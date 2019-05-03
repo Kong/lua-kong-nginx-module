@@ -1,13 +1,13 @@
 Name
 ====
-lua-kong-nginx-module - Nginx C module that exposes Lua API to dynamically control Nginx
+lua-kong-nginx-module - Nginx C module that exposes a Lua API to dynamically control Nginx
 
 
 Description
 ===========
-Kong often need to be able to change Nginx behavior at runtime, traditionally this
-has been done using various core patches. This module attempts to unify those approach
-and ensure least amount of modifications made directly to Nginx to support future
+Kong often needs to be able to change Nginx behavior at runtime. Traditionally this
+has been done using various core patches. This module attempts to unify those approaches
+and ensure the least amount of modifications made directly to Nginx to support future
 maintainability.
 
 Install
@@ -31,13 +31,13 @@ resty.kong.tls.request\_client\_certificate
 
 **context:** *ssl_certificate_by_lua&#42;*
 
-Requests client to present it's client side certificate to initiate mutual TLS
+Requests client to present its client-side certificate to initiate mutual TLS
 authentication between server and client.
 
-This function only *request*, but does not *require* client to start the mTLS
-process. Even if client did not present a client certificate the TLS handshake
-will still complete (obviously not be mTLS in that case).
-Whether client honored the request can be determined using
+This function only *requests*, but does not *require* the client to start the mTLS
+process. Even if the client did not present a client certificate the TLS handshake
+will still complete (obviously not being mTLS in that case).
+Whether the client honored the request can be determined using
 [get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
 in later phases.
 
@@ -63,12 +63,12 @@ provided by [ngx\_http\_ssl\_module](https://nginx.org/en/docs/http/ngx_http_ssl
 with the notable exception that this function also returns any certificate chain
 client sent during handshake.
 
-If TLS session was reused, (signaled by
+If the TLS session was reused, (signaled by
 [$ssl\_session\_reused](https://nginx.org/en/docs/http/ngx_http_ssl_module.html#var_ssl_session_reused) returns "r"),
-then no client certificate information will be available as full handshake never occurred.
+then no client certificate information will be available as a full handshake never occurred.
 In this case caller should use
 [$ssl\_session\_id](https://nginx.org/en/docs/http/ngx_http_ssl_module.html#var_ssl_session_id) to
-associate this session will one of the previous handshakes to identify the connecting
+associate this session with one of the previous handshakes to identify the connecting
 client.
 
 
