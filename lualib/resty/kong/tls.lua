@@ -22,11 +22,10 @@ base.allows_subsystem('http')
 
 
 ffi.cdef([[
-const char *
-ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r);
-int
-ngx_http_lua_kong_ffi_get_full_client_certificate_chain(ngx_http_request_t *r,
-    char *buf, size_t *buf_len);
+const char *ngx_http_lua_kong_ffi_request_client_certificate(
+    ngx_http_request_t *r);
+int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
+    ngx_http_request_t *r, char *buf, size_t *buf_len);
 ]])
 
 
@@ -75,7 +74,7 @@ do
 
     function _M.get_full_client_certificate_chain()
         if not ALLOWED_PHASES[get_phase()] then
-            error("API disabled in the current context")
+            error("API disabled in the current context", 2)
         end
 
         local r = getfenv(0).__ngx_req
@@ -90,23 +89,26 @@ do
             r, buf, size_ptr)
         if ret == NGX_OK then
             return ffi_string(buf, size_ptr[0])
+        end
 
-        elseif ret == NGX_ERROR then
+        if ret == NGX_ERROR then
             return nil, "error while obtaining client certificate chain"
+        end
 
-        elseif ret == NGX_ABORT then
+        if ret == NGX_ABORT then
             return nil,
                    "connection is not TLS or TLS support for Nginx not enabled"
-
-        elseif ret == NGX_DECLINED then
-            return nil
-
-        elseif ret == NGX_AGAIN then
-            goto again
-
-        else
-            error("unknown return code: ", tostring(ret))
         end
+
+        if ret == NGX_DECLINED then
+            return nil
+        end
+
+        if ret == NGX_AGAIN then
+            goto again
+        end
+
+        error("unknown return code: ", tostring(ret))
     end
 end
 
