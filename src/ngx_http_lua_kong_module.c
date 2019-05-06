@@ -148,7 +148,8 @@ ngx_http_lua_kong_ffi_get_full_client_certificate_chain(ngx_http_request_t *r,
 
     chain = SSL_get_peer_cert_chain(sc);
     if (chain == NULL) {
-        return NGX_DECLINED;
+        ret = NGX_DECLINED;
+        goto done;
     }
 
     n = sk_X509_num(chain);
