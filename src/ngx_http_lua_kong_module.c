@@ -124,6 +124,68 @@ ngx_http_lua_kong_new_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
 
 
 /*
+ * disables session reuse for the current TLS connection, must be called
+ * in ssl_certby_lua* phase
+ */
+
+const char *
+ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r)
+{
+#if (NGX_SSL)
+    ngx_uint_t           flag;
+    ngx_connection_t    *c = r->connection;
+    ngx_ssl_conn_t      *sc;
+    SSL_CTX             *ctx;
+
+    if (c->ssl == NULL) {
+        return "server does not have TLS enabled";
+    }
+
+    sc = c->ssl->connection;
+
+    /* the following disables session ticket for the current connection */
+    SSL_set_options(sc, SSL_OP_NO_TICKET);
+
+    /* the following disables session cache for the current connection
+     * note that we are using the pointer storage to store a flag value to
+     * avoid having to do memory allocations. since the pointer is never
+     * dereferenced this is completely safe to do */
+    flag = 1;
+
+    if (SSL_set_ex_data(sc,
+                        ngx_http_lua_kong_ssl_no_session_cache_flag_index,
+                        (void *) flag) == 0)
+    {
+        return "unable to disable session cache for current connection";
+    }
+
+    ctx = c->ssl->session_ctx;
+
+    /* hook session_new_cb if not already done so */
+    if (SSL_CTX_sess_get_new_cb(ctx) !=
+        ngx_http_lua_kong_new_session)
+    {
+        /* save old callback */
+        if (SSL_CTX_set_ex_data(ctx,
+                                ngx_http_lua_kong_ssl_old_sess_new_cb_index,
+                                SSL_CTX_sess_get_new_cb(ctx)) == 0)
+        {
+            return "unable to install new session hook";
+        }
+
+        /* install hook */
+        SSL_CTX_sess_set_new_cb(ctx, ngx_http_lua_kong_new_session);
+    }
+
+    return NULL;
+
+#else
+    return "TLS support is not enabled in Nginx build"
+#endif
+}
+
+
+/*
  * request downstream to present a client certificate during TLS handshake,
  * but does not validate it
  *
@@ -134,13 +196,11 @@ ngx_http_lua_kong_new_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
  */
 
 const char *
-ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r,
-    int no_session_reuse)
+ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
 {
 #if (NGX_SSL)
     ngx_connection_t    *c = r->connection;
     ngx_ssl_conn_t      *sc;
-    ngx_uint_t           flag;
     SSL_CTX             *ctx;
 
     if (c->ssl == NULL) {
@@ -150,42 +210,6 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r,
     sc = c->ssl->connection;
 
     SSL_set_verify(sc, SSL_VERIFY_PEER, ngx_http_lua_kong_verify_callback);
-
-    if (no_session_reuse) {
-        /* the following disables session ticket for the current connection */
-        SSL_set_options(sc, SSL_OP_NO_TICKET);
-
-        /* the following disables session cache for the current connection
-         * note that we are using the pointer storage to store a flag value to
-         * avoid having to do memory allocations. since the pointer is never
-         * dereferenced this is completely safe to do */
-        flag = 1;
-
-        if (SSL_set_ex_data(sc,
-                            ngx_http_lua_kong_ssl_no_session_cache_flag_index,
-                            (void *) flag) == 0)
-        {
-            return "unable to disable session cache for current connection";
-        }
-
-        ctx = c->ssl->session_ctx;
-
-        /* hook session_new_cb if not already done so */
-        if (SSL_CTX_sess_get_new_cb(ctx) !=
-            ngx_http_lua_kong_new_session)
-        {
-            /* save old callback */
-            if (SSL_CTX_set_ex_data(ctx,
-                                    ngx_http_lua_kong_ssl_old_sess_new_cb_index,
-                                    SSL_CTX_sess_get_new_cb(ctx)) == 0)
-            {
-                return "unable to install new session hook";
-            }
-
-            /* install hook */
-            SSL_CTX_sess_set_new_cb(ctx, ngx_http_lua_kong_new_session);
-        }
-    }
 
     return NULL;
 

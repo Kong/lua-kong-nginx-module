@@ -27,7 +27,7 @@ Methods
 
 resty.kong.tls.request\_client\_certificate
 -------------------------------------------
-**syntax:** *succ, err = resty.kong.tls.request\_client\_certificate(suppress_session_reuse?)*
+**syntax:** *succ, err = resty.kong.tls.request\_client\_certificate()*
 
 **context:** *ssl_certificate_by_lua&#42;*
 
@@ -41,9 +41,17 @@ Whether the client honored the request can be determined using
 [get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
 in later phases.
 
-The optional argument `suppress_session_reuse` can be set to `true` to indicate the current TLS
-session should not be reused. It effectively disables session ticket and session ID for the current
-TLS connection.
+This function returns `true` when the call is successful. Otherwise it returns
+`nil` and a string describing the error.
+
+resty.kong.tls.disable\_session\_reuse
+--------------------------------------
+**syntax:** *succ, err = resty.kong.tls.disable\_session\_reuse()*
+
+**context:** *ssl_certificate_by_lua&#42;*
+
+Prevents the TLS session for the current connection from being reused by
+disabling session ticket and session ID for the current TLS connection.
 
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.

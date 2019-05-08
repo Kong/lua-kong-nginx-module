@@ -249,7 +249,7 @@ uibeZgK1Yk7YQKXdvbZvXwrgTcAjCdbppw2L6e0Uy+OGgNjnIps8K460SdaIiA==
 
 
 
-=== TEST 4: request_client_certificate(true) can supress usage of session tickets
+=== TEST 4: disable_session_reuse() can suppress usage of session tickets
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -259,8 +259,10 @@ uibeZgK1Yk7YQKXdvbZvXwrgTcAjCdbppw2L6e0Uy+OGgNjnIps8K460SdaIiA==
         ssl_certificate_by_lua_block {
             print("ssl cert by lua is running!")
 
+            assert(require("resty.kong.tls").disable_session_reuse())
+
             print("request_client_certificate: ",
-                  require("resty.kong.tls").request_client_certificate(true))
+                  require("resty.kong.tls").request_client_certificate())
         }
         ssl_certificate ../../cert/example.com.crt;
         ssl_certificate_key ../../cert/example.com.key;
@@ -371,7 +373,7 @@ uibeZgK1Yk7YQKXdvbZvXwrgTcAjCdbppw2L6e0Uy+OGgNjnIps8K460SdaIiA==
 
 
 
-=== TEST 5: request_client_certificate(true) can supress usage of session cache
+=== TEST 5: disable_session_reuse can suppress usage of session cache
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -381,8 +383,10 @@ uibeZgK1Yk7YQKXdvbZvXwrgTcAjCdbppw2L6e0Uy+OGgNjnIps8K460SdaIiA==
         ssl_certificate_by_lua_block {
             print("ssl cert by lua is running!")
 
+            assert(require("resty.kong.tls").disable_session_reuse())
+
             print("request_client_certificate: ",
-                  require("resty.kong.tls").request_client_certificate(true))
+                  require("resty.kong.tls").request_client_certificate())
         }
         ssl_certificate ../../cert/example.com.crt;
         ssl_certificate_key ../../cert/example.com.key;
