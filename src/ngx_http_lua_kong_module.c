@@ -18,17 +18,22 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include "ngx_http_lua_kong_module.h"
 
 
 #if (NGX_SSL)
+static int ngx_http_lua_kong_ssl_ctx_index = -1;
+
+
 static int
 ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store);
 #endif
+static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
 
 
 static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
     NULL,                                    /* preconfiguration */
-    NULL,                                    /* postconfiguration */
+    ngx_http_lua_kong_init,                  /* postconfiguration */
 
     NULL,                                    /* create main configuration */
     NULL,                                    /* init main configuration */
@@ -55,6 +60,106 @@ ngx_module_t ngx_http_lua_kong_module = {
     NULL,                              /* exit master */
     NGX_MODULE_V1_PADDING
 };
+
+
+static ngx_int_t
+ngx_http_lua_kong_init(ngx_conf_t *cf)
+{
+#if (NGX_SSL)
+    if (ngx_http_lua_kong_ssl_ctx_index == -1) {
+        ngx_http_lua_kong_ssl_ctx_index = SSL_get_ex_new_index(0, NULL, NULL,
+                                                               NULL, NULL);
+
+        if (ngx_http_lua_kong_ssl_ctx_index == -1) {
+            ngx_ssl_error(NGX_LOG_ALERT, cf->log, 0,
+                          "kong: SSL_get_ex_new_index() for ssl ctx failed");
+            return NGX_ERROR;
+        }
+    }
+#endif
+
+    return NGX_OK;
+}
+
+
+const char *
+ngx_http_lua_kong_ssl_set_session_flags(ngx_http_request_t *r, ngx_uint_t flags)
+{
+#if (NGX_SSL)
+    ngx_connection_t             *c = r->connection;
+    ngx_ssl_conn_t               *sc;
+    ngx_http_lua_kong_ssl_ctx_t  *sctx;
+
+    if (c->ssl == NULL) {
+        return "server does not have TLS enabled";
+    }
+
+    sc = c->ssl->connection;
+
+    sctx = SSL_get_ex_data(sc, ngx_http_lua_kong_ssl_ctx_index);
+    if (sctx == NULL) {
+        sctx = ngx_pcalloc(r->pool, sizeof(ngx_http_lua_kong_ssl_ctx_t));
+        if (sctx == NULL) {
+            return "memory allocation failed";
+        }
+
+        if (SSL_set_ex_data(sc,
+                ngx_http_lua_kong_ssl_ctx_index, sctx) != 1)
+        {
+            return "failed to save ctx to TLS connection";
+        }
+    }
+
+    sctx->session_flags = flags;
+
+#else
+    return "TLS support is not enabled in Nginx build"
+#endif
+}
+
+
+u_char *
+ngx_http_lua_kong_ssl_get_session_id(ngx_http_request_t *r, size_t *len, char **errmsg)
+{
+#if (NGX_SSL)
+    ngx_connection_t             *c = r->connection;
+    ngx_ssl_conn_t               *sc;
+    SSL_SESSION                  *sess;
+
+    if (c->ssl == NULL) {
+        *errmsg = "server does not have TLS enabled";
+        return NULL;
+    }
+
+    sc = c->ssl->connection;
+
+    *errmsg = NULL;
+
+    sess = SSL_get0_session(c->ssl->connection);
+    if (sess == NULL) {
+        return NULL;
+    }
+
+    return SSL_SESSION_get_id(sess, len);
+
+#else
+    *errmsg = "TLS support is not enabled in Nginx build";
+    return NULL;
+#endif
+}
+
+
+#if (NGX_SSL)
+ngx_uint_t
+ngx_http_lua_kong_ssl_get_session_flags(ngx_ssl_conn_t *sc)
+{
+    ngx_http_lua_kong_ssl_ctx_t  *sctx;
+
+    sctx = SSL_get_ex_data(sc, ngx_http_lua_kong_ssl_ctx_index);
+
+    return sctx == NULL ? 0 : sctx->session_flags;
+}
+#endif
 
 
 #if (NGX_SSL)

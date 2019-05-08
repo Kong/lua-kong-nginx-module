@@ -1,0 +1,48 @@
+diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
+index 88a6dbed..bab56b74 100644
+--- a/src/event/ngx_event_openssl.c
++++ b/src/event/ngx_event_openssl.c
+@@ -8,6 +8,9 @@
+ #include <ngx_config.h>
+ #include <ngx_core.h>
+ #include <ngx_event.h>
++#if (NGX_HTTP_LUA_KONG)
++#include <ngx_http_lua_kong_module.h>
++#endif
+ 
+ 
+ #define NGX_SSL_PASSWORD_BUFFER_SIZE  4096
+@@ -2656,7 +2659,15 @@ ngx_ssl_get_cached_session(ngx_ssl_conn_t *ssl_conn,
+ 
+         if (rc == 0) {
+ 
++#if (NGX_HTTP_LUA_KONG)
++            if (sess_id->expire > ngx_time() &&
++                !(ngx_http_lua_kong_ssl_get_session_flags(ssl_conn) &
++                  NGX_HTTP_LUA_KONG_SSL_NO_SESSION_CACHE))
++            {
++
++#else
+             if (sess_id->expire > ngx_time()) {
++#endif
+                 ngx_memcpy(buf, sess_id->session, sess_id->len);
+ 
+                 ngx_shmtx_unlock(&shpool->mutex);
+@@ -3077,6 +3088,17 @@ ngx_ssl_session_ticket_key_callback(ngx_ssl_conn_t *ssl_conn,
+     } else {
+         /* decrypt session ticket */
+ 
++#if (NGX_HTTP_LUA_KONG)
++        if (ngx_http_lua_kong_ssl_get_session_flags(ssl_conn) &
++            NGX_HTTP_LUA_KONG_SSL_NO_SESSION_TICKET)
++        {
++            ngx_log_debug0(NGX_LOG_DEBUG_EVENT, c->log, 0,
++                           "ssl session ticket decrypt, suppressed by Kong");
++
++            return 0;
++        }
++#endif
++
+         for (i = 0; i < keys->nelts; i++) {
+             if (ngx_memcmp(name, key[i].name, 16) == 0) {
+                 goto found;

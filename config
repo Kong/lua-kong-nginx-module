@@ -1,6 +1,8 @@
 ngx_module_type=HTTP
 ngx_module_name=ngx_http_lua_kong_module
 ngx_module_srcs="$ngx_addon_dir/src/ngx_http_lua_kong_module.c"
+CORE_INCS="$CORE_INCS $ngx_addon_dir/src"
+have=NGX_HTTP_LUA_KONG . auto/have
 
 . auto/module
 
