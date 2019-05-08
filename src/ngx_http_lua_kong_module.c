@@ -21,14 +21,19 @@
 
 
 #if (NGX_SSL)
+static int ngx_http_lua_kong_ssl_old_sess_new_cb_index = -1;
+static int ngx_http_lua_kong_ssl_no_session_cache_flag_index = -1;
+
+
 static int
 ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store);
 #endif
+static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
 
 
 static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
     NULL,                                    /* preconfiguration */
-    NULL,                                    /* postconfiguration */
+    ngx_http_lua_kong_init,                  /* postconfiguration */
 
     NULL,                                    /* create main configuration */
     NULL,                                    /* init main configuration */
@@ -57,6 +62,37 @@ ngx_module_t ngx_http_lua_kong_module = {
 };
 
 
+static ngx_int_t
+ngx_http_lua_kong_init(ngx_conf_t *cf)
+{
+#if (NGX_SSL)
+    if (ngx_http_lua_kong_ssl_old_sess_new_cb_index == -1) {
+        ngx_http_lua_kong_ssl_old_sess_new_cb_index =
+            SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+
+        if (ngx_http_lua_kong_ssl_old_sess_new_cb_index == -1) {
+            ngx_ssl_error(NGX_LOG_ALERT, cf->log, 0,
+                          "kong: SSL_CTX_get_ex_new_index() for ssl ctx failed");
+            return NGX_ERROR;
+        }
+    }
+
+    if (ngx_http_lua_kong_ssl_no_session_cache_flag_index == -1) {
+        ngx_http_lua_kong_ssl_no_session_cache_flag_index =
+            SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+
+        if (ngx_http_lua_kong_ssl_no_session_cache_flag_index == -1) {
+            ngx_ssl_error(NGX_LOG_ALERT, cf->log, 0,
+                          "kong: SSL_get_ex_new_index() for ssl failed");
+            return NGX_ERROR;
+        }
+    }
+#endif
+
+    return NGX_OK;
+}
+
+
 #if (NGX_SSL)
 static int
 ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store)
@@ -64,6 +100,25 @@ ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store)
     /* similar to ngx_ssl_verify_callback, always allow handshake
      * to conclude before deciding the validity of client certificate */
     return 1;
+}
+
+
+static int
+ngx_http_lua_kong_new_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
+{
+    ngx_uint_t      flag;
+
+    flag = (ngx_uint_t) SSL_get_ex_data(ssl_conn,
+                            ngx_http_lua_kong_ssl_no_session_cache_flag_index);
+
+    if (flag) {
+        return 0;
+    }
+
+    return ((int (*)(SSL *ssl, SSL_SESSION *sess))
+               SSL_CTX_get_ex_data(SSL_get_SSL_CTX(ssl_conn),
+                   ngx_http_lua_kong_ssl_old_sess_new_cb_index))(ssl_conn,
+                                                                 sess);
 }
 #endif
 
@@ -79,11 +134,14 @@ ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store)
  */
 
 const char *
-ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
+ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r,
+    int no_session_reuse)
 {
 #if (NGX_SSL)
     ngx_connection_t    *c = r->connection;
     ngx_ssl_conn_t      *sc;
+    ngx_uint_t           flag;
+    SSL_CTX             *ctx;
 
     if (c->ssl == NULL) {
         return "server does not have TLS enabled";
@@ -92,6 +150,42 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
     sc = c->ssl->connection;
 
     SSL_set_verify(sc, SSL_VERIFY_PEER, ngx_http_lua_kong_verify_callback);
+
+    if (no_session_reuse) {
+        /* the following disables session ticket for the current connection */
+        SSL_set_options(sc, SSL_OP_NO_TICKET);
+
+        /* the following disables session cache for the current connection
+         * note that we are using the pointer storage to store a flag value to
+         * avoid having to do memory allocations. since the pointer is never
+         * dereferenced this is completely safe to do */
+        flag = 1;
+
+        if (SSL_set_ex_data(sc,
+                            ngx_http_lua_kong_ssl_no_session_cache_flag_index,
+                            (void *) flag) == 0)
+        {
+            return "unable to disable session cache for current connection";
+        }
+
+        ctx = c->ssl->session_ctx;
+
+        /* hook session_new_cb if not already done so */
+        if (SSL_CTX_sess_get_new_cb(ctx) !=
+            ngx_http_lua_kong_new_session)
+        {
+            /* save old callback */
+            if (SSL_CTX_set_ex_data(ctx,
+                                    ngx_http_lua_kong_ssl_old_sess_new_cb_index,
+                                    SSL_CTX_sess_get_new_cb(ctx)) == 0)
+            {
+                return "unable to install new session hook";
+            }
+
+            /* install hook */
+            SSL_CTX_sess_set_new_cb(ctx, ngx_http_lua_kong_new_session);
+        }
+    }
 
     return NULL;
 

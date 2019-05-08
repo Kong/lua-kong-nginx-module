@@ -23,7 +23,7 @@ base.allows_subsystem('http')
 
 ffi.cdef([[
 const char *ngx_http_lua_kong_ffi_request_client_certificate(
-    ngx_http_request_t *r);
+    ngx_http_request_t *r, int no_session_reuse);
 int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
     ngx_http_request_t *r, char *buf, size_t *buf_len);
 ]])
@@ -46,7 +46,7 @@ local NGX_DONE = ngx.DONE
 local NGX_DECLINED = ngx.DECLINED
 
 
-function _M.request_client_certificate()
+function _M.request_client_certificate(no_session_reuse)
     if get_phase() ~= 'ssl_cert' then
         error("API disabled in the current context")
     end
@@ -55,7 +55,8 @@ function _M.request_client_certificate()
     -- no need to check if r is nil as phase check above
     -- already ensured it
 
-    local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r)
+    local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r,
+                        no_session_reuse and 1 or 0)
     if errmsg == nil then
         return true
     end
