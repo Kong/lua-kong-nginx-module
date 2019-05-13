@@ -22,10 +22,10 @@ base.allows_subsystem('http')
 
 
 ffi.cdef([[
-const char *ngx_http_lua_kong_ffi_request_client_certificate(
-    ngx_http_request_t *r);
+const char *ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r);
 int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
     ngx_http_request_t *r, char *buf, size_t *buf_len);
+const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
 ]])
 
 
@@ -46,7 +46,7 @@ local NGX_DONE = ngx.DONE
 local NGX_DECLINED = ngx.DECLINED
 
 
-function _M.request_client_certificate()
+function _M.request_client_certificate(no_session_reuse)
     if get_phase() ~= 'ssl_cert' then
         error("API disabled in the current context")
     end
@@ -62,6 +62,23 @@ function _M.request_client_certificate()
 
     return nil, ffi_string(errmsg)
 end
+
+
+function _M.disable_session_reuse()
+    if get_phase() ~= 'ssl_cert' then
+        error("API disabled in the current context")
+    end
+
+    local r = getfenv(0).__ngx_req
+
+    local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
+    if errmsg == nil then
+        return true
+    end
+
+    return nil, ffi_string(errmsg)
+end
+
 
 do
     local ALLOWED_PHASES = {

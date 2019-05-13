@@ -44,6 +44,18 @@ in later phases.
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.
 
+resty.kong.tls.disable\_session\_reuse
+--------------------------------------
+**syntax:** *succ, err = resty.kong.tls.disable\_session\_reuse()*
+
+**context:** *ssl_certificate_by_lua&#42;*
+
+Prevents the TLS session for the current connection from being reused by
+disabling session ticket and session ID for the current TLS connection.
+
+This function returns `true` when the call is successful. Otherwise it returns
+`nil` and a string describing the error.
+
 
 resty.kong.tls.get\_full\_client\_certificate\_chain
 -------------------------------------------
