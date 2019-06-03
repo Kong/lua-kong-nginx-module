@@ -126,7 +126,7 @@ do
             goto again
         end
 
-        error("unknown return code: ", tostring(ret))
+        error("unknown return code: " .. tostring(ret))
     end
 end
 
