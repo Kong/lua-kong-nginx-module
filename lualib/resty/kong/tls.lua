@@ -44,6 +44,7 @@ local NGX_ERROR = ngx.ERROR
 local NGX_AGAIN = ngx.AGAIN
 local NGX_DONE = ngx.DONE
 local NGX_DECLINED = ngx.DECLINED
+local NGX_ABORT = -6
 
 
 function _M.request_client_certificate(no_session_reuse)
