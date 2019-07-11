@@ -26,6 +26,8 @@ const char *ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t 
 int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
     ngx_http_request_t *r, char *buf, size_t *buf_len);
 const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
+int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
+    void *_chain, void *_key);
 ]])
 
 
@@ -47,12 +49,33 @@ local NGX_DECLINED = ngx.DECLINED
 local NGX_ABORT = -6
 
 
+local get_request
+do
+    local ok, exdata = pcall(require, "thread.exdata")
+    if ok and exdata then
+        function get_request()
+            local r = exdata()
+            if r ~= nil then
+                return r
+            end
+        end
+
+    else
+        local getfenv = getfenv
+
+        function get_request()
+            return getfenv(0).__ngx_req
+        end
+    end
+end
+
+
 function _M.request_client_certificate(no_session_reuse)
     if get_phase() ~= 'ssl_cert' then
         error("API disabled in the current context")
     end
 
-    local r = getfenv(0).__ngx_req
+    local r = get_request()
     -- no need to check if r is nil as phase check above
     -- already ensured it
 
@@ -70,7 +93,7 @@ function _M.disable_session_reuse()
         error("API disabled in the current context")
     end
 
-    local r = getfenv(0).__ngx_req
+    local r = get_request()
 
     local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
     if errmsg == nil then
@@ -95,7 +118,7 @@ do
             error("API disabled in the current context", 2)
         end
 
-        local r = getfenv(0).__ngx_req
+        local r = get_request()
 
         size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
 
@@ -124,6 +147,40 @@ do
 
         if ret == NGX_AGAIN then
             goto again
+        end
+
+        error("unknown return code: " .. tostring(ret))
+    end
+end
+
+
+do
+    local ALLOWED_PHASES = {
+        ['rewrite'] = true,
+        ['balancer'] = true,
+        ['access'] = true,
+    }
+
+    function _M.set_upstream_cert_and_key(chain, key)
+        if not ALLOWED_PHASES[get_phase()] then
+            error("API disabled in the current context", 2)
+        end
+
+        if not chain or not key then
+            error("chain and key must not be nil")
+        end
+
+        local r = get_request()
+        size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
+
+        local ret = C.ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(
+            r, chain, key)
+        if ret == NGX_OK then
+            return true
+        end
+
+        if ret == NGX_ERROR then
+            return nil, "error while setting upstream client cert and key"
         end
 
         error("unknown return code: " .. tostring(ret))
