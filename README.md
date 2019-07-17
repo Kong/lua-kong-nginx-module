@@ -71,7 +71,6 @@ disabling session ticket and session ID for the current TLS connection.
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.
 
-
 [Back to TOC](#table-of-contents)
 
 resty.kong.tls.get\_full\_client\_certificate\_chain
@@ -103,7 +102,7 @@ client.
 [Back to TOC](#table-of-contents)
 
 resty.kong.tls.set\_upstream\_cert\_and\_key
----------------------------------------
+--------------------------------------------
 **syntax:** *ok, err = resty.kong.tls.set\_upstream\_cert\_and\_key(chain, key)*
 
 **context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*

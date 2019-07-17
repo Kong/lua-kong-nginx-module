@@ -403,7 +403,7 @@ ngx_http_lua_kong_cleanup(void *data)
 {
     ngx_http_lua_kong_ctx_t     *ctx = data;
 
-    if (ctx->upstream_client_certificate_chain) {
+    if (ctx->upstream_client_certificate_chain != NULL) {
         sk_X509_pop_free(ctx->upstream_client_certificate_chain, X509_free);
         EVP_PKEY_free(ctx->upstream_client_private_key);
     }
@@ -419,6 +419,10 @@ ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
     STACK_OF(X509)              *new_chain;
     ngx_http_lua_kong_ctx_t     *ctx;
     ngx_pool_cleanup_t          *cln;
+
+    if (chain == NULL || key == NULL) {
+        return NGX_ERROR;
+    }
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
     if (ctx == NULL) {
@@ -437,17 +441,11 @@ ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
 
         ngx_http_set_ctx(r, ctx, ngx_http_lua_kong_module);
 
-    } else {
-        if (ctx->upstream_client_certificate_chain != NULL) {
-            ngx_http_lua_kong_cleanup(ctx);
+    } else if (ctx->upstream_client_certificate_chain != NULL) {
+        ngx_http_lua_kong_cleanup(ctx);
 
-            ctx->upstream_client_certificate_chain = NULL;
-            ctx->upstream_client_private_key = NULL;
-        }
-    }
-
-    if (chain == NULL || key == NULL) {
-        return NGX_ERROR;
+        ctx->upstream_client_certificate_chain = NULL;
+        ctx->upstream_client_private_key = NULL;
     }
 
     if (EVP_PKEY_up_ref(key) == 0) {

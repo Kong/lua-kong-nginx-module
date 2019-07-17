@@ -167,11 +167,10 @@ do
         end
 
         if not chain or not key then
-            error("chain and key must not be nil")
+            error("chain and key must not be nil", 2)
         end
 
         local r = get_request()
-        size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
 
         local ret = C.ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(
             r, chain, key)
