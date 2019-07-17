@@ -18,6 +18,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include "ngx_http_lua_kong_module.h"
 
 
 #if (NGX_SSL)
@@ -201,7 +202,6 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
 #if (NGX_SSL)
     ngx_connection_t    *c = r->connection;
     ngx_ssl_conn_t      *sc;
-    SSL_CTX             *ctx;
 
     if (c->ssl == NULL) {
         return "server does not have TLS enabled";
@@ -305,3 +305,170 @@ done:
     return NGX_ABORT;
 #endif
 }
+
+
+#if (NGX_HTTP_SSL)
+
+/*
+ * called by ngx_http_upstream_ssl_init_connection right after
+ * ngx_ssl_create_connection to override any parameters in the
+ * ngx_ssl_conn_t before handshake occurs
+ *
+ * c->ssl is guaranteed to be present and valid
+ */
+
+void
+ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r, ngx_connection_t *c)
+{
+    ngx_ssl_conn_t              *sc = c->ssl->connection;
+    ngx_http_lua_kong_ctx_t     *ctx;
+    STACK_OF(X509)              *chain;
+    EVP_PKEY                    *pkey;
+    X509                        *x509;
+#ifdef OPENSSL_IS_BORINGSSL
+    size_t                       i;
+#else
+    int                          i;
+#endif
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
+    if (ctx == NULL || ctx->upstream_client_certificate_chain == NULL) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                       "skip overriding upstream SSL configuration, "
+                       "certificate not set");
+        return;
+    }
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
+                   "overriding upstream SSL configuration");
+
+    chain = ctx->upstream_client_certificate_chain;
+    pkey = ctx->upstream_client_private_key;
+
+    if (sk_X509_num(chain) < 1) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "invalid client certificate chain provided while "
+                      "handshaking with upstream");
+        goto failed;
+    }
+
+    x509 = sk_X509_value(chain, 0);
+    if (x509 == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "sk_X509_value() failed");
+        goto failed;
+    }
+
+    if (SSL_use_certificate(sc, x509) == 0) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "SSL_use_certificate() failed");
+        goto failed;
+    }
+
+    /* read rest of the chain */
+
+    for (i = 1; i < sk_X509_num(chain); i++) {
+        x509 = sk_X509_value(chain, i);
+        if (x509 == NULL) {
+            ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "sk_X509_value() failed");
+            goto failed;
+        }
+
+        if (SSL_add1_chain_cert(sc, x509) == 0) {
+            ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "SSL_add1_chain_cert() failed");
+            goto failed;
+        }
+    }
+
+    if (SSL_use_PrivateKey(sc, pkey) == 0) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "SSL_use_PrivateKey() failed");
+        goto failed;
+    }
+
+    return;
+
+failed:
+
+    ERR_clear_error();
+}
+
+
+static X509 *
+ngx_http_lua_kong_x509_copy(X509 *in)
+{
+    return X509_up_ref(in) == 0 ? NULL : in;
+}
+
+
+static void
+ngx_http_lua_kong_cleanup(void *data)
+{
+    ngx_http_lua_kong_ctx_t     *ctx = data;
+
+    if (ctx->upstream_client_certificate_chain != NULL) {
+        sk_X509_pop_free(ctx->upstream_client_certificate_chain, X509_free);
+        EVP_PKEY_free(ctx->upstream_client_private_key);
+    }
+}
+
+
+int
+ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
+    void *_chain, void *_key)
+{
+    STACK_OF(X509)              *chain = _chain;
+    EVP_PKEY                    *key = _key;
+    STACK_OF(X509)              *new_chain;
+    ngx_http_lua_kong_ctx_t     *ctx;
+    ngx_pool_cleanup_t          *cln;
+
+    if (chain == NULL || key == NULL) {
+        return NGX_ERROR;
+    }
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
+    if (ctx == NULL) {
+        ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_lua_kong_ctx_t));
+        if (ctx == NULL) {
+            return NGX_ERROR;
+        }
+
+        cln = ngx_pool_cleanup_add(r->pool, 0);
+        if (cln == NULL) {
+            return NGX_ERROR;
+        }
+
+        cln->data = ctx;
+        cln->handler = ngx_http_lua_kong_cleanup;
+
+        ngx_http_set_ctx(r, ctx, ngx_http_lua_kong_module);
+
+    } else if (ctx->upstream_client_certificate_chain != NULL) {
+        ngx_http_lua_kong_cleanup(ctx);
+
+        ctx->upstream_client_certificate_chain = NULL;
+        ctx->upstream_client_private_key = NULL;
+    }
+
+    if (EVP_PKEY_up_ref(key) == 0) {
+        goto failed;
+    }
+
+    new_chain = sk_X509_deep_copy(chain, ngx_http_lua_kong_x509_copy,
+                                  X509_free);
+    if (new_chain == NULL) {
+        EVP_PKEY_free(key);
+        goto failed;
+    }
+
+    ctx->upstream_client_certificate_chain = new_chain;
+    ctx->upstream_client_private_key = key;
+
+    return NGX_OK;
+
+failed:
+
+    ERR_clear_error();
+
+    return NGX_ERROR;
+}
+
+#endif
