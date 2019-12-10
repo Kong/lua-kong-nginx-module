@@ -18,17 +18,25 @@ local _M = {}
 
 local ffi = require("ffi")
 local base = require("resty.core.base")
-base.allows_subsystem('http')
+base.allows_subsystem('http', 'stream')
 
 
-ffi.cdef([[
-const char *ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r);
-int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
-    ngx_http_request_t *r, char *buf, size_t *buf_len);
-const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
-int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
-    void *_chain, void *_key);
-]])
+if ngx.config.subsystem == "http" then
+    ffi.cdef([[
+    const char *ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r);
+    int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
+        ngx_http_request_t *r, char *buf, size_t *buf_len);
+    const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
+    int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
+        void *_chain, void *_key);
+    ]])
+
+else
+    ffi.cdef([[
+        int
+        ngx_stream_lua_kong_ffi_proxy_ssl_disable(ngx_stream_lua_request_t *r);
+    ]])
+end
 
 
 local get_phase = ngx.get_phase
@@ -70,119 +78,148 @@ do
 end
 
 
-function _M.request_client_certificate(no_session_reuse)
-    if get_phase() ~= 'ssl_cert' then
-        error("API disabled in the current context")
-    end
-
-    local r = get_request()
-    -- no need to check if r is nil as phase check above
-    -- already ensured it
-
-    local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r)
-    if errmsg == nil then
-        return true
-    end
-
-    return nil, ffi_string(errmsg)
-end
-
-
-function _M.disable_session_reuse()
-    if get_phase() ~= 'ssl_cert' then
-        error("API disabled in the current context")
-    end
-
-    local r = get_request()
-
-    local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
-    if errmsg == nil then
-        return true
-    end
-
-    return nil, ffi_string(errmsg)
-end
-
-
-do
-    local ALLOWED_PHASES = {
-        ['rewrite'] = true,
-        ['balancer'] = true,
-        ['access'] = true,
-        ['content'] = true,
-        ['log'] = true,
-    }
-
-    function _M.get_full_client_certificate_chain()
-        if not ALLOWED_PHASES[get_phase()] then
-            error("API disabled in the current context", 2)
+if ngx.config.subsystem == "http" then
+    function _M.request_client_certificate(no_session_reuse)
+        if get_phase() ~= 'ssl_cert' then
+            error("API disabled in the current context")
         end
 
         local r = get_request()
+        -- no need to check if r is nil as phase check above
+        -- already ensured it
 
-        size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
-
-::again::
-
-        local buf = get_string_buf(size_ptr[0])
-
-        local ret = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
-            r, buf, size_ptr)
-        if ret == NGX_OK then
-            return ffi_string(buf, size_ptr[0])
-        end
-
-        if ret == NGX_ERROR then
-            return nil, "error while obtaining client certificate chain"
-        end
-
-        if ret == NGX_ABORT then
-            return nil,
-                   "connection is not TLS or TLS support for Nginx not enabled"
-        end
-
-        if ret == NGX_DECLINED then
-            return nil
-        end
-
-        if ret == NGX_AGAIN then
-            goto again
-        end
-
-        error("unknown return code: " .. tostring(ret))
-    end
-end
-
-
-do
-    local ALLOWED_PHASES = {
-        ['rewrite'] = true,
-        ['balancer'] = true,
-        ['access'] = true,
-    }
-
-    function _M.set_upstream_cert_and_key(chain, key)
-        if not ALLOWED_PHASES[get_phase()] then
-            error("API disabled in the current context", 2)
-        end
-
-        if not chain or not key then
-            error("chain and key must not be nil", 2)
-        end
-
-        local r = get_request()
-
-        local ret = C.ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(
-            r, chain, key)
-        if ret == NGX_OK then
+        local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r)
+        if errmsg == nil then
             return true
         end
 
-        if ret == NGX_ERROR then
-            return nil, "error while setting upstream client cert and key"
+        return nil, ffi_string(errmsg)
+    end
+
+
+    function _M.disable_session_reuse()
+        if get_phase() ~= 'ssl_cert' then
+            error("API disabled in the current context")
         end
 
-        error("unknown return code: " .. tostring(ret))
+        local r = get_request()
+
+        local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
+        if errmsg == nil then
+            return true
+        end
+
+        return nil, ffi_string(errmsg)
+    end
+
+
+    do
+        local ALLOWED_PHASES = {
+            ['rewrite'] = true,
+            ['balancer'] = true,
+            ['access'] = true,
+            ['content'] = true,
+            ['log'] = true,
+        }
+
+        function _M.get_full_client_certificate_chain()
+            if not ALLOWED_PHASES[get_phase()] then
+                error("API disabled in the current context", 2)
+            end
+
+            local r = get_request()
+
+            size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
+
+    ::again::
+
+            local buf = get_string_buf(size_ptr[0])
+
+            local ret = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
+                r, buf, size_ptr)
+            if ret == NGX_OK then
+                return ffi_string(buf, size_ptr[0])
+            end
+
+            if ret == NGX_ERROR then
+                return nil, "error while obtaining client certificate chain"
+            end
+
+            if ret == NGX_ABORT then
+                return nil,
+                       "connection is not TLS or TLS support for Nginx not enabled"
+            end
+
+            if ret == NGX_DECLINED then
+                return nil
+            end
+
+            if ret == NGX_AGAIN then
+                goto again
+            end
+
+            error("unknown return code: " .. tostring(ret))
+        end
+    end
+
+
+    do
+        local ALLOWED_PHASES = {
+            ['rewrite'] = true,
+            ['balancer'] = true,
+            ['access'] = true,
+        }
+
+        function _M.set_upstream_cert_and_key(chain, key)
+            if not ALLOWED_PHASES[get_phase()] then
+                error("API disabled in the current context", 2)
+            end
+
+            if not chain or not key then
+                error("chain and key must not be nil", 2)
+            end
+
+            local r = get_request()
+
+            local ret = C.ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(
+                r, chain, key)
+            if ret == NGX_OK then
+                return true
+            end
+
+            if ret == NGX_ERROR then
+                return nil, "error while setting upstream client cert and key"
+            end
+
+            error("unknown return code: " .. tostring(ret))
+        end
+    end
+
+else -- stream
+    do
+        local ALLOWED_PHASES = {
+            ['preread'] = true,
+            ['balancer'] = true,
+        }
+
+        function _M.disable_proxy_ssl()
+            if not ALLOWED_PHASES[get_phase()] then
+                error("API disabled in the current context", 2)
+            end
+
+            local r = get_request()
+
+            local ret = C.ngx_stream_lua_kong_ffi_proxy_ssl_disable(r)
+            if ret == NGX_OK then
+                return true
+            end
+
+            if ret == NGX_ERROR then
+                return nil, "error while disabling upstream TLS handshake"
+            end
+
+            error("unknown return code: " .. tostring(ret))
+        end
     end
 end
 

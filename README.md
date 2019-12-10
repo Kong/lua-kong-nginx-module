@@ -13,7 +13,8 @@ Table of Contents
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
-    * [resty.kong.tls.upstream\_cert\_and\_key](#restykongtlsupstream_cert_and_key)
+    * [resty.kong.tls.set\_upstream\_cert\_and\_key](#restykongtlsset_upstream_cert_and_key)
+    * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
 * [License](#license)
 
 Description
@@ -44,6 +45,8 @@ resty.kong.tls.request\_client\_certificate
 
 **context:** *ssl_certificate_by_lua&#42;*
 
+**subsystems:** *http*
+
 Requests client to present its client-side certificate to initiate mutual TLS
 authentication between server and client.
 
@@ -65,6 +68,8 @@ resty.kong.tls.disable\_session\_reuse
 
 **context:** *ssl_certificate_by_lua&#42;*
 
+**subsystems:** *http*
+
 Prevents the TLS session for the current connection from being reused by
 disabling session ticket and session ID for the current TLS connection.
 
@@ -78,6 +83,8 @@ resty.kong.tls.get\_full\_client\_certificate\_chain
 **syntax:** *pem_chain, err = resty.kong.tls.get\_full\_client\_certificate\_chain()*
 
 **context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*
+
+**subsystems:** *http*
 
 Returns the PEM encoded downstream client certificate chain with the client certificate
 at the top and intermediate certificates (if any) at the bottom.
@@ -107,6 +114,8 @@ resty.kong.tls.set\_upstream\_cert\_and\_key
 
 **context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
 
+**subsystems:** *http*
+
 Overrides and enables sending client certificate while connecting to the
 upstream in the current request.
 
@@ -122,6 +131,24 @@ will be returned.
 
 This function can be called multiple times in the same request. Later calls override
 previous ones.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.disable\_proxy\_ssl
+----------------------------------
+**syntax:** *ok, err = resty.kong.tls.disable_proxy_ssl()*
+
+**context:** *preread_by_lua&#42;, balancer_by_lua&#42;*
+
+**subsystems:** *stream*
+
+Disables the TLS handshake to upstream for [ngx\_stream\_proxy\_module](https://nginx.org/en/docs/stream/ngx_stream_proxy_module.html).
+Effectively this overrides [proxy\_ssl](https://nginx.org/en/docs/stream/ngx_stream_proxy_module.html#proxy_ssl) directive to `off` setting
+for the current stream session.
+
+This function has no side effects if the `proxy_ssl off;` setting has already
+been specified inside `nginx.conf` or if this function has been previously
+called from the current session.
 
 [Back to TOC](#table-of-contents)
 
