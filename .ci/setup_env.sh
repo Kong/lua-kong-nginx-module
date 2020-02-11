@@ -71,3 +71,6 @@ nginx -V
 resty -V
 luarocks --version
 openssl version
+
+# Needed by tests of tls.set_upstream_trusted_store
+luarocks install lua-resty-openssl
