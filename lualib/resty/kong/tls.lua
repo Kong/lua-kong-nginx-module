@@ -29,6 +29,12 @@ if ngx.config.subsystem == "http" then
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
     int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
         void *_chain, void *_key);
+    int ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(ngx_http_request_t *r,
+        void *_store);
+    int ngx_http_lua_kong_ffi_set_upstream_ssl_verify(ngx_http_request_t *r,
+        int verify);
+    int ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth(ngx_http_request_t *r,
+        int depth);
     ]])
 
 else
@@ -189,6 +195,82 @@ if ngx.config.subsystem == "http" then
 
             if ret == NGX_ERROR then
                 return nil, "error while setting upstream client cert and key"
+            end
+
+            error("unknown return code: " .. tostring(ret))
+        end
+
+        function _M.set_upstream_ssl_trusted_store(store)
+            if not ALLOWED_PHASES[get_phase()] then
+                error("API disabled in the current context", 2)
+            end
+
+            if type(store) ~= 'cdata' then
+                error("store expects a cdata object but found " .. type(store), 2)
+            end
+
+            local r = get_request()
+
+            local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(
+                r, store)
+            if ret == NGX_OK then
+                return true
+            end
+
+            if ret == NGX_ERROR then
+                return nil, "error while setting upstream trusted store"
+            end
+
+            error("unknown return code: " .. tostring(ret))
+        end
+
+        function _M.set_upstream_ssl_verify(verify)
+            if not ALLOWED_PHASES[get_phase()] then
+                error("API disabled in the current context", 2)
+            end
+
+            if type(verify) ~= 'boolean' then
+                error("verify expects a boolean but found " .. type(verify), 2)
+            end
+
+            local r = get_request()
+
+            local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify(
+                r, verify)
+            if ret == NGX_OK then
+                return true
+            end
+
+            if ret == NGX_ERROR then
+                return nil, "error while setting upstream ssl verify mode"
+            end
+
+            error("unknown return code: " .. tostring(ret))
+        end
+
+        function _M.set_upstream_ssl_verify_depth(depth)
+            if not ALLOWED_PHASES[get_phase()] then
+                error("API disabled in the current context", 2)
+            end
+
+            if type(depth) ~= 'number' then
+                error("depth expects a number but found " .. type(depth), 2)
+            end
+
+            if depth < 0 then
+                error("depth expects a non-negative integer but found " .. tostring(depth), 2)
+            end
+
+            local r = get_request()
+
+            local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth(
+                r, depth)
+            if ret == NGX_OK then
+                return true
+            end
+
+            if ret == NGX_ERROR then
+                return nil, "error while setting upstream ssl verify depth"
             end
 
             error("unknown return code: " .. tostring(ret))
