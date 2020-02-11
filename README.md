@@ -14,6 +14,9 @@ Table of Contents
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
     * [resty.kong.tls.set\_upstream\_cert\_and\_key](#restykongtlsset_upstream_cert_and_key)
+    * [resty.kong.tls.set\_upstream\_ssl\_trusted\_store](#restykongtlsset_upstream_ssl_trusted_store)
+    * [resty.kong.tls.set\_upstream\_ssl\_verify](#restykongtlsset_upstream_ssl_verify)
+    * [resty.kong.tls.set\_upstream\_ssl\_verify\_depth](#restykongtlsset_upstream_ssl_verify_depth)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
 * [License](#license)
 
@@ -134,6 +137,106 @@ previous ones.
 
 [Back to TOC](#table-of-contents)
 
+resty.kong.tls.set\_upstream\_ssl\_trusted\_store
+--------------------------------------------
+**syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_trusted\_store(store)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+
+**subsystems:** *http*
+
+Set upstream ssl verification trusted store of current request. Global setting set by
+`proxy_ssl_trusted_certificate` will be overwritten for the current request.
+
+`store` is a `X509_STORE*` cdata that can be created by
+[resty.openssl.x509.store.new](https://github.com/fffonion/lua-resty-openssl#storenew).
+
+On success, this function returns `true` and future handshakes with upstream servers
+will be verified with given store. Otherwise `nil` and a string describing the
+error will be returned.
+
+This function can be called multiple times in the same request. Later calls override
+previous ones.
+
+Example:
+```lua
+local x509 = require("resty.openssl.x509")
+local crt, err = x509.new([[-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----]])
+if err then
+    ngx.log(ngx.ERR, "failed to parse cert: ", err)
+    ngx.exit(500)
+end
+local store = require("resty.openssl.x509.store")
+local st, err = store.new()
+if err then
+    ngx.log(ngx.ERR, "failed to create store: ", err)
+    ngx.exit(500)
+end
+local ok, err = st:add(crt)
+if err then
+    ngx.log(ngx.ERR, "failed to add cert to store: ", err)
+    ngx.exit(500)
+end
+-- st:add can be called multiple times, also accept a crl
+-- st:add(another_crt)
+-- st:add(crl)
+-- OR
+-- st:use_default() to load default CA bundle
+local tls = require("resty.kong.tls")
+local ok, err = tls.set_upstream_ssl_trusted_store(st.ctx)
+if err then
+    ngx.log(ngx.ERR, "failed to set upstream trusted store: ", err)
+    ngx.exit(500)
+end
+local ok, err = tls.set_upstream_ssl_verify(true)
+if err then
+    ngx.log(ngx.ERR, "failed to set upstream ssl verify: ", err)
+    ngx.exit(500)
+end
+```
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.set\_upstream\_ssl\_verify
+--------------------------------------------
+**syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_verify(verify)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+
+**subsystems:** *http*
+
+Set upstream ssl verification enablement of current request to the given boolean
+argument `verify`. Global setting set by `proxy_ssl_verify` will be overwritten.
+
+On success, this function returns `true`. Otherwise `nil` and a string
+describing the error will be returned.
+
+This function can be called multiple times in the same request. Later calls override
+previous ones.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.set\_upstream\_ssl\_verify\_depth
+--------------------------------------------
+**syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_verify\_depth(depth)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+
+**subsystems:** *http*
+
+Set upstream ssl verification depth of current request to the given non-negative integer
+argument `depth`. Global setting set by `proxy_ssl_verify_depth` will be overwritten.
+
+On success, this function returns `true`. Otherwise `nil` and a string
+describing the error will be returned.
+
+This function can be called multiple times in the same request. Later calls override
+previous ones.
+
+[Back to TOC](#table-of-contents)
+
 resty.kong.tls.disable\_proxy\_ssl
 ----------------------------------
 **syntax:** *ok, err = resty.kong.tls.disable_proxy_ssl()*
@@ -172,4 +275,3 @@ limitations under the License.
 ```
 
 [Back to TOC](#table-of-contents)
-
