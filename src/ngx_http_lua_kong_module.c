@@ -624,3 +624,13 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 }
 
 #endif
+
+
+extern ngx_int_t ngx_http_proxy_create_request(ngx_http_request_t *r);
+
+
+ngx_int_t
+ngx_http_lua_kong_ffi_recreate_request(ngx_http_request_t *r)
+{
+    return ngx_http_proxy_create_request(r);
+}
