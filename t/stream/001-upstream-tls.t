@@ -20,9 +20,10 @@ __DATA__
 --- stream_server_config
     proxy_pass mockbin.com:443;
     proxy_ssl on;
---- stream_request
-GET /
---- stream_response_like: ^{"message":"no Route matched with those values"}$
+    proxy_ssl_server_name on;
+--- stream_request eval
+"GET / HTTP/1.0\r\nHost: mockbin.com\r\n\r\n"
+--- stream_response_like: ^HTTP/1.1 200 OK
 --- no_error_log
 [error]
 
@@ -32,9 +33,9 @@ GET /
 --- stream_server_config
     proxy_pass mockbin.com:80;
     proxy_ssl off;
---- stream_request
-GET /
---- stream_response_like: ^{"message":"no Route matched with those values"}$
+--- stream_request eval
+"GET / HTTP/1.0\r\nHost: mockbin.com\r\n\r\n"
+--- stream_response_like: ^HTTP/1.1 200 OK
 --- no_error_log
 [error]
 
@@ -53,8 +54,8 @@ GET /
 
         assert(tls.disable_proxy_ssl())
     }
---- stream_request
-GET /
+--- stream_request eval
+"GET / HTTP/1.0\r\nHost: mockbin.com\r\n\r\n"
 --- stream_response_like: ^.+400 The plain HTTP request was sent to HTTPS port.+$
 --- no_error_log
 [error]
