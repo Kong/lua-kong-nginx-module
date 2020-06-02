@@ -200,28 +200,33 @@ if ngx.config.subsystem == "http" then
             error("unknown return code: " .. tostring(ret))
         end
 
-        function _M.set_upstream_ssl_trusted_store(store)
-            if not ALLOWED_PHASES[get_phase()] then
-                error("API disabled in the current context", 2)
-            end
+        do
+          local store_lib = require("resty.openssl.x509.store")
 
-            if type(store) ~= 'cdata' then
-                error("store expects a cdata object but found " .. type(store), 2)
-            end
+          function _M.set_upstream_ssl_trusted_store(store)
+              if not ALLOWED_PHASES[get_phase()] then
+                  error("API disabled in the current context", 2)
+              end
 
-            local r = get_request()
+              if not store_lib.istype(store) then
+                  error("store expects a resty.openssl.x509.store" ..
+                        " object but found " .. type(store), 2)
+              end
 
-            local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(
-                r, store)
-            if ret == NGX_OK then
-                return true
-            end
+              local r = get_request()
 
-            if ret == NGX_ERROR then
-                return nil, "error while setting upstream trusted store"
-            end
+              local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(
+                  r, store.ctx)
+              if ret == NGX_OK then
+                  return true
+              end
 
-            error("unknown return code: " .. tostring(ret))
+              if ret == NGX_ERROR then
+                  return nil, "error while setting upstream trusted store"
+              end
+
+              error("unknown return code: " .. tostring(ret))
+          end
         end
 
         function _M.set_upstream_ssl_verify(verify)
