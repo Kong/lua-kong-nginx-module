@@ -651,7 +651,7 @@ X509_check_host(): match
                 f:close()
                 assert(s:add(x509.new(cert_data)))
             end
-            local ok, err = tls.set_upstream_ssl_trusted_store(s.ctx)
+            local ok, err = tls.set_upstream_ssl_trusted_store(s)
             if not ok then
                 ngx.say("set_upstream_ssl_trusted_store failed: ", err)
             end
@@ -718,7 +718,7 @@ upstream SSL certificate verify error: (2:unable to get issuer certificate)
                 f:close()
                 assert(s:add(x509.new(cert_data)))
             end
-            local ok, err = tls.set_upstream_ssl_trusted_store(s.ctx)
+            local ok, err = tls.set_upstream_ssl_trusted_store(s)
             if not ok then
                 ngx.say("set_upstream_ssl_trusted_store failed: ", err)
             end
@@ -786,7 +786,7 @@ X509_check_host(): match
                 assert(s:add(x509.new(cert_data)))
             end
             for i=0,3 do
-                local ok, err = tls.set_upstream_ssl_trusted_store(s.ctx)
+                local ok, err = tls.set_upstream_ssl_trusted_store(s)
                 if not ok then
                     ngx.say("set_upstream_ssl_trusted_store failed: ", err)
                     return

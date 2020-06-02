@@ -148,7 +148,7 @@ resty.kong.tls.set\_upstream\_ssl\_trusted\_store
 Set upstream ssl verification trusted store of current request. Global setting set by
 `proxy_ssl_trusted_certificate` will be overwritten for the current request.
 
-`store` is a `X509_STORE*` cdata that can be created by
+`store` is a table object that can be created by
 [resty.openssl.x509.store.new](https://github.com/fffonion/lua-resty-openssl#storenew).
 
 On success, this function returns `true` and future handshakes with upstream servers
