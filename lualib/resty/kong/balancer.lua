@@ -2,7 +2,25 @@ local _M = {}
 
 
 local ffi = require("ffi")
-local get_request = require("resty.core.base").get_request
+local get_request
+do
+    local ok, exdata = pcall(require, "thread.exdata")
+    if ok and exdata then
+        function get_request()
+            local r = exdata()
+            if r ~= nil then
+                return r
+            end
+        end
+
+    else
+        local getfenv = getfenv
+
+        function get_request()
+            return getfenv(0).__ngx_req
+        end
+    end
+end
 
 
 if ngx.config.subsystem == "http" then
