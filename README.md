@@ -27,6 +27,12 @@ has been done using various core patches. This module attempts to unify those ap
 and ensure the least amount of modifications made directly to Nginx to support future
 maintainability.
 
+Patches from [openresty-patches](https://github.com/Kong/kong-build-tools/tree/master/openresty-patches/patches)
+are **required** for this module to compile successfully.
+You may use the [openresty-build-tools](https://github.com/Kong/kong-build-tools/tree/master/openresty-build-tools)
+script to automatically build an OpenResty binary with required patches as well as this module
+included.
+
 Install
 =======
 This module can be installed just like any ordinary Nginx C module, using the
