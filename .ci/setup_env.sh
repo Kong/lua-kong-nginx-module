@@ -17,7 +17,7 @@ OPENSSL=$(dep_version RESTY_OPENSSL_VERSION)
 DEPS_HASH=$(cat .ci/setup_env.sh .travis.yml .requirements | md5sum | awk '{ print $1 }')
 DOWNLOAD_ROOT=${DOWNLOAD_ROOT:=/download-root}
 BUILD_TOOLS_DOWNLOAD=$DOWNLOAD_ROOT/kong-build-tools
-BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=master}
+BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=feat/grpc_authority}
 
 if [ ! -d $BUILD_TOOLS_DOWNLOAD ]; then
     git clone -b $BUILD_TOOLS_BRANCH -q https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
