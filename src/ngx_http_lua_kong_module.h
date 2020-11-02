@@ -12,6 +12,7 @@ typedef struct {
     EVP_PKEY            *upstream_client_private_key;
     X509_STORE          *upstream_trusted_store;
     ngx_uint_t          upstream_ssl_verify_depth;
+    ngx_str_t           grpc_authority;
     unsigned            upstream_ssl_verify:1;
     unsigned            upstream_ssl_verify_set:1;
     unsigned            upstream_ssl_verify_depth_set:1;
@@ -20,6 +21,8 @@ typedef struct {
 
 void ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r,
     ngx_connection_t *c);
+void ngx_http_lua_kong_set_grpc_authority(ngx_http_request_t *r,
+    ngx_str_t *host);
 
 ngx_flag_t
 ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
