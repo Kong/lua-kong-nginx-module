@@ -28,6 +28,7 @@ int ngx_http_lua_kong_ffi_set_grpc_authority(ngx_http_request_t *r,
 
 
 local error = error
+local type = type
 local C = ffi.C
 local get_request = base.get_request
 local get_phase = ngx.get_phase
@@ -48,10 +49,18 @@ do
             error("API disabled in the current context", 2)
         end
 
+        if type(authority) ~= "string" then
+            error("incorrect argument, expects a string, got " ..
+                  type(authority), 2)
+        end
+
+        if authority == "" then
+            error("incorrect argument, the value can not be empty string", 2)
+        end
+
         local r = get_request()
 
-        local ret = C.ngx_http_lua_kong_ffi_set_grpc_authority(r,
-                                                               authority,
+        local ret = C.ngx_http_lua_kong_ffi_set_grpc_authority(r, authority,
                                                                #authority)
         if ret == NGX_OK then
             return true
