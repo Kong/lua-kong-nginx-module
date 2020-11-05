@@ -1,5 +1,5 @@
 /**
- * Copyright 2019 Kong Inc.
+ * Copyright 2019-2020 Kong Inc.
 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ static int
 ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store);
 #endif
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
+static ngx_http_lua_kong_ctx_t *ngx_http_lua_kong_get_module_ctx(
+    ngx_http_request_t *r);
 
 
 static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
@@ -306,6 +308,52 @@ done:
 #else
     return NGX_ABORT;
 #endif
+}
+
+
+int
+ngx_http_lua_kong_ffi_set_grpc_authority(ngx_http_request_t *r,
+    const char *buf, size_t buf_len)
+{
+    u_char                      *host;
+    ngx_http_lua_kong_ctx_t     *ctx;
+
+    ctx = ngx_http_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return NGX_ERROR;
+    }
+
+    host = ngx_palloc(r->pool, buf_len);
+    if (host == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_memcpy(host, buf, buf_len);
+
+    ctx->grpc_authority.data = host;
+    ctx->grpc_authority.len = buf_len;
+
+    return NGX_OK;
+}
+
+
+void
+ngx_http_lua_kong_set_grpc_authority(ngx_http_request_t *r,
+    ngx_str_t *host)
+{
+    ngx_http_lua_kong_ctx_t     *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
+    if (ctx == NULL) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                       "skip overriding gRPC authority pseudo-header, "
+                       "module ctx not set");
+        return;
+    }
+
+    if (ctx->grpc_authority.data != NULL) {
+        *host = ctx->grpc_authority;
+    }
 }
 
 
@@ -623,4 +671,4 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
     return ctx->upstream_ssl_verify;
 }
 
-#endif
+#endif /* NGX_HTTP_SSL */
