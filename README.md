@@ -248,7 +248,7 @@ resty.kong.grpc.set\_authority
 ------------------------------
 **syntax:** *ok, err = resty.kong.grpc.set_authority(new_authority)*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
 
 **subsystems:** *http*
 
@@ -273,6 +273,9 @@ describing the error will be returned.
 
 This function can be called multiple times in the same request. Later calls override
 previous ones.
+
+If called in the `balancer_by_lua` context, the request needs to be recreated
+(see [balancer.recreate](https://github.com/openresty/lua-resty-core/blob/master/lib/ngx/balancer.md#recreate_request).
 
 [Back to TOC](#table-of-contents)
 

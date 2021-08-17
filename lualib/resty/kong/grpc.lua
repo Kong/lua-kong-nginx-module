@@ -42,6 +42,7 @@ do
     local ALLOWED_PHASES = {
         ['rewrite'] = true,
         ['access'] = true,
+        ['balancer'] = true,
     }
 
     function _M.set_authority(authority)
