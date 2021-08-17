@@ -3,8 +3,6 @@
 use Test::Nginx::Socket::Lua;
 use Cwd qw(cwd);
 
-repeat_each(2);
-
 plan tests => repeat_each() * (blocks() * 5);
 
 my $pwd = cwd();
@@ -225,3 +223,60 @@ falseincorrect argument, expects a string, got number
 [error]
 [crit]
 [alert]
+
+
+
+=== TEST 6: recreate upstream module requests with authority header change
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    server {
+        listen 127.0.0.1:12346 http2;
+        server_name   example.com;
+
+        server_tokens off;
+
+        location / {
+            default_type 'text/plain';
+            more_clear_headers Date;
+            echo ':authority: $http_host';
+        }
+    }
+
+    upstream backend {
+        server 0.0.0.1;
+
+        balancer_by_lua_block {
+            print("here")
+            local b = require "ngx.balancer"
+            local grpc = require("resty.kong.grpc")
+
+            if ngx.ctx.balancer_run then
+                print"IF"
+                grpc.set_authority("try2")
+                assert(b.set_current_peer("127.0.0.1", 12346))
+                assert(b.recreate_request())
+
+            else
+                print"ELSE"
+                grpc.set_authority("try1")
+                ngx.ctx.balancer_run = true
+                assert(b.set_current_peer("127.0.0.3", 12345))
+                assert(b.set_more_tries(1))
+            end
+        }
+    }
+--- config
+    location = /t {
+         grpc_pass grpc://backend;
+    }
+
+--- request
+GET /t
+--- response_body
+:authority: try2
+--- error_log
+connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1
+--- no_error_log
+[warn]
+[crit]
