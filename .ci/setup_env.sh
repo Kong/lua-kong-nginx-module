@@ -20,11 +20,11 @@ BUILD_TOOLS_DOWNLOAD=$DOWNLOAD_ROOT/kong-build-tools
 BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=master}
 
 if [ ! -d $BUILD_TOOLS_DOWNLOAD ]; then
-    git clone -b $BUILD_TOOLS_BRANCH -q https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
+    git clone -b $BUILD_TOOLS_BRANCH https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
 else
     pushd $BUILD_TOOLS_DOWNLOAD
         git fetch
-        git reset --hard $BUILD_TOOLS_BRANCH
+        git reset --hard origin/$BUILD_TOOLS_BRANCH
     popd
 fi
 
