@@ -18,6 +18,9 @@ typedef struct {
     unsigned            upstream_ssl_verify_depth_set:1;
 } ngx_http_lua_kong_ctx_t;
 
+char *
+ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+
 
 void ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r,
     ngx_connection_t *c);

@@ -48,11 +48,24 @@ static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
     NULL                                     /* merge location configuration */
 };
 
+// static ngx_command_t ngx_http_lua_kong_cmds[] = {
+
+//     { ngx_string("lua_kong_load_var_index"),
+//       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
+//                         |NGX_CONF_TAKE1,
+//       ngx_http_lua_kong_load_var_index,
+//       NGX_HTTP_LOC_CONF_OFFSET,
+//       0,
+//       NULL },
+
+//     ngx_null_command
+// };
+
 
 ngx_module_t ngx_http_lua_kong_module = {
     NGX_MODULE_V1,
     &ngx_http_lua_kong_module_ctx,     /* module context */
-    NULL,                              /* module directives */
+    NULL, // ngx_http_lua_kong_cmds,            /* module directives */
     NGX_HTTP_MODULE,                   /* module type */
     NULL,                              /* init master */
     NULL,                              /* init module */
@@ -670,5 +683,247 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 
     return ctx->upstream_ssl_verify;
 }
+# endif
 
-#endif /* NGX_HTTP_SSL */
+// char *
+// ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+// {
+
+//     ngx_str_t                     *value;
+//     ngx_int_t                      index;
+
+//     value = cf->args->elts;
+
+//     if (value[1].len == 0) {
+//         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+//                            "invalid variable name size \"%V\"",
+//                            &value[1]);
+//         return NGX_CONF_ERROR;
+//     }
+
+//     index = ngx_http_get_variable_index(cf, &value[1]);
+
+//     if (index == NGX_ERROR) {
+//         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+//                            "variable \"%V\" is not found",
+//                            &value[1]);
+//         return NGX_CONF_ERROR;
+//     }
+
+//     return NGX_CONF_OK;
+// }
+
+int
+ngx_http_lua_kong_ffi_var_load_index(u_char *name_data,
+    size_t name_len, ngx_uint_t *index, char **err)
+{
+    ngx_uint_t                  i;
+    ngx_http_variable_t        *v;
+    ngx_str_t                   name;
+    ngx_http_core_main_conf_t  *cmcf;
+
+    name.data = name_data;
+    name.len = name_len;
+
+    cmcf = ngx_http_cycle_get_module_main_conf(ngx_cycle, ngx_http_core_module);
+
+    /* From src/http/ngx_http_variables.c:ngx_http_get_variable_index */
+    v = cmcf->variables.elts;
+
+    if (v == NULL) {
+        /* This function will always be called post config, so we can assume the variable
+            array always exists
+        */
+        *err = "can't access variables array";
+        return NGX_ERROR;
+
+    } else {
+        for (i = 0; i < cmcf->variables.nelts; i++) {
+            if (name.len != v[i].name.len
+                || ngx_strncasecmp(name.data, v[i].name.data, name.len) != 0)
+            {
+                continue;
+            }
+
+            *index = i;
+            return NGX_OK;
+        }
+    }
+
+    v = ngx_array_push(&cmcf->variables);
+    if (v == NULL) {
+        *err = "no memory";
+        return NGX_ERROR;
+    }
+
+    v->name.len = name.len;
+    v->name.data = ngx_pnalloc(ngx_cycle->pool, name.len);
+    if (v->name.data == NULL) {
+        *err = "no memory";
+        return NGX_ERROR;
+    }
+
+    ngx_strlow(v->name.data, name.data, name.len);
+
+    v->set_handler = NULL;
+    v->get_handler = NULL;
+    v->data = 0;
+    v->flags = 0;
+    v->index = cmcf->variables.nelts - 1;
+
+    *index = v->index;
+
+    return NGX_OK;
+}
+
+int
+ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
+    u_char **value, size_t *value_len, char **err)
+{
+    ngx_http_variable_value_t   *vv;
+
+    if (r == NULL) {
+        *err = "no request object found";
+        return NGX_ERROR;
+    }
+
+    if ((r)->connection->fd == (ngx_socket_t) -1) {
+        *err = "API disabled in the current context";
+        return NGX_ERROR;
+    }
+
+    vv = ngx_http_get_indexed_variable(r, index);
+    if (vv == NULL || vv->not_found) {
+        return NGX_DECLINED;
+    }
+
+    *value = vv->data;
+    *value_len = vv->len;
+    return NGX_OK;
+}
+
+
+int
+ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
+    u_char *value, size_t value_len, char **err)
+{
+    u_char                      *p;
+    ngx_http_variable_t         *v;
+    ngx_http_variable_value_t   *vv;
+    ngx_http_core_main_conf_t   *cmcf;
+
+    if (r == NULL) {
+        *err = "no request object found";
+        return NGX_ERROR;
+    }
+
+    if ((r)->connection->fd == (ngx_socket_t) -1) {
+        *err = "API disabled in the current context";
+        return NGX_ERROR;
+    }
+
+    cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+
+    if (index >= cmcf->variables.nelts) {
+       *err = "variable index out of range";
+        return NGX_ERROR;
+    }
+
+    v = ((ngx_http_variable_t*) cmcf->variables.elts) + index;
+
+    // following is not changed from openresty/lua-nginx-module/blob/master/src/ngx_http_lua_variable.c
+
+    if (v) {
+        if (!(v->flags & NGX_HTTP_VAR_CHANGEABLE)) {
+            *err = "variable not changeable";
+            return NGX_ERROR;
+        }
+
+        if (v->set_handler) {
+
+            if (value != NULL && value_len) {
+                vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t)
+                                + value_len);
+                if (vv == NULL) {
+                    goto nomem;
+                }
+
+                p = (u_char *) vv + sizeof(ngx_http_variable_value_t);
+                ngx_memcpy(p, value, value_len);
+                value = p;
+
+            } else {
+                vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t));
+                if (vv == NULL) {
+                    goto nomem;
+                }
+            }
+
+            if (value == NULL) {
+                vv->valid = 0;
+                vv->not_found = 1;
+                vv->no_cacheable = 0;
+                vv->data = NULL;
+                vv->len = 0;
+
+            } else {
+                vv->valid = 1;
+                vv->not_found = 0;
+                vv->no_cacheable = 0;
+
+                vv->data = value;
+                vv->len = value_len;
+            }
+
+            v->set_handler(r, vv, v->data);
+            return NGX_OK;
+        }
+
+        if (v->flags & NGX_HTTP_VAR_INDEXED) {
+            vv = &r->variables[v->index];
+
+            if (value == NULL) {
+                vv->valid = 0;
+                vv->not_found = 1;
+                vv->no_cacheable = 0;
+
+                vv->data = NULL;
+                vv->len = 0;
+
+            } else {
+                p = ngx_palloc(r->pool, value_len);
+                if (p == NULL) {
+                    goto nomem;
+                }
+
+                ngx_memcpy(p, value, value_len);
+                value = p;
+
+                vv->valid = 1;
+                vv->not_found = 0;
+                vv->no_cacheable = 0;
+
+                vv->data = value;
+                vv->len = value_len;
+            }
+
+            return NGX_OK;
+        }
+
+        *err = "variable cannot be assigned a value";
+        return NGX_ERROR;
+    }
+
+    /* variable not found */
+
+    *err= "variable not found for writing; "
+        "maybe it is a built-in variable that is not "
+        "changeable or you forgot to use \"set\" directive"
+        "in the config file to define it first";
+    return NGX_ERROR;
+
+nomem:
+
+    *err = "no memory";
+    return NGX_ERROR;
+}
