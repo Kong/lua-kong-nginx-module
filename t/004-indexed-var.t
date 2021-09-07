@@ -13,8 +13,7 @@ no_long_string();
 #no_diff();
 
 our $HttpConfig = qq{
-    #lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;t/?.lua;;";
-    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;t/?.lua;lib/?.lua;;";
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;t/?.lua;;";
 
     init_by_lua_block {
         _G.test_var = require "var"

@@ -685,34 +685,6 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 }
 # endif
 
-// char *
-// ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
-// {
-
-//     ngx_str_t                     *value;
-//     ngx_int_t                      index;
-
-//     value = cf->args->elts;
-
-//     if (value[1].len == 0) {
-//         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-//                            "invalid variable name size \"%V\"",
-//                            &value[1]);
-//         return NGX_CONF_ERROR;
-//     }
-
-//     index = ngx_http_get_variable_index(cf, &value[1]);
-
-//     if (index == NGX_ERROR) {
-//         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-//                            "variable \"%V\" is not found",
-//                            &value[1]);
-//         return NGX_CONF_ERROR;
-//     }
-
-//     return NGX_CONF_OK;
-// }
-
 int
 ngx_http_lua_kong_ffi_var_load_index(u_char *name_data,
     size_t name_len, ngx_uint_t *index, char **err)
@@ -727,13 +699,14 @@ ngx_http_lua_kong_ffi_var_load_index(u_char *name_data,
 
     cmcf = ngx_http_cycle_get_module_main_conf(ngx_cycle, ngx_http_core_module);
 
-    /* From src/http/ngx_http_variables.c:ngx_http_get_variable_index */
+    /* from src/http/ngx_http_variables.c:ngx_http_get_variable_index */
     v = cmcf->variables.elts;
 
     if (v == NULL) {
-        /* This function will always be called post config, so we can assume the variable
-            array always exists
-        */
+        /*
+         * this function will always be called post config,
+         * so we can assume the variable array always exists
+         */
         *err = "can't access variables array";
         return NGX_ERROR;
 
@@ -831,7 +804,10 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
 
     v = ((ngx_http_variable_t*) cmcf->variables.elts) + index;
 
-    // following is not changed from openresty/lua-nginx-module/blob/master/src/ngx_http_lua_variable.c
+    /*
+     * following is not changed from
+     * openresty/lua-nginx-module/blob/master/src/ngx_http_lua_variable.c
+     */
 
     if (v) {
         if (!(v->flags & NGX_HTTP_VAR_CHANGEABLE)) {

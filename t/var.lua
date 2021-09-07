@@ -31,8 +31,8 @@ local ERR_BUF_SIZE = 256
 
 local variable_index = {}
 
-
-ngx.var = new_tab(0, 0)
+-- Changed to distinguish between stock ngx.var
+ngx.var_indexed = new_tab(0, 0)
 
 
 if subsystem == "http" then
@@ -218,7 +218,8 @@ do
     mt.__index = var_get
     mt.__newindex = var_set
 
-    setmetatable(ngx.var, mt)
+    -- Changed to distinguish between stock ngx.var
+    setmetatable(ngx.var_indexed, mt)
 end
 
 
