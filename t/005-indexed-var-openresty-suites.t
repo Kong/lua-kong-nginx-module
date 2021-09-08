@@ -46,7 +46,7 @@ new: nil
 === TEST 2: set variables with set_handler to nil
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "args";
+    lua_kong_load_var_index $args;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -90,7 +90,7 @@ value: nil
 === TEST 4: no-hash variables
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "proxy_host";
+    lua_kong_load_var_index $proxy_host;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -139,7 +139,7 @@ value: 32
 github issue #239
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "invalid_referer";
+    lua_kong_load_var_index $invalid_referer;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -170,7 +170,7 @@ invalid referer:
 github issue #239
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "invalid_referer";
+    lua_kong_load_var_index $invalid_referer;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -200,9 +200,9 @@ invalid referer: 1
 === TEST 8: $proxy_host & $proxy_port & $proxy_add_x_forwarded_for
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "proxy_host";
-    lua_kong_load_var_index "proxy_port";
-    lua_kong_load_var_index "proxy_add_x_forwarded_for";
+    lua_kong_load_var_index $proxy_host;
+    lua_kong_load_var_index $proxy_port;
+    lua_kong_load_var_index $proxy_add_x_forwarded_for;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -279,7 +279,7 @@ bad variable name
 === TEST 11: set a variable that is not changeable
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "query_string";
+    lua_kong_load_var_index $query_string;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -301,7 +301,7 @@ variable not changeable
 === TEST 12: get a variable in balancer_by_lua_block
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "port";
+    lua_kong_load_var_index $port;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }

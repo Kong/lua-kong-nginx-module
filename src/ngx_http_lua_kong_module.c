@@ -15,7 +15,6 @@
  */
 
 
-#include <assert.h>
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -30,6 +29,14 @@ static int ngx_http_lua_kong_ssl_no_session_cache_flag_index = -1;
 static int
 ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store);
 #endif
+
+#ifdef NGX_LUA_USE_ASSERT
+#include <assert.h>
+#   define ngx_http_lua_assert(a)  assert(a)
+#else
+#   define ngx_http_lua_assert(a)
+#endif
+
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
 static ngx_http_lua_kong_ctx_t *ngx_http_lua_kong_get_module_ctx(
     ngx_http_request_t *r);
@@ -693,12 +700,14 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-    if (value[1].len == 0) {
+    if (value[1].data[0] != '$') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "invalid variable name size \"%V\"",
-                           &value[1]);
+                            "invalid variable name \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
     }
+
+    value[1].len--;
+    value[1].data++;
 
     index = ngx_http_get_variable_index(cf, &value[1]);
 
@@ -712,9 +721,8 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
-int
-ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names,
-    unsigned int *count, char **err)
+ngx_uint_t
+ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names)
 {
     ngx_uint_t                  i;
     ngx_http_variable_t        *v;
@@ -722,16 +730,20 @@ ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names,
 
     cmcf = ngx_http_cycle_get_module_main_conf(ngx_cycle, ngx_http_core_module);
 
+    /* return required size only */
+    if (names == NULL) {
+        return cmcf->variables.nelts;
+    }
+
     v = cmcf->variables.elts;
 
-    assert(v != NULL);
+    ngx_http_lua_assert(v != NULL);
 
-    for (i = 0; i < cmcf->variables.nelts && i < *count; i++) {
-        assert(v[i].index == i);
+    for (i = 0; i < cmcf->variables.nelts; i++) {
+        ngx_http_lua_assert(v[i].index == i);
         names[i] = &v[i].name;
     }
 
-    *count = i - 1;
     return NGX_OK;
 }
 
@@ -783,10 +795,7 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
 
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
-    if (index >= cmcf->variables.nelts) {
-       *err = "variable index out of range";
-        return NGX_ERROR;
-    }
+    ngx_http_lua_assert(index < cmcf->variables.nelts);
 
     v = ((ngx_http_variable_t *) cmcf->variables.elts) + index;
 
@@ -840,7 +849,7 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
         return NGX_OK;
     }
 
-    assert(v->flags & NGX_HTTP_VAR_INDEXED);
+    ngx_http_lua_assert(v->flags & NGX_HTTP_VAR_INDEXED);
 
     vv = &r->variables[index];
 

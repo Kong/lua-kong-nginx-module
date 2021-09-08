@@ -19,7 +19,7 @@ __DATA__
 === TEST 1: lua_kong_load_var_index directive works
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_var_index "realip_remote_addr";
+    lua_kong_load_var_index $realip_remote_addr;
 
 --- config
     set $variable_1 'value1';
@@ -47,7 +47,7 @@ value1
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     # this is not required for variable defined by set
     # but set explictly in tests
-    lua_kong_load_var_index "variable_2";
+    lua_kong_load_var_index $variable_2;
 
     init_by_lua_block {
         local var = require "resty.kong.var"
@@ -77,7 +77,7 @@ GET /t
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     # this is not required, but set explictly in tests
-    lua_kong_load_var_index "variable_3";
+    lua_kong_load_var_index $variable_3;
 
     init_by_lua_block {
         local var = require "resty.kong.var"
@@ -115,7 +115,7 @@ value3
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     # this is not required, but set explictly in tests
-    lua_kong_load_var_index "variable_4";
+    lua_kong_load_var_index $variable_4;
 
     init_by_lua_block {
         local var = require "resty.kong.var"

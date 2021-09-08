@@ -8,13 +8,18 @@ local ffi_str = ffi.string
 local type = type
 local error = error
 local tostring = tostring
+local tonumber = tonumber
 local getmetatable = getmetatable
 local get_request = base.get_request
 local get_size_ptr = base.get_size_ptr
 local subsystem = ngx.config.subsystem
+local NGX_OK = ngx.OK
+local NGX_ERROR = ngx.ERROR
+local NGX_DECLINED = ngx.DECLINED
 
 
 local variable_index = {}
+local metatable_patched
 
 local ngx_lua_kong_ffi_var_get_by_index
 local ngx_lua_kong_ffi_var_set_by_index
@@ -30,8 +35,7 @@ if subsystem == "http" then
         unsigned int index, const unsigned char *value, size_t value_len,
         char **err);
 
-    int ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names,
-        unsigned int *count, char **err);
+    unsigned int ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names);
     ]]
 
     ngx_lua_kong_ffi_var_get_by_index = C.ngx_http_lua_kong_ffi_var_get_by_index
@@ -43,29 +47,23 @@ end
 local value_ptr = ffi_new("unsigned char *[1]")
 local errmsg = base.get_errmsg_ptr()
 
-local function load_indexes(count)
+local function load_indexes()
     if ngx.get_phase() ~= "init" then
         error("load_indexes can only be called in init phase")
     end
 
-    count = count or 100
+    local count = ngx_lua_kong_ffi_var_load_indexes(nil)
+    count = tonumber(count)
+
     local names_buf = ffi_new("ngx_str_t *[?]", count)
-    local count_ptr = ffi_new("unsigned int [1]")
-    count_ptr[0] = count
 
-    local rc = ngx_lua_kong_ffi_var_load_indexes(names_buf,
-                                                 count_ptr, errmsg)
+    local rc = ngx_lua_kong_ffi_var_load_indexes(names_buf)
 
-    if rc == 0 then -- NGX_OK
-        count = tonumber(count_ptr[0])
-        for i = 0, count do
+    if rc == NGX_OK then
+        for i = 0, count-1 do
             local name = ffi_str(names_buf[i].data, names_buf[i].len)
             variable_index[name] = i
         end
-    end
-
-    if rc == -1 then  -- NGX_ERROR
-        error(ffi_str(errmsg[0]), 2)
     end
 
     return variable_index
@@ -81,15 +79,15 @@ local function var_get_by_index(index)
 
     local rc = ngx_lua_kong_ffi_var_get_by_index(r, index, value_ptr, value_len, errmsg)
 
-    if rc == 0 then -- NGX_OK
+    if rc == NGX_OK then
         return ffi_str(value_ptr[0], value_len[0])
     end
 
-    if rc == -5 then  -- NGX_DECLINED
+    if rc == NGX_DECLINED then
         return nil
     end
 
-    if rc == -1 then  -- NGX_ERROR
+    if rc == NGX_ERROR then
         error(ffi_str(errmsg[0]), 2)
     end
 end
@@ -113,13 +111,11 @@ local function var_set_by_index(index, value)
     local rc = ngx_lua_kong_ffi_var_set_by_index(r, index, value,
                                                  value_len, errmsg)
 
-    -- ngx.log(ngx.WARN, "rc = ", rc)
-
-    if rc == 0 then -- NGX_OK
+    if rc == NGX_OK then
         return
     end
 
-    if rc == -1 then  -- NGX_ERROR
+    if rc == NGX_ERROR then
         error(ffi_str(errmsg[0]), 2)
     end
 end
@@ -128,6 +124,12 @@ local function patch_metatable()
     if ngx.get_phase() ~= "init" then
         error("patch_metatable can only be called in init phase")
     end
+
+    if metatable_patched then
+        error("patch_metatable should only be called once")
+    end
+
+    patch_metatable = true
 
     load_indexes()
 
@@ -152,8 +154,6 @@ local function patch_metatable()
 
         return orig_set(self, name, value)
     end
-
-    --setmetatable(ngx.var, mt)
 end
 
 if subsystem == "stream" then
