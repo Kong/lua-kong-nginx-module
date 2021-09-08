@@ -337,10 +337,15 @@ resty.kong.var.patch\_metatable
 
 **subsystems:** *http*
 
-Replace the get/set method of ngx.var to use index. Variables that are not indexed
-will fallback to use the original get/set method.
+Indexed variable access is a faster way of accessing Nginx variables for OpenResty.
+This method patches the metatable of `ngx.var` to enable index access to variables
+that supports it. It should be called once in the `init` phase which will be effective for
+all subsequent `ngx.var` uses.
 
-To index an variable before access, user may use [lua_kong_load_var_index](#lua_kong_load_var_index)
+For variables that does not have indexed access, the slower hash based lookup will
+be used instead (this is the OpenResty default behavior).
+
+To ensure a variable can be accessed using index, you can use the [lua_kong_load_var_index](#lua_kong_load_var_index)
 directive.
 
 [Back to TOC](#table-of-contents)

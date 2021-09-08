@@ -108,7 +108,7 @@ local function var_set_by_index(index, value)
     end
 
     local rc = ngx_lua_kong_ffi_var_set_by_index(r, index, value,
-                                                      value_len, errmsg)
+                                                 value_len, errmsg)
 
     -- ngx.log(ngx.WARN, "rc = ", rc)
 

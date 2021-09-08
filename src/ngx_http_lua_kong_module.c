@@ -49,12 +49,12 @@ static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
     NULL                                     /* merge location configuration */
 };
 
-static ngx_command_t ngx_http_lua_kong_cmds[] = {
+static ngx_command_t ngx_http_lua_kong_commands[] = {
 
     { ngx_string("lua_kong_load_var_index"),
       NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
       ngx_http_lua_kong_load_var_index,
-      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
       0,
       NULL },
 
@@ -65,7 +65,7 @@ static ngx_command_t ngx_http_lua_kong_cmds[] = {
 ngx_module_t ngx_http_lua_kong_module = {
     NGX_MODULE_V1,
     &ngx_http_lua_kong_module_ctx,     /* module context */
-    ngx_http_lua_kong_cmds,            /* module directives */
+    ngx_http_lua_kong_commands,        /* module directives */
     NGX_HTTP_MODULE,                   /* module type */
     NULL,                              /* init master */
     NULL,                              /* init module */
@@ -688,7 +688,6 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 char *
 ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-
     ngx_str_t                     *value;
     ngx_int_t                      index;
 
@@ -705,7 +704,7 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (index == NGX_ERROR) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "undefined variable \"%V\"",
+                           "unable to mark variable \"%V\" as indexed: no memory",
                            &value[1]);
         return NGX_CONF_ERROR;
     }
@@ -789,7 +788,7 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
         return NGX_ERROR;
     }
 
-    v = ((ngx_http_variable_t*) cmcf->variables.elts) + index;
+    v = ((ngx_http_variable_t *) cmcf->variables.elts) + index;
 
     /*
      * following is slightly modified from
@@ -802,7 +801,6 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
     }
 
     if (v->set_handler) {
-
         if (value != NULL && value_len) {
             vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t)
                             + value_len);
@@ -838,6 +836,7 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
         }
 
         v->set_handler(r, vv, v->data);
+
         return NGX_OK;
     }
 
