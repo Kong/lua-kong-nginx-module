@@ -13,10 +13,10 @@ no_long_string();
 #no_diff();
 
 our $HttpConfig = qq{
-    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;t/?.lua;;";
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     init_by_lua_block {
-        _G.test_var = require "var"
+        _G.var = require "resty.kong.var"
     }
 };
 
@@ -24,23 +24,22 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: can return valid index for known variable
+=== TEST 1: lua_kong_load_var_index directive works
 --- http_config eval: $::HttpConfig
 --- config
-    set $variable_1 '';
+    set $variable_1 'value1';
+    lua_kong_load_var_index "realip_remote_addr";
 
     location /t {
         content_by_lua_block {
-            ngx.say(test_var.load_index("variable_1"))
-            ngx.say(test_var.load_index("http_host"))
+            ngx.say(ngx.var.variable_1)
         }
     }
 
 --- request
 GET /t
 --- response_body_like
-\d+
-\d+
+value1
 
 --- error_code: 200
 --- no_error_log
@@ -48,25 +47,25 @@ GET /t
 [crit]
 [alert]
 
-=== TEST 2: can use index to get variable
+
+=== TEST 2: load_indexes API works
 --- http_config eval: $::HttpConfig
 --- config
     set $variable_2 'value2';
+    # this is not required, but set explictly in tests
+    lua_kong_load_var_index "variable_2";
 
     location /t {
         content_by_lua_block {
-            test_var.load_index("variable_2")
-
-            ngx.say(ngx.var_indexed.variable_2)
-            ngx.say(ngx.var_indexed.variable_2)
+            local t = var.load_indexes()
+            ngx.say(t.variable_2)
         }
     }
 
 --- request
 GET /t
 --- response_body_like
-value2
-value2
+\d+
 
 --- error_code: 200
 --- no_error_log
@@ -74,24 +73,37 @@ value2
 [crit]
 [alert]
 
-=== TEST 3: can use index to set variable
+=== TEST 3: patch metatable works for get
 --- http_config eval: $::HttpConfig
 --- config
     set $variable_3 'value3';
+    # this is not required, but set explictly in tests
+    lua_kong_load_var_index "variable_3";
 
     location /t {
         content_by_lua_block {
-            test_var.load_index("variable_3")
+            ngx.say(ngx.var.variable_3)
 
-            ngx.var_indexed.variable_3 = "value3_set"
-            ngx.say(ngx.var_indexed.variable_3)
+            -- break original function
+            local breakit = function() error("broken") end
+            local mt1 = getmetatable(ngx.var)
+            mt1.__index = breakit
+            mt1.__newindex = breakit
+
+            local pok, perr = pcall(function() return ngx.var.variable_3 end)
+            ngx.say(perr)
+
+            var.patch_metatable()
+            ngx.say(ngx.var.variable_3)
         }
     }
 
 --- request
 GET /t
 --- response_body_like
-value3_set
+value3
+.+broken
+value3
 
 --- error_code: 200
 --- no_error_log
@@ -99,16 +111,27 @@ value3_set
 [crit]
 [alert]
 
-=== TEST 4: can use index to set variable and read by ngx.var
+=== TEST 4: patch metatable works for set
 --- http_config eval: $::HttpConfig
 --- config
     set $variable_4 'value4';
 
     location /t {
         content_by_lua_block {
-            test_var.load_index("variable_4")
+            ngx.var.variable_4 = "value4_1"
+            ngx.say(ngx.var.variable_4)
 
-            ngx.var_indexed.variable_4 = "value4_set"
+            -- break original function
+            local breakit = function() error("broken") end
+            local mt1 = getmetatable(ngx.var)
+            mt1.__index = breakit
+            mt1.__newindex = breakit
+
+            local pok, perr = pcall(function() return ngx.var.variable_4 end)
+            ngx.say(perr)
+
+            var.patch_metatable()
+            ngx.var.variable_4 = "value4_2"
             ngx.say(ngx.var.variable_4)
         }
     }
@@ -116,37 +139,12 @@ value3_set
 --- request
 GET /t
 --- response_body_like
-value4_set
+value4_1
+.+broken
+value4_2
 
 --- error_code: 200
 --- no_error_log
 [error]
 [crit]
 [alert]
-
-=== TEST 5: can use ngx.var to set variable and read by index
---- http_config eval: $::HttpConfig
---- config
-    set $variable_5 'value5';
-
-    location /t {
-        content_by_lua_block {
-            test_var.load_index("variable_5")
-
-            ngx.var.variable_5 = "value5_set"
-            ngx.say(ngx.var_indexed.variable_5)
-        }
-    }
-
---- request
-GET /t
---- response_body_like
-value5_set
-
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-

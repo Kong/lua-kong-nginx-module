@@ -15,6 +15,7 @@
  */
 
 
+#include <assert.h>
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -48,24 +49,23 @@ static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
     NULL                                     /* merge location configuration */
 };
 
-// static ngx_command_t ngx_http_lua_kong_cmds[] = {
+static ngx_command_t ngx_http_lua_kong_cmds[] = {
 
-//     { ngx_string("lua_kong_load_var_index"),
-//       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
-//                         |NGX_CONF_TAKE1,
-//       ngx_http_lua_kong_load_var_index,
-//       NGX_HTTP_LOC_CONF_OFFSET,
-//       0,
-//       NULL },
+    { ngx_string("lua_kong_load_var_index"),
+      NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+      ngx_http_lua_kong_load_var_index,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
 
-//     ngx_null_command
-// };
+    ngx_null_command
+};
 
 
 ngx_module_t ngx_http_lua_kong_module = {
     NGX_MODULE_V1,
     &ngx_http_lua_kong_module_ctx,     /* module context */
-    NULL, // ngx_http_lua_kong_cmds,            /* module directives */
+    ngx_http_lua_kong_cmds,            /* module directives */
     NGX_HTTP_MODULE,                   /* module type */
     NULL,                              /* init master */
     NULL,                              /* init module */
@@ -685,67 +685,54 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 }
 # endif
 
+char *
+ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+
+    ngx_str_t                     *value;
+    ngx_int_t                      index;
+
+    value = cf->args->elts;
+
+    if (value[1].len == 0) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "invalid variable name size \"%V\"",
+                           &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    index = ngx_http_get_variable_index(cf, &value[1]);
+
+    if (index == NGX_ERROR) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "undefined variable \"%V\"",
+                           &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    return NGX_CONF_OK;
+}
+
 int
-ngx_http_lua_kong_ffi_var_load_index(u_char *name_data,
-    size_t name_len, ngx_uint_t *index, char **err)
+ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names,
+    unsigned int *count, char **err)
 {
     ngx_uint_t                  i;
     ngx_http_variable_t        *v;
-    ngx_str_t                   name;
     ngx_http_core_main_conf_t  *cmcf;
-
-    name.data = name_data;
-    name.len = name_len;
 
     cmcf = ngx_http_cycle_get_module_main_conf(ngx_cycle, ngx_http_core_module);
 
-    /* from src/http/ngx_http_variables.c:ngx_http_get_variable_index */
     v = cmcf->variables.elts;
 
-    if (v == NULL) {
-        /*
-         * this function will always be called post config,
-         * so we can assume the variable array always exists
-         */
-        *err = "can't access variables array";
-        return NGX_ERROR;
+    assert(v != NULL);
 
-    } else {
-        for (i = 0; i < cmcf->variables.nelts; i++) {
-            if (name.len != v[i].name.len
-                || ngx_strncasecmp(name.data, v[i].name.data, name.len) != 0)
-            {
-                continue;
-            }
-
-            *index = i;
-            return NGX_OK;
-        }
+    for (i = 0; i < cmcf->variables.nelts && i < *count; i++) {
+        assert(v[i].index == i);
+        names[i] = &v[i].name;
     }
 
-    v = ngx_array_push(&cmcf->variables);
-    if (v == NULL) {
-        *err = "no memory";
-        return NGX_ERROR;
-    }
-
-    v->name.len = name.len;
-    v->name.data = ngx_pnalloc(ngx_cycle->pool, name.len);
-    if (v->name.data == NULL) {
-        *err = "no memory";
-        return NGX_ERROR;
-    }
-
-    ngx_strlow(v->name.data, name.data, name.len);
-
-    v->set_handler = NULL;
-    v->get_handler = NULL;
-    v->data = 0;
-    v->flags = 0;
-    v->index = cmcf->variables.nelts - 1;
-
-    *index = v->index;
-
+    *count = i - 1;
     return NGX_OK;
 }
 
