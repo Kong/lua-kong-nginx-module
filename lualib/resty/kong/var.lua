@@ -59,8 +59,9 @@ local function load_indexes(count)
 
     if rc == 0 then -- NGX_OK
         count = tonumber(count_ptr[0])
-        for i = 0,count do
+        for i = 0, count do
             local name = ffi_str(names_buf[i].data, names_buf[i].len)
+            ngx.log(ngx.ERR, name, " => ", i)
             variable_index[name] = i
         end
     end

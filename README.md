@@ -9,6 +9,8 @@ Table of Contents
 * [Name](#name)
 * [Description](#description)
 * [Install](#install)
+* [Directives](#directives)
+    * [lua_kong_load_var_index](#lua_kong_load_var_index)
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
@@ -19,6 +21,7 @@ Table of Contents
     * [resty.kong.tls.set\_upstream\_ssl\_verify\_depth](#restykongtlsset_upstream_ssl_verify_depth)
     * [resty.kong.grpc.set\_authority](#restykonggrpcset_authority)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
+    * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
 * [License](#license)
 
 Description
@@ -45,6 +48,35 @@ This module can be installed just like any ordinary Nginx C module, using the
             ...
 
 ```
+
+Directives
+=======
+
+lua_kong_load_var_index
+-------------------------------------------
+**syntax:** *lua_kong_load_var_index variable_name;*
+
+**context:** *http*
+
+Load the variable *variable_name* into Nginx's variable index. Note that
+variables defined by `set` directive are always cached by Nginx by default.
+
+Common variables used by other modules are indexed as well:
+
+- proxy_host
+- proxy_internal_body_length
+- proxy_internal_chunked
+- remote_addr
+- remote_user
+- request
+- http_referer
+- http_user_agent
+- host
+
+See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to use
+indexed variable.
+
+[Back to TOC](#table-of-contents)
 
 Methods
 =======
@@ -296,6 +328,23 @@ been specified inside `nginx.conf` or if this function has been previously
 called from the current session.
 
 [Back to TOC](#table-of-contents)
+
+resty.kong.var.patch\_metatable
+----------------------------------
+**syntax:** *resty.kong.var.patch_metatable()*
+
+**context:** *any*
+
+**subsystems:** *http*
+
+Replace the get/set method of ngx.var to use index. Variables that are not indexed
+will fallback to use the original get/set method.
+
+To index an variable before access, user may use [lua_kong_load_var_index](#lua_kong_load_var_index)
+directive.
+
+[Back to TOC](#table-of-contents)
+
 
 License
 =======
