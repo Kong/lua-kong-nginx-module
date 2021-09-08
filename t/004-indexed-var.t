@@ -49,13 +49,15 @@ value1
     # but set explictly in tests
     lua_kong_load_var_index "variable_2";
 
+    init_by_lua_block {
+        local var = require "resty.kong.var"
+        _G.t = var.load_indexes()
+    }
 --- config
     set $variable_2 'value2';
 
     location /t {
         content_by_lua_block {
-            local var = require "resty.kong.var"
-            local t = var.load_indexes()
             ngx.say(t.variable_2)
         }
     }
@@ -77,24 +79,23 @@ GET /t
     # this is not required, but set explictly in tests
     lua_kong_load_var_index "variable_3";
 
+    init_by_lua_block {
+        local var = require "resty.kong.var"
+        -- break original function
+        local breakit = function() error("broken") end
+        local mt1 = getmetatable(ngx.var)
+        mt1.__index = breakit
+        mt1.__newindex = breakit
+
+        local var = require "resty.kong.var"
+        var.patch_metatable()
+    }
+
 --- config
     set $variable_3 'value3';
 
     location /t {
         content_by_lua_block {
-            ngx.say(ngx.var.variable_3)
-
-            -- break original function
-            local breakit = function() error("broken") end
-            local mt1 = getmetatable(ngx.var)
-            mt1.__index = breakit
-            mt1.__newindex = breakit
-
-            local pok, perr = pcall(function() return ngx.var.variable_3 end)
-            ngx.say(perr)
-
-            local var = require "resty.kong.var"
-            var.patch_metatable()
             ngx.say(ngx.var.variable_3)
         }
     }
@@ -102,8 +103,6 @@ GET /t
 --- request
 GET /t
 --- response_body_like
-value3
-.+broken
 value3
 
 --- error_code: 200
@@ -118,25 +117,23 @@ value3
     # this is not required, but set explictly in tests
     lua_kong_load_var_index "variable_4";
 
+    init_by_lua_block {
+        local var = require "resty.kong.var"
+        -- break original function
+        local breakit = function() error("broken") end
+        local mt1 = getmetatable(ngx.var)
+        mt1.__index = breakit
+        mt1.__newindex = breakit
+
+        local var = require "resty.kong.var"
+        var.patch_metatable()
+    }
+
 --- config
     set $variable_4 'value4';
 
     location /t {
         content_by_lua_block {
-            ngx.var.variable_4 = "value4_1"
-            ngx.say(ngx.var.variable_4)
-
-            -- break original function
-            local breakit = function() error("broken") end
-            local mt1 = getmetatable(ngx.var)
-            mt1.__index = breakit
-            mt1.__newindex = breakit
-
-            local pok, perr = pcall(function() return ngx.var.variable_4 end)
-            ngx.say(perr)
-
-            local var = require "resty.kong.var"
-            var.patch_metatable()
             ngx.var.variable_4 = "value4_2"
             ngx.say(ngx.var.variable_4)
         }
@@ -145,8 +142,6 @@ value3
 --- request
 GET /t
 --- response_body_like
-value4_1
-.+broken
 value4_2
 
 --- error_code: 200

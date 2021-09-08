@@ -44,6 +44,10 @@ local value_ptr = ffi_new("unsigned char *[1]")
 local errmsg = base.get_errmsg_ptr()
 
 local function load_indexes(count)
+    if ngx.get_phase() ~= "init" then
+        error("load_indexes can only be called in init phase")
+    end
+
     count = count or 100
     local names_buf = ffi_new("ngx_str_t *[?]", count)
     local count_ptr = ffi_new("unsigned int [1]")
@@ -56,7 +60,6 @@ local function load_indexes(count)
         count = tonumber(count_ptr[0])
         for i = 0, count do
             local name = ffi_str(names_buf[i].data, names_buf[i].len)
-            ngx.log(ngx.ERR, name, " => ", i)
             variable_index[name] = i
         end
     end
@@ -122,6 +125,10 @@ local function var_set_by_index(index, value)
 end
 
 local function patch_metatable()
+    if ngx.get_phase() ~= "init" then
+        error("patch_metatable can only be called in init phase")
+    end
+
     load_indexes()
 
     local mt = getmetatable(ngx.var)

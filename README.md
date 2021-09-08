@@ -333,7 +333,7 @@ resty.kong.var.patch\_metatable
 ----------------------------------
 **syntax:** *resty.kong.var.patch_metatable()*
 
-**context:** *any*
+**context:** *init_by_lua*
 
 **subsystems:** *http*
 
