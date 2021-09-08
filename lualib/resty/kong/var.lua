@@ -8,12 +8,9 @@ local ffi_str = ffi.string
 local type = type
 local error = error
 local tostring = tostring
-local setmetatable = setmetatable
 local getmetatable = getmetatable
 local get_request = base.get_request
-local get_string_buf = base.get_string_buf
 local get_size_ptr = base.get_size_ptr
-local new_tab = base.new_tab
 local subsystem = ngx.config.subsystem
 
 
@@ -21,7 +18,7 @@ local variable_index = {}
 
 local ngx_lua_kong_ffi_var_get_by_index
 local ngx_lua_kong_ffi_var_set_by_index
-local ngx_lua_kong_ffi_var_load_index
+local ngx_lua_kong_ffi_var_load_indexes
 
 
 if subsystem == "http" then
@@ -58,12 +55,11 @@ local function load_indexes(count)
     count_ptr[0] = count
 
     local rc = ngx_lua_kong_ffi_var_load_indexes(names_buf,
-                                                 count_ptr, err_msg)
-    -- ngx.log(ngx.WARN, "rc = ", rc)
+                                                 count_ptr, errmsg)
 
     if rc == 0 then -- NGX_OK
         count = tonumber(count_ptr[0])
-        for i=0,count do
+        for i = 0,count do
             local name = ffi_str(names_buf[i].data, names_buf[i].len)
             variable_index[name] = i
         end
@@ -125,7 +121,7 @@ local function var_set_by_index(index, value)
     end
 
     if rc == -1 then  -- NGX_ERROR
-        error(ffi_str(errbuf, errlen[0]), 2)
+        error(ffi_str(errmsg[0]), 2)
     end
 end
 
