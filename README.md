@@ -54,27 +54,27 @@ Directives
 
 lua_kong_load_var_index
 -------------------------------------------
-**syntax:** *lua_kong_load_var_index variable_name;*
+**syntax:** *lua_kong_load_var_index $variable;*
 
 **context:** *http*
 
-Load the variable *variable_name* into Nginx's variable index. Note that
-variables defined by `set` directive are always cached by Nginx by default.
+Ensure *variable* is indexed. Note that variables defined by `set` directive
+are always indexed by default and does not need to be defined here again.
 
-Common variables used by other modules are indexed as well:
+Common variables defined by other modules that are already indexed:
 
-- proxy_host
-- proxy_internal_body_length
-- proxy_internal_chunked
-- remote_addr
-- remote_user
-- request
-- http_referer
-- http_user_agent
-- host
+- `$proxy_host`
+- `$proxy_internal_body_length`
+- `$proxy_internal_chunked`
+- `$remote_addr`
+- `$remote_user`
+- `$request`
+- `$http_referer`
+- `$http_user_agent`
+- `$host`
 
-See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to use
-indexed variable.
+See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
+indexed variable access.
 
 [Back to TOC](#table-of-contents)
 
