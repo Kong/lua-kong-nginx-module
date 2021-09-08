@@ -37,11 +37,6 @@ if subsystem == "http" then
     ngx_lua_kong_ffi_var_get_by_index = C.ngx_http_lua_kong_ffi_var_get_by_index
     ngx_lua_kong_ffi_var_set_by_index = C.ngx_http_lua_kong_ffi_var_set_by_index
     ngx_lua_kong_ffi_var_load_indexes = C.ngx_http_lua_kong_ffi_var_load_indexes
-
-elseif subsystem == "stream" then
-    -- TODO
-    ffi.cdef[[
-    ]]
 end
 
 
@@ -152,6 +147,11 @@ local function patch_metatable()
     end
 
     --setmetatable(ngx.var, mt)
+end
+
+if subsystem == "stream" then
+    patch_metatable = function() end
+    load_indexes = function() end
 end
 
 
