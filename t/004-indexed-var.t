@@ -12,23 +12,17 @@ $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
 no_long_string();
 #no_diff();
 
-our $HttpConfig = qq{
-    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-
-    init_by_lua_block {
-        _G.var = require "resty.kong.var"
-    }
-};
-
 run_tests();
 
 __DATA__
 
 === TEST 1: lua_kong_load_var_index directive works
---- http_config eval: $::HttpConfig
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index "realip_remote_addr";
+
 --- config
     set $variable_1 'value1';
-    lua_kong_load_var_index "realip_remote_addr";
 
     location /t {
         content_by_lua_block {
@@ -49,14 +43,18 @@ value1
 
 
 === TEST 2: load_indexes API works
---- http_config eval: $::HttpConfig
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    # this is not required for variable defined by set
+    # but set explictly in tests
+    lua_kong_load_var_index "variable_2";
+
 --- config
     set $variable_2 'value2';
-    # this is not required, but set explictly in tests
-    lua_kong_load_var_index "variable_2";
 
     location /t {
         content_by_lua_block {
+            local var = require "resty.kong.var"
             local t = var.load_indexes()
             ngx.say(t.variable_2)
         }
@@ -74,11 +72,13 @@ GET /t
 [alert]
 
 === TEST 3: patch metatable works for get
---- http_config eval: $::HttpConfig
---- config
-    set $variable_3 'value3';
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     # this is not required, but set explictly in tests
     lua_kong_load_var_index "variable_3";
+
+--- config
+    set $variable_3 'value3';
 
     location /t {
         content_by_lua_block {
@@ -93,6 +93,7 @@ GET /t
             local pok, perr = pcall(function() return ngx.var.variable_3 end)
             ngx.say(perr)
 
+            local var = require "resty.kong.var"
             var.patch_metatable()
             ngx.say(ngx.var.variable_3)
         }
@@ -112,7 +113,11 @@ value3
 [alert]
 
 === TEST 4: patch metatable works for set
---- http_config eval: $::HttpConfig
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    # this is not required, but set explictly in tests
+    lua_kong_load_var_index "variable_4";
+
 --- config
     set $variable_4 'value4';
 
@@ -130,6 +135,7 @@ value3
             local pok, perr = pcall(function() return ngx.var.variable_4 end)
             ngx.say(perr)
 
+            local var = require "resty.kong.var"
             var.patch_metatable()
             ngx.var.variable_4 = "value4_2"
             ngx.say(ngx.var.variable_4)
