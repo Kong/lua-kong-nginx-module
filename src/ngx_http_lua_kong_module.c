@@ -792,98 +792,85 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
     v = ((ngx_http_variable_t*) cmcf->variables.elts) + index;
 
     /*
-     * following is not changed from
+     * following is slightly modified from
      * openresty/lua-nginx-module/blob/master/src/ngx_http_lua_variable.c
      */
 
-    if (v) {
-        if (!(v->flags & NGX_HTTP_VAR_CHANGEABLE)) {
-            *err = "variable not changeable";
-            return NGX_ERROR;
-        }
-
-        if (v->set_handler) {
-
-            if (value != NULL && value_len) {
-                vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t)
-                                + value_len);
-                if (vv == NULL) {
-                    goto nomem;
-                }
-
-                p = (u_char *) vv + sizeof(ngx_http_variable_value_t);
-                ngx_memcpy(p, value, value_len);
-                value = p;
-
-            } else {
-                vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t));
-                if (vv == NULL) {
-                    goto nomem;
-                }
-            }
-
-            if (value == NULL) {
-                vv->valid = 0;
-                vv->not_found = 1;
-                vv->no_cacheable = 0;
-                vv->data = NULL;
-                vv->len = 0;
-
-            } else {
-                vv->valid = 1;
-                vv->not_found = 0;
-                vv->no_cacheable = 0;
-
-                vv->data = value;
-                vv->len = value_len;
-            }
-
-            v->set_handler(r, vv, v->data);
-            return NGX_OK;
-        }
-
-        if (v->flags & NGX_HTTP_VAR_INDEXED) {
-            vv = &r->variables[v->index];
-
-            if (value == NULL) {
-                vv->valid = 0;
-                vv->not_found = 1;
-                vv->no_cacheable = 0;
-
-                vv->data = NULL;
-                vv->len = 0;
-
-            } else {
-                p = ngx_palloc(r->pool, value_len);
-                if (p == NULL) {
-                    goto nomem;
-                }
-
-                ngx_memcpy(p, value, value_len);
-                value = p;
-
-                vv->valid = 1;
-                vv->not_found = 0;
-                vv->no_cacheable = 0;
-
-                vv->data = value;
-                vv->len = value_len;
-            }
-
-            return NGX_OK;
-        }
-
-        *err = "variable cannot be assigned a value";
+    if (!(v->flags & NGX_HTTP_VAR_CHANGEABLE)) {
+        *err = "variable not changeable";
         return NGX_ERROR;
     }
 
-    /* variable not found */
+    if (v->set_handler) {
 
-    *err= "variable not found for writing; "
-        "maybe it is a built-in variable that is not "
-        "changeable or you forgot to use \"set\" directive"
-        "in the config file to define it first";
-    return NGX_ERROR;
+        if (value != NULL && value_len) {
+            vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t)
+                            + value_len);
+            if (vv == NULL) {
+                goto nomem;
+            }
+
+            p = (u_char *) vv + sizeof(ngx_http_variable_value_t);
+            ngx_memcpy(p, value, value_len);
+            value = p;
+
+        } else {
+            vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t));
+            if (vv == NULL) {
+                goto nomem;
+            }
+        }
+
+        if (value == NULL) {
+            vv->valid = 0;
+            vv->not_found = 1;
+            vv->no_cacheable = 0;
+            vv->data = NULL;
+            vv->len = 0;
+
+        } else {
+            vv->valid = 1;
+            vv->not_found = 0;
+            vv->no_cacheable = 0;
+
+            vv->data = value;
+            vv->len = value_len;
+        }
+
+        v->set_handler(r, vv, v->data);
+        return NGX_OK;
+    }
+
+    assert(v->flags & NGX_HTTP_VAR_INDEXED);
+
+    vv = &r->variables[index];
+
+    if (value == NULL) {
+        vv->valid = 0;
+        vv->not_found = 1;
+        vv->no_cacheable = 0;
+
+        vv->data = NULL;
+        vv->len = 0;
+
+    } else {
+        p = ngx_palloc(r->pool, value_len);
+        if (p == NULL) {
+            goto nomem;
+        }
+
+        ngx_memcpy(p, value, value_len);
+        value = p;
+
+        vv->valid = 1;
+        vv->not_found = 0;
+        vv->no_cacheable = 0;
+
+        vv->data = value;
+        vv->len = value_len;
+    }
+
+    return NGX_OK;
 
 nomem:
 
