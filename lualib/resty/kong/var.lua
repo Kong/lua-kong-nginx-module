@@ -60,7 +60,7 @@ local function load_indexes()
     local rc = ngx_lua_kong_ffi_var_load_indexes(names_buf)
 
     if rc == NGX_OK then
-        for i = 0, count-1 do
+        for i = 0, count - 1 do
             local name = ffi_str(names_buf[i].data, names_buf[i].len)
             variable_index[name] = i
         end
@@ -87,9 +87,8 @@ local function var_get_by_index(index)
         return nil
     end
 
-    if rc == NGX_ERROR then
-        error(ffi_str(errmsg[0]), 2)
-    end
+    assert(rc == NGX_ERROR)
+    error(ffi_str(errmsg[0]), 2)
 end
 
 local function var_set_by_index(index, value)
@@ -101,10 +100,12 @@ local function var_set_by_index(index, value)
     local value_len
     if value == nil then
         value_len = 0
+
     else
         if type(value) ~= 'string' then
             value = tostring(value)
         end
+
         value_len = #value
     end
 
@@ -115,9 +116,8 @@ local function var_set_by_index(index, value)
         return
     end
 
-    if rc == NGX_ERROR then
-        error(ffi_str(errmsg[0]), 2)
-    end
+    assert(rc == NGX_ERROR)
+    error(ffi_str(errmsg[0]), 2)
 end
 
 local function patch_metatable()
@@ -129,7 +129,7 @@ local function patch_metatable()
         error("patch_metatable should only be called once")
     end
 
-    patch_metatable = true
+    metatable_patched = true
 
     load_indexes()
 
