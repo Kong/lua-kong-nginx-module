@@ -489,9 +489,9 @@ failed:
 
 
 static X509 *
-ngx_http_lua_kong_x509_copy(const X509 *in)
+ngx_http_lua_kong_x509_copy(X509 *in)
 {
-    return X509_up_ref((X509 *) in) == 0 ? NULL : (X509 *) in;
+    return X509_up_ref(in) == 0 ? NULL : in;
 }
 
 
