@@ -20,7 +20,15 @@ BUILD_TOOLS_DOWNLOAD=$DOWNLOAD_ROOT/kong-build-tools
 BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=master}
 
 if [ ! -d $BUILD_TOOLS_DOWNLOAD ]; then
-    git clone -b $BUILD_TOOLS_BRANCH https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
+    #git clone -b $BUILD_TOOLS_BRANCH https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
+
+    # temporary operation, get pr430
+    git clone https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
+
+    pushd $BUILD_TOOLS_DOWNLOAD
+        git fetch origin pull/430/head:pr430
+        git checkout pr430
+    popd
 else
     pushd $BUILD_TOOLS_DOWNLOAD
         git fetch
