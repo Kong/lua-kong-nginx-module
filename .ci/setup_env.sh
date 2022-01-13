@@ -29,6 +29,15 @@ if [ ! -d $BUILD_TOOLS_DOWNLOAD ]; then
         git fetch origin pull/430/head:pr430
         git checkout pr430
     popd
+
+    # temporary operation, get pr23
+    pushd $DOWNLOAD_ROOT/work
+        git clone https://github.com/Kong/lua-kong-nginx-module
+        pushd lua-kong-nginx-module
+            git fetch origin pull/23/head:pr23
+            git checkout pr23
+        popd
+    popd
 else
     pushd $BUILD_TOOLS_DOWNLOAD
         git fetch
