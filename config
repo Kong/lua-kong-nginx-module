@@ -1,6 +1,26 @@
+# search ngx_lua's src path
+for inc in $CORE_INCS
+do
+  ngx_lua_path=${inc%/api}
+
+  if [ "$inc" != "$ngx_lua_path" ]; then
+
+    ngx_lua_header="$ngx_lua_path/ngx_http_lua_common.h"
+
+    if [ -f "$ngx_lua_header" ]; then
+      CORE_INCS="$CORE_INCS $ngx_lua_path"
+      break
+    fi
+
+  fi
+done
+
 ngx_module_type=HTTP
 ngx_module_name=ngx_http_lua_kong_module
-ngx_module_srcs="$ngx_addon_dir/src/ngx_http_lua_kong_module.c"
+ngx_module_srcs=" \
+                $ngx_addon_dir/src/ngx_http_lua_kong_module.c \
+                $ngx_addon_dir/src/ngx_http_lua_kong_socket_tcp.c \
+                "
 ngx_module_incs="$ngx_addon_dir/src"
 
 . auto/module
