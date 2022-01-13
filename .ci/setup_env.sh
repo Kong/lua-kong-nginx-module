@@ -31,7 +31,7 @@ if [ ! -d $BUILD_TOOLS_DOWNLOAD ]; then
     popd
 
     # temporary operation, get pr23
-    pushd $DOWNLOAD_ROOT/work
+    pushd $DOWNLOAD_ROOT
         git clone https://github.com/Kong/lua-kong-nginx-module
         pushd lua-kong-nginx-module
             git fetch origin pull/23/head:pr23
