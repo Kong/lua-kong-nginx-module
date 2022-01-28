@@ -640,7 +640,7 @@ failed:
 
 int
 ngx_http_lua_kong_ffi_set_upstream_ssl_verify(ngx_http_request_t *r,
-    int verify, int depth)
+    int verify)
 {
     ngx_http_lua_kong_ctx_t     *ctx;
 
