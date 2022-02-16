@@ -98,6 +98,7 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
 
     *value = vv->data;
     *value_len = vv->len;
+
     return NGX_OK;
 }
 
