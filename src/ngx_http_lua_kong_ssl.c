@@ -587,6 +587,6 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 }
 
 
-# endif
+#endif
 
 
