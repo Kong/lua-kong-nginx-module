@@ -44,3 +44,23 @@ ngx_http_lua_kong_ffi_set_grpc_authority(ngx_http_request_t *r,
 }
 
 
+void
+ngx_http_lua_kong_set_grpc_authority(ngx_http_request_t *r,
+    ngx_str_t *host)
+{
+    ngx_http_lua_kong_ctx_t     *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
+    if (ctx == NULL) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                       "skip overriding gRPC authority pseudo-header, "
+                       "module ctx not set");
+        return;
+    }
+
+    if (ctx->grpc_authority.data != NULL) {
+        *host = ctx->grpc_authority;
+    }
+}
+
+
