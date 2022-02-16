@@ -405,6 +405,17 @@ ngx_http_lua_kong_cleanup_trusted_store(ngx_http_lua_kong_ctx_t *ctx)
 }
 
 
+static void
+ngx_http_lua_kong_cleanup(void *data)
+{
+    ngx_http_lua_kong_ctx_t     *ctx = data;
+
+    ngx_http_lua_kong_cleanup_cert_and_key(ctx);
+
+    ngx_http_lua_kong_cleanup_trusted_store(ctx);
+}
+
+
 ngx_http_lua_kong_ctx_t *
 ngx_http_lua_kong_get_module_ctx(ngx_http_request_t *r)
 {
@@ -431,17 +442,6 @@ ngx_http_lua_kong_get_module_ctx(ngx_http_request_t *r)
     }
 
     return ctx;
-}
-
-
-static void
-ngx_http_lua_kong_cleanup(void *data)
-{
-    ngx_http_lua_kong_ctx_t     *ctx = data;
-
-    ngx_http_lua_kong_cleanup_cert_and_key(ctx);
-
-    ngx_http_lua_kong_cleanup_trusted_store(ctx);
 }
 
 
