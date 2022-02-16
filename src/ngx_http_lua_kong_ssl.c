@@ -21,10 +21,6 @@
 #if (NGX_SSL)
 static int ngx_http_lua_kong_ssl_old_sess_new_cb_index = -1;
 static int ngx_http_lua_kong_ssl_no_session_cache_flag_index = -1;
-
-
-static int
-ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store);
 #endif
 
 static ngx_int_t
