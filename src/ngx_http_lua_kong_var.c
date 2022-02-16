@@ -47,6 +47,7 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
+
 ngx_uint_t
 ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names)
 {
@@ -72,6 +73,7 @@ ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names)
 
     return NGX_OK;
 }
+
 
 int
 ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
@@ -211,4 +213,5 @@ nomem:
     *err = "no memory";
     return NGX_ERROR;
 }
+
 
