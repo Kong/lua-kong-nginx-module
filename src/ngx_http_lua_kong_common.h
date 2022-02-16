@@ -43,6 +43,8 @@ typedef struct {
 #   define ngx_http_lua_kong_assert(a)
 #endif
 
+extern ngx_module_t ngx_http_lua_kong_module;
+
 ngx_http_lua_kong_ctx_t *ngx_http_lua_kong_get_module_ctx(
     ngx_http_request_t *r);
 
