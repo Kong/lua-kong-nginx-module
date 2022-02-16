@@ -23,7 +23,7 @@ static int ngx_http_lua_kong_ssl_old_sess_new_cb_index = -1;
 static int ngx_http_lua_kong_ssl_no_session_cache_flag_index = -1;
 #endif
 
-static ngx_int_t
+ngx_int_t
 ngx_http_lua_kong_ssl_init(ngx_conf_t *cf)
 {
 #if (NGX_SSL)
@@ -581,6 +581,8 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 
     return ctx->upstream_ssl_verify;
 }
+
+
 # endif
 
 
