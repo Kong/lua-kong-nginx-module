@@ -14,7 +14,6 @@ OPENSSL=$(dep_version RESTY_OPENSSL_VERSION)
 # Download
 #---------
 
-DEPS_HASH=$(cat .github/workflows/setup_env.sh .github/workflows/tests.yml .requirements | md5sum | awk '{ print $1 }')
 DOWNLOAD_ROOT=${DOWNLOAD_ROOT:=/download-root}
 BUILD_TOOLS_DOWNLOAD=$DOWNLOAD_ROOT/kong-build-tools
 BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=master}
@@ -34,7 +33,7 @@ export PATH=$BUILD_TOOLS_DOWNLOAD/openresty-build-tools:$PATH
 # Install
 #--------
 INSTALL_CACHE=${INSTALL_CACHE:=/install-cache}
-INSTALL_ROOT=$INSTALL_CACHE/$DEPS_HASH
+INSTALL_ROOT=${INSTALL_CACHE:=/install-cache/root}
 
 kong-ngx-build \
     --work $DOWNLOAD_ROOT \
