@@ -14,7 +14,7 @@ OPENSSL=$(dep_version RESTY_OPENSSL_VERSION)
 # Download
 #---------
 
-DEPS_HASH=$(cat .ci/setup_env.sh .github/workflow/tests.yml .requirements | md5sum | awk '{ print $1 }')
+DEPS_HASH=$(cat .github/workflow/setup_env.sh .github/workflow/tests.yml .requirements | md5sum | awk '{ print $1 }')
 DOWNLOAD_ROOT=${DOWNLOAD_ROOT:=/download-root}
 BUILD_TOOLS_DOWNLOAD=$DOWNLOAD_ROOT/kong-build-tools
 BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=master}

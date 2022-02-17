@@ -9,15 +9,15 @@ jobs:
 
     env:
       JOBS: 2
-      INSTALL_CACHE: $HOME/install-cache
-      DOWNLOAD_ROOT: $HOME/download-root
+      INSTALL_CACHE: /install-cache
+      DOWNLOAD_ROOT: /download-root
 
     steps:
     - name: Setup cache
       uses: actions/cache@v2
       with:
         path: |
-          $INSTALL_CACHE
+          /install-cache
         key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}
 
     - name: Setup tools
