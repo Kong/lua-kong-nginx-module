@@ -10,7 +10,7 @@ jobs:
     env:
       JOBS: 2
       INSTALL_CACHE: /home/runner/work/install-cache
-      INSTALL_ROOT: /home/runner/work/install-cache/root
+      INSTALL_ROOT: /home/runner/work/install-root
       DOWNLOAD_ROOT: /home/runner/work/download-root
 
     steps:
