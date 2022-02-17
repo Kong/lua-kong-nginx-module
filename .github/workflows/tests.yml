@@ -9,8 +9,8 @@ jobs:
 
     env:
       JOBS: 2
-      INSTALL_CACHE: $HOME/install-cache
-      DOWNLOAD_ROOT: $HOME/download-root
+      INSTALL_CACHE: /home/runner/work/install-cache
+      DOWNLOAD_ROOT: /home/runner/work/download-root
 
     steps:
     - name: Checkout source code
@@ -22,7 +22,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: |
-          $HOME/install-cache
+          /home/runner/work/install-cache
         key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}
 
     - name: Setup tools
