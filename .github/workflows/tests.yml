@@ -1,0 +1,32 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-20.04
+
+    env:
+      JOBS: 2
+      INSTALL_CACHE: $HOME/install-cache
+      DOWNLOAD_ROOT: $HOME/download-root
+
+    steps:
+    - name: Setup cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          $INSTALL_CACHE
+        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}
+
+    - name: Setup tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -qq -y postgresql cpanminus net-tools libpcre3-dev build-essential valgrind
+        source .github/workflow/setup_env.sh
+
+    - name: Run Test
+      run: |
+        prove -r t
+
