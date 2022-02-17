@@ -58,10 +58,10 @@ export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI
 eval `luarocks path`
 
 if [ ! -e perl ]; then
-    sudo cpanm --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1);
-    cp -r /usr/local/share/perl/ .;
+    sudo cpanm --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1)
+    cp -r /usr/local/share/perl/ .
 else
-    sudo cp -r perl /usr/local/share;
+    sudo cp -r perl /usr/local/share
 fi
 
 nginx -V

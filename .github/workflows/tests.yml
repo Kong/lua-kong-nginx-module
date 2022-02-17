@@ -33,5 +33,7 @@ jobs:
 
     - name: Run Test
       run: |
+        echo $PATH
+        echo LD_LIBRARY_PATH
         prove -r t
 
