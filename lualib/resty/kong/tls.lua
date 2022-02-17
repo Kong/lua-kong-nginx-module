@@ -61,7 +61,6 @@ local DEFAULT_CERT_CHAIN_SIZE = 10240
 local NGX_OK = ngx.OK
 local NGX_ERROR = ngx.ERROR
 local NGX_AGAIN = ngx.AGAIN
-local NGX_DONE = ngx.DONE
 local NGX_DECLINED = ngx.DECLINED
 local NGX_ABORT = -6
 
