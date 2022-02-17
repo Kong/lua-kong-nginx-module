@@ -13,6 +13,11 @@ jobs:
       DOWNLOAD_ROOT: /download-root
 
     steps:
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: 'true'
+
     - name: Setup cache
       uses: actions/cache@v2
       with:
