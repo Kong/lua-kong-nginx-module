@@ -24,7 +24,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -qq -y postgresql cpanminus net-tools libpcre3-dev build-essential valgrind
-        source .github/workflow/setup_env.sh
+        source .github/workflows/setup_env.sh
 
     - name: Run Test
       run: |
