@@ -47,41 +47,22 @@ end
 
 local get_phase = ngx.get_phase
 local getfenv = getfenv
+local type = type
 local error = error
+local tostring = tostring
 local C = ffi.C
 local ffi_string = ffi.string
 local get_string_buf = base.get_string_buf
 local size_ptr = base.get_size_ptr()
+local get_request = base.get_request
 
 
 local DEFAULT_CERT_CHAIN_SIZE = 10240
 local NGX_OK = ngx.OK
 local NGX_ERROR = ngx.ERROR
 local NGX_AGAIN = ngx.AGAIN
-local NGX_DONE = ngx.DONE
 local NGX_DECLINED = ngx.DECLINED
 local NGX_ABORT = -6
-
-
-local get_request
-do
-    local ok, exdata = pcall(require, "thread.exdata")
-    if ok and exdata then
-        function get_request()
-            local r = exdata()
-            if r ~= nil then
-                return r
-            end
-        end
-
-    else
-        local getfenv = getfenv
-
-        function get_request()
-            return getfenv(0).__ngx_req
-        end
-    end
-end
 
 
 if ngx.config.subsystem == "http" then
