@@ -48,6 +48,7 @@ end
 local get_phase = ngx.get_phase
 local getfenv = getfenv
 local error = error
+local tostring = tostring
 local C = ffi.C
 local ffi_string = ffi.string
 local get_string_buf = base.get_string_buf
