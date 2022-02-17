@@ -25,4 +25,11 @@
 ngx_int_t
 ngx_http_lua_kong_ssl_init(ngx_conf_t *cf);
 
+void
+ngx_http_lua_kong_cleanup_cert_and_key(ngx_http_lua_kong_ctx_t *ctx);
+
+void
+ngx_http_lua_kong_cleanup_trusted_store(ngx_http_lua_kong_ctx_t *ctx);
+
+
 #endif /* _NGX_HTTP_LUA_KONG_SSL_H_INCLUDED_ */

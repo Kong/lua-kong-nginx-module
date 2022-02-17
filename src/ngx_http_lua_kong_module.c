@@ -72,3 +72,43 @@ ngx_http_lua_kong_init(ngx_conf_t *cf)
 }
 
 
+static void
+ngx_http_lua_kong_cleanup(void *data)
+{
+    ngx_http_lua_kong_ctx_t     *ctx = data;
+
+    ngx_http_lua_kong_cleanup_cert_and_key(ctx);
+
+    ngx_http_lua_kong_cleanup_trusted_store(ctx);
+}
+
+
+ngx_http_lua_kong_ctx_t *
+ngx_http_lua_kong_get_module_ctx(ngx_http_request_t *r)
+{
+    ngx_http_lua_kong_ctx_t     *ctx;
+    ngx_pool_cleanup_t          *cln;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
+
+    if (ctx == NULL) {
+        ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_lua_kong_ctx_t));
+        if (ctx == NULL) {
+            return NULL;
+        }
+
+        cln = ngx_pool_cleanup_add(r->pool, 0);
+        if (cln == NULL) {
+            return NULL;
+        }
+
+        cln->data = ctx;
+        cln->handler = ngx_http_lua_kong_cleanup;
+
+        ngx_http_set_ctx(r, ctx, ngx_http_lua_kong_module);
+    }
+
+    return ctx;
+}
+
+
