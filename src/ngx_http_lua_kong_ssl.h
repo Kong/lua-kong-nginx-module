@@ -15,26 +15,21 @@
  */
 
 
-#ifndef _NGX_HTTP_LUA_KONG_MODULE_H_INCLUDED_
-#define _NGX_HTTP_LUA_KONG_MODULE_H_INCLUDED_
+#ifndef _NGX_HTTP_LUA_KONG_SSL_H_INCLUDED_
+#define _NGX_HTTP_LUA_KONG_SSL_H_INCLUDED_
 
 
-#include <ngx_config.h>
-#include <ngx_core.h>
-#include <ngx_http.h>
+#include "ngx_http_lua_kong_common.h"
 
 
-void
-ngx_http_lua_kong_set_grpc_authority(ngx_http_request_t *r,
-    ngx_str_t *host);
+ngx_int_t
+ngx_http_lua_kong_ssl_init(ngx_conf_t *cf);
 
 void
-ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r,
-    ngx_connection_t *c);
+ngx_http_lua_kong_cleanup_cert_and_key(ngx_http_lua_kong_ctx_t *ctx);
 
-ngx_flag_t
-ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
-    ngx_flag_t proxy_ssl_verify);
+void
+ngx_http_lua_kong_cleanup_trusted_store(ngx_http_lua_kong_ctx_t *ctx);
 
 
-#endif /* _NGX_HTTP_LUA_KONG_MODULE_H_INCLUDED_ */
+#endif /* _NGX_HTTP_LUA_KONG_SSL_H_INCLUDED_ */
