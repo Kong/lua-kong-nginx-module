@@ -30,6 +30,8 @@ kong-ngx-build \
     --debug \
     -j $JOBS
 
+export PATH=$LUAROCKS_INSTALL/bin:$PATH
+
 eval `luarocks path`
 
 if [ ! -e perl ]; then
