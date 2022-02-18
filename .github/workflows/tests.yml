@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     env:
-      JOBS: 2
+      JOBS: 1
       INSTALL_CACHE: /home/runner/work/install-cache
       INSTALL_ROOT: /home/runner/work/install-root
       DOWNLOAD_ROOT: /home/runner/work/download-root
