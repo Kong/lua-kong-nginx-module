@@ -11,6 +11,7 @@ jobs:
       JOBS: 1  # must be 1 as socket tests interfere with each other
       INSTALL_ROOT: /home/runner/work/install-root
       DOWNLOAD_ROOT: /home/runner/work/download-root
+      BUILD_TOOLS_BRANCH: master
 
     steps:
     - name: Checkout source code
@@ -24,13 +25,21 @@ jobs:
       with:
         path: |
           ${{ env.INSTALL_ROOT }}
-        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-${{ hashFiles('.requirements') }}-${{ hashFiles('kong-*.rockspec') }}
 
     - name: Install packages
       if: steps.cache-deps.outputs.cache-hit != 'true'
       run: |
         sudo apt update
         sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
+
+    - name: Checkout kong-build-tools
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      uses: actions/checkout@v2
+      with:
+        repository: Kong/kong-build-tools
+        path: ${{ env.INSTALL_ROOT }}/kong-build-tools
+        ref: ${{ env.BUILD_TOOLS_BRANCH}}
 
     - name: Setup tools
       run: |
