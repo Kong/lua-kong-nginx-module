@@ -30,9 +30,6 @@ kong-ngx-build \
     --debug \
     -j $JOBS
 
-export PATH=$OPENSSL_INSTALL/bin:$OPENRESTY_INSTALL/nginx/sbin:$OPENRESTY_INSTALL/bin:$LUAROCKS_INSTALL/bin:$PATH
-export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI invoked in the test suite
-
 eval `luarocks path`
 
 if [ ! -e perl ]; then
@@ -41,11 +38,6 @@ if [ ! -e perl ]; then
 else
     sudo cp -r perl /usr/local/share
 fi
-
-nginx -V
-resty -V
-luarocks --version
-openssl version
 
 # Needed by tests of tls.set_upstream_trusted_store
 luarocks install lua-resty-openssl
