@@ -11,7 +11,6 @@ jobs:
       matrix:
         include:
         # TODO: arm64
-        # latest and one version older for valgrind
         - openresty: "1.19.3.2"
           luarocks: "3.7.0"
           openssl: "1.1.1k"
@@ -56,12 +55,6 @@ jobs:
       run: |
         sudo apt update
         sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
-
-    - name: Get deps version
-      run: |
-          echo "OPENRESTY=`grep RESTY_VERSION .requirements | sed -e 's/.*=//' | tr -d '\n'`" >> $GITHUB_ENV
-          echo "LUAROCKS=`grep RESTY_LUAROCKS_VERSION .requirements | sed -e 's/.*=//' | tr -d '\n'`" >> $GITHUB_ENV
-          echo "OPENSSL=`grep RESTY_OPENSSL_VERSION .requirements | sed -e 's/.*=//' | tr -d '\n'`" >> $GITHUB_ENV
 
     #- name: Checkout kong-build-tools
     #  if: steps.cache-deps.outputs.cache-hit != 'true'
