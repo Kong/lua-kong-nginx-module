@@ -51,7 +51,6 @@ jobs:
         key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-openresty-${{ matrix.openresty }}-luarocks-${{ matrix.luarocks }}-openssl-${{ matrix.openssl }}
 
     - name: Install packages
-      if: steps.cache-deps.outputs.cache-hit != 'true'
       run: |
         sudo apt update
         sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
