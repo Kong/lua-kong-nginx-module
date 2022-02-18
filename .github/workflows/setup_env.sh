@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # set -e
 
-dep_version() {
-    grep $1 .requirements | sed -e 's/.*=//' | tr -d '\n'
-}
-
-OPENRESTY=$(dep_version RESTY_VERSION)
-LUAROCKS=$(dep_version RESTY_LUAROCKS_VERSION)
-OPENSSL=$(dep_version RESTY_OPENSSL_VERSION)
+#dep_version() {
+#    grep $1 .requirements | sed -e 's/.*=//' | tr -d '\n'
+#}
+#
+#OPENRESTY=$(dep_version RESTY_VERSION)
+#LUAROCKS=$(dep_version RESTY_LUAROCKS_VERSION)
+#OPENSSL=$(dep_version RESTY_OPENSSL_VERSION)
 
 
 #---------

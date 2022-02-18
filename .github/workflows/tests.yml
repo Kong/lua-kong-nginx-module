@@ -33,6 +33,12 @@ jobs:
         sudo apt update
         sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
 
+    - name: Get deps version
+      run: |
+          echo "OPENRESTY=`grep RESTY_VERSION .requirements | sed -e 's/.*=//' | tr -d '\n'`" >> $GITHUB_ENV
+          echo "LUAROCKS=`grep RESTY_LUAROCKS_VERSION .requirements | sed -e 's/.*=//' | tr -d '\n'`" >> $GITHUB_ENV
+          echo "OPENSSL=`grep RESTY_OPENSSL_VERSION .requirements | sed -e 's/.*=//' | tr -d '\n'`" >> $GITHUB_ENV
+
     #- name: Checkout kong-build-tools
     #  if: steps.cache-deps.outputs.cache-hit != 'true'
     #  uses: actions/checkout@v2
