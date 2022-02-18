@@ -55,14 +55,6 @@ jobs:
         sudo apt update
         sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
 
-    #- name: Checkout kong-build-tools
-    #  if: steps.cache-deps.outputs.cache-hit != 'true'
-    #  uses: actions/checkout@v2
-    #  with:
-    #    repository: Kong/kong-build-tools
-    #    path: ${{ env.INSTALL_ROOT }}/kong-build-tools
-    #    ref: ${{ env.BUILD_TOOLS_BRANCH}}
-
     - name: Setup tools
       run: |
         source .github/workflows/setup_env.sh
