@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 2 + 9);
+plan tests => repeat_each() * (blocks() * 2 + 9 + 4);
 
 #no_diff();
 #no_long_string();
@@ -40,6 +40,8 @@ GET /test
 --- response_body
 old: 32
 new: nil
+--- error_log
+get variable value '32' by index
 
 
 
@@ -64,6 +66,8 @@ GET /test?hello=world
 --- response_body
 old: hello=world
 new: nil
+--- error_log
+get variable value 'hello=world' by index
 
 
 
@@ -164,6 +168,8 @@ invalid referer:
 --- no_error_log
 [error]
 
+--- error_log
+get variable value '' by index
 
 
 === TEST 7: false $invalid_referer variable value in Lua
@@ -195,6 +201,8 @@ invalid referer: 1
 --- no_error_log
 [error]
 
+--- error_log
+get variable value '1' by index
 
 
 === TEST 8: $proxy_host & $proxy_port & $proxy_add_x_forwarded_for
