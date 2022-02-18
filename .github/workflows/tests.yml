@@ -10,7 +10,11 @@ jobs:
     env:
       JOBS: 1  # must be 1 as socket tests interfere with each other
       INSTALL_ROOT: /home/runner/work/install-root
-      DOWNLOAD_ROOT: /home/runner/work/download-root
+      DOWNLOAD_ROOT:  ${{ env.INSTALL_ROOT }}/download-root
+      OPENSSL_INSTALL: ${{ env.INSTALL_ROOT }}/openssl
+      OPENSSL_DIR: ${{ OPENSSL_INSTALL }}
+      OPENRESTY_INSTALL: ${{ env.INSTALL_ROOT }}/openresty
+      LUAROCKS_INSTALL: ${{ env.INSTALL_ROOT }}/luarocks
       BUILD_TOOLS_BRANCH: master
 
     steps:
@@ -53,10 +57,7 @@ jobs:
 
     - name: Run Test
       run: |
-        export OPENSSL_INSTALL=$INSTALL_ROOT/openssl
         export OPENSSL_DIR=$OPENSSL_INSTALL
-        export OPENRESTY_INSTALL=$INSTALL_ROOT/openresty
-        export LUAROCKS_INSTALL=$INSTALL_ROOT/luarocks
         export PATH=$OPENSSL_INSTALL/bin:$OPENRESTY_INSTALL/nginx/sbin:$OPENRESTY_INSTALL/bin:$LUAROCKS_INSTALL/bin:$PATH
         export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI invoked in the test suite
         eval `luarocks path`

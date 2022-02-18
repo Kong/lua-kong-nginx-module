@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 # set -e
 
-#dep_version() {
-#    grep $1 .requirements | sed -e 's/.*=//' | tr -d '\n'
-#}
-#
-#OPENRESTY=$(dep_version RESTY_VERSION)
-#LUAROCKS=$(dep_version RESTY_LUAROCKS_VERSION)
-#OPENSSL=$(dep_version RESTY_OPENSSL_VERSION)
-
-
 #---------
 # Download
 #---------
@@ -43,12 +34,6 @@ kong-ngx-build \
     --openssl $OPENSSL \
     --debug \
     -j $JOBS
-
-OPENSSL_INSTALL=$INSTALL_ROOT/openssl
-OPENRESTY_INSTALL=$INSTALL_ROOT/openresty
-LUAROCKS_INSTALL=$INSTALL_ROOT/luarocks
-
-export OPENSSL_DIR=$OPENSSL_INSTALL # for LuaSec install
 
 export PATH=$OPENSSL_INSTALL/bin:$OPENRESTY_INSTALL/nginx/sbin:$OPENRESTY_INSTALL/bin:$LUAROCKS_INSTALL/bin:$PATH
 export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI invoked in the test suite
