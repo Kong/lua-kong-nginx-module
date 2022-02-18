@@ -15,7 +15,7 @@ jobs:
       with:
         # List of files, directories and rockspecs to check.
         # Default: .
-        files: 'lib'
+        files: 'lualib'
 
         # Path to configuration file.
         # Default: .luacheckrc

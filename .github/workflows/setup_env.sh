@@ -30,7 +30,8 @@ kong-ngx-build \
     --debug \
     -j $JOBS
 
-export PATH=$LUAROCKS_INSTALL/bin:$PATH
+#export PATH=$LUAROCKS_INSTALL/bin:$PATH
+export PATH=$OPENSSL_INSTALL/bin:$OPENRESTY_INSTALL/nginx/sbin:$OPENRESTY_INSTALL/bin:$LUAROCKS_INSTALL/bin:$PATH
 
 eval `luarocks path`
 
