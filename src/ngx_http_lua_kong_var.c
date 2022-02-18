@@ -26,6 +26,8 @@ static ngx_str_t default_vars[] = {
     ngx_string("content_type"),
     ngx_string("host"),
 
+/* http headers*/
+#if 1
     ngx_string("http_authorization"),
     ngx_string("http_connection"),
     ngx_string("http_host"),
@@ -41,12 +43,21 @@ static ngx_str_t default_vars[] = {
     ngx_string("http_x_forwarded_port"),
     ngx_string("http_x_forwarded_prefix"),
     ngx_string("http_x_forwarded_proto"),
+#endif
 
+#if (NGX_HTTP_SSL)
     ngx_string("https"),
-    ngx_string("http2"),
+#endif
 
+#if (NGX_HTTP_V2)
+    ngx_string("http2"),
+#endif
+
+#if (NGX_HTTP_REALIP)
     ngx_string("realip_remote_addr"),
     ngx_string("realip_remote_port"),
+#endif
+
     ngx_string("remote_addr"),
     ngx_string("remote_port"),
 
@@ -59,11 +70,13 @@ static ngx_str_t default_vars[] = {
     ngx_string("server_addr"),
     ngx_string("server_port"),
 
+#if (NGX_SSL)
     ngx_string("ssl_cipher"),
     ngx_string("ssl_client_raw_cert"),
     ngx_string("ssl_client_verify"),
     ngx_string("ssl_protocol"),
     ngx_string("ssl_server_name"),
+#endif
 
     ngx_string("upstream_http_connection"),
     ngx_string("upstream_http_trailer"),
