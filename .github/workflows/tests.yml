@@ -10,11 +10,11 @@ jobs:
     env:
       JOBS: 1  # must be 1 as socket tests interfere with each other
       INSTALL_ROOT: /home/runner/work/install-root
-      DOWNLOAD_ROOT:  ${{ env.INSTALL_ROOT }}/download-root
-      OPENSSL_INSTALL: ${{ env.INSTALL_ROOT }}/openssl
-      OPENSSL_DIR: ${{ OPENSSL_INSTALL }}
-      OPENRESTY_INSTALL: ${{ env.INSTALL_ROOT }}/openresty
-      LUAROCKS_INSTALL: ${{ env.INSTALL_ROOT }}/luarocks
+      DOWNLOAD_ROOT:  /home/runner/work/download-root
+      OPENSSL_INSTALL: /home/runner/work/install-root/openssl
+      OPENSSL_DIR: /home/runner/work/install-root/openssl
+      OPENRESTY_INSTALL: /home/runner/work/install-root/openresty
+      LUAROCKS_INSTALL: /home/runner/work/install-root/luarocks
       BUILD_TOOLS_BRANCH: master
 
     steps:
