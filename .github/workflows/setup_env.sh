@@ -32,7 +32,6 @@ export PATH=$BUILD_TOOLS_DOWNLOAD/openresty-build-tools:$PATH
 #--------
 # Install
 #--------
-INSTALL_CACHE=${INSTALL_CACHE:=/install-cache}
 INSTALL_ROOT=${INSTALL_ROOT:=/install-root}
 
 kong-ngx-build \

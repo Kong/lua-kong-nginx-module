@@ -9,7 +9,6 @@ jobs:
 
     env:
       JOBS: 1  # must be 1 as socket tests interfere with each other
-      INSTALL_CACHE: /home/runner/work/install-cache
       INSTALL_ROOT: /home/runner/work/install-root
       DOWNLOAD_ROOT: /home/runner/work/download-root
 
@@ -21,9 +20,10 @@ jobs:
 
     - name: Setup cache
       uses: actions/cache@v2
+      id: cache-deps
       with:
         path: |
-          /home/runner/work/install-cache
+          ${{ env.INSTALL_ROOT }}
         key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}
 
     - name: Setup tools
