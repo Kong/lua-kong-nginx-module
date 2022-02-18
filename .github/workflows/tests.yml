@@ -26,10 +26,14 @@ jobs:
           ${{ env.INSTALL_ROOT }}
         key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}
 
+    - name: Install packages
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        sudo apt update
+        sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
+
     - name: Setup tools
       run: |
-        sudo apt-get update
-        sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
         source .github/workflows/setup_env.sh
 
     - name: Run Test
