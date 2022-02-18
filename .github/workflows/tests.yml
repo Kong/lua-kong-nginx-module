@@ -7,6 +7,18 @@ jobs:
     name: Tests
     runs-on: ubuntu-20.04
 
+    strategy:
+      matrix:
+        include:
+        # TODO: arm64
+        # latest and one version older for valgrind
+        - openresty: "1.19.3.2"
+          luarocks: "3.7.0"
+          openssl: "1.1.1k"
+        - openresty: "1.19.9.1"
+          luarocks: "3.8.0"
+          openssl: "1.1.1m"
+
     env:
       JOBS: 1  # must be 1 as socket tests interfere with each other
 
@@ -21,6 +33,10 @@ jobs:
       BUILD_TOOLS_DOWNLOAD: /home/runner/work/download-root/kong-build-tools
       BUILD_TOOLS_BRANCH: master
 
+      OPENRESTY: ${{ matrix.openresty }}
+      LUAROCKS: ${{ matrix.luarocks }}
+      OPENSSL: ${{ matrix.openssl }}
+
     steps:
     - name: Checkout source code
       uses: actions/checkout@v2
@@ -33,7 +49,7 @@ jobs:
       with:
         path: |
           ${{ env.INSTALL_ROOT }}
-        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-${{ hashFiles('.requirements') }}-${{ hashFiles('kong-*.rockspec') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-openresty-${{ matrix.openresty }}-luarocks-${{ matrix.luarocks }}-openssl-${{ matrix.openssl }}
 
     - name: Install packages
       if: steps.cache-deps.outputs.cache-hit != 'true'
