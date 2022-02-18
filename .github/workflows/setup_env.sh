@@ -5,10 +5,6 @@
 # Download
 #---------
 
-DOWNLOAD_ROOT=${DOWNLOAD_ROOT:=/download-root}
-BUILD_TOOLS_DOWNLOAD=$DOWNLOAD_ROOT/kong-build-tools
-BUILD_TOOLS_BRANCH=${BUILD_TOOLS_BRANCH:=master}
-
 if [ ! -d $BUILD_TOOLS_DOWNLOAD ]; then
     git clone -b $BUILD_TOOLS_BRANCH https://github.com/Kong/kong-build-tools.git $BUILD_TOOLS_DOWNLOAD
 else
