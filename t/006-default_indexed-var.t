@@ -213,8 +213,8 @@ get variable value '666' by index
     }
 --- request
 GET /test
---- response_body_like
-GET 58 /test \d\.\d{3} 127.0.0.1 1984
+--- response_body
+GET 58 /test 0.000 127.0.0.1 1984
 --- error_log
 get variable value 'GET' by index
 get variable value '58' by index
