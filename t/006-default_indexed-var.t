@@ -251,10 +251,10 @@ GET /test
 --- response_body
 nil nil nil nil
 --- error_log
-get variable value is declined by index
-get variable value is declined by index
-get variable value is declined by index
-get variable value is declined by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
 --- no_error_log
 [error]
 [crit]
@@ -287,11 +287,11 @@ GET /test
  nil nil nil nil nil
 --- error_log
 get variable value '' by index
-get variable value is declined by index
-get variable value is declined by index
-get variable value is declined by index
-get variable value is declined by index
-get variable value is declined by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
 --- no_error_log
 [error]
 [crit]
