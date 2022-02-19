@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) + 12;
+plan tests => repeat_each() * (blocks() * 8) + 10;
 
 #no_diff();
 #no_long_string();
@@ -378,6 +378,35 @@ GET /test
 http2:
 --- error_log
 get variable value '' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+=== TEST 12: variable $content_type$bytes_sent
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.content_type, " ",
+                    ngx.var.bytes_sent)
+        ';
+    }
+--- request
+GET /test
+--- more_headers
+content-type: plain
+--- response_body
+plain 0
+--- error_log
+get variable value 'plain' by index
+get variable value '0' by index
 --- no_error_log
 [error]
 [crit]
