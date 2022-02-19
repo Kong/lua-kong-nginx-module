@@ -186,7 +186,7 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
     vv = ngx_http_get_indexed_variable(r, index);
     if (vv == NULL || vv->not_found) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "get variable value by index %d is declined", index);
+                "get variable value is declined by index %d", index);
 
         return NGX_DECLINED;
     }

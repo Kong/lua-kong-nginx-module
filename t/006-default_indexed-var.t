@@ -190,3 +190,148 @@ get variable value '666' by index
 [crit]
 [alert]
 
+
+
+=== TEST 6: request variables
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.request_method, " ",
+                    ngx.var.request_length, " ",
+                    ngx.var.request_uri, " ",
+                    ngx.var.request_time, " ",
+                    ngx.var.server_addr, " ",
+                    ngx.var.server_port
+                    )
+        ';
+    }
+--- request
+GET /test
+--- response_body
+GET 58 /test 0.000 127.0.0.1 1984
+--- error_log
+get variable value 'GET' by index
+get variable value '58' by index
+get variable value '/test' by index
+get variable value '0.000' by index
+get variable value '127.0.0.1' by index
+get variable value '1984' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 7: upstream variables
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.upstream_http_connection, " ",
+                    ngx.var.upstream_http_trailer, " ",
+                    ngx.var.upstream_http_upgrade, " ",
+                    ngx.var.upstream_status
+                    )
+        ';
+    }
+--- request
+GET /test
+--- response_body
+nil nil nil nil
+--- error_log
+get variable value is declined by index
+get variable value is declined by index
+get variable value is declined by index
+get variable value is declined by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 8: ssl/https variables
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.https, " ",
+                    ngx.var.ssl_cipher, " ",
+                    ngx.var.ssl_client_raw_cert, " ",
+                    ngx.var.ssl_client_verify, " ",
+                    ngx.var.ssl_protocol, " ",
+                    ngx.var.ssl_server_name
+                    )
+        ';
+    }
+--- request
+GET /test
+--- response_body
+ nil nil nil nil nil
+--- error_log
+get variable value '' by index
+get variable value is declined by index
+get variable value is declined by index
+get variable value is declined by index
+get variable value is declined by index
+get variable value is declined by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 9: reomte variables
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+    set_real_ip_from 127.0.0.1;
+    real_ip_header X-Real-IP;
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.remote_addr, " ",
+                    type(ngx.var.remote_port), " ",
+                    ngx.var.realip_remote_addr, " ",
+                    type(ngx.var.realip_remote_port)
+                    )
+        ';
+    }
+--- request
+GET /test
+--- more_headers
+X-Real-IP: 1.2.3.4
+--- response_body
+1.2.3.4 string 127.0.0.1 string
+--- error_log
+get variable value '1.2.3.4' by index
+get variable value '127.0.0.1' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+--- ONLY
+
+
+
