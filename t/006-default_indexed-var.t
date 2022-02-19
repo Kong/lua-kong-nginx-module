@@ -99,7 +99,7 @@ get variable value '/test' by index
 
 
 === TEST 4: variable $http_xxx
--- http_config
+--- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_default_var_indexes;
     #lua_kong_load_var_index $http_authorization;
@@ -109,15 +109,14 @@ get variable value '/test' by index
 --- config
     location = /test {
         content_by_lua '
-            ngx.say(ngx.var.host --, " ",
-                    -- ngx.var.http_authorization, " ",
-                    -- ngx.var.http_connection, " ",
-                    -- ngx.var.http_host, " ",
-                    -- ngx.var.http_kong_debug, " ",
-                    -- ngx.var.http_proxy, " ",
-                    -- ngx.var.http_proxy_connection, " ",
-                    -- ngx.var.http_te, " ",
-                    -- ngx.var.http_upgrade
+            ngx.say(ngx.var.http_authorization, " ",
+                    ngx.var.http_connection, " ",
+                    ngx.var.http_host, " ",
+                    ngx.var.http_kong_debug, " ",
+                    ngx.var.http_proxy, " ",
+                    ngx.var.http_proxy_connection, " ",
+                    ngx.var.http_te, " ",
+                    ngx.var.http_upgrade
                     )
         ';
     }
@@ -133,13 +132,16 @@ proxy-connection: xxx
 te: xxx
 upgrade: xxx
 --- response_body
-test.com
-#test.com auth close test.com 1 xxx xxx xxx xxx
+auth close test.com 1 xxx xxx xxx xxx
 --- error_log
-get variable value 'test.com' by index
 get variable value 'auth' by index
 get variable value 'close' by index
 get variable value 'test.com' by index
+get variable value '1' by index
+get variable value 'xxx' by index
+get variable value 'xxx' by index
+get variable value 'xxx' by index
+get variable value 'xxx' by index
 --- no_error_log
 [error]
 [crit]
