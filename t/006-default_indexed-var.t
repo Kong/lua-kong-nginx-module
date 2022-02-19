@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) + 16;
+plan tests => repeat_each() * (blocks() * 8) + 12;
 
 #no_diff();
 #no_long_string();
@@ -306,13 +306,39 @@ variable value is not found by index
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.remote_addr, " ",
+                    ngx.var.remote_port
+                    )
+        ';
+    }
+--- request
+GET /test
+--- response_body_like
+127.0.0.1 \d+$
+--- error_log
+get variable value '127.0.0.1' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+=== TEST 10: realip variables
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
     set_real_ip_from 127.0.0.1;
     real_ip_header X-Real-IP;
 --- config
     location = /test {
         content_by_lua '
             ngx.say(ngx.var.remote_addr, " ",
-                    ngx.var.remote_port, " ",
                     ngx.var.realip_remote_addr, " ",
                     ngx.var.realip_remote_port
                     )
@@ -323,7 +349,7 @@ GET /test
 --- more_headers
 X-Real-IP: 1.2.3.4
 --- response_body_like
-^1.2.3.4  127.0.0.1 \d+$
+^1.2.3.4 127.0.0.1 \d+$
 --- error_log
 get variable value '1.2.3.4' by index
 get variable value '127.0.0.1' by index
@@ -333,7 +359,7 @@ get variable value '127.0.0.1' by index
 [alert]
 
 
-=== TEST 10: http2 variable
+=== TEST 11: http2 variable
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_default_var_indexes;
