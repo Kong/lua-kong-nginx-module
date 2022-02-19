@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) + 8;
+plan tests => repeat_each() * (blocks() * 8) + 16;
 
 #no_diff();
 #no_long_string();
@@ -213,8 +213,8 @@ get variable value '666' by index
     }
 --- request
 GET /test
---- response_body
-GET 58 /test 0.000 127.0.0.1 1984
+--- response_body_like
+GET 58 /test \d\.\d{3} 127.0.0.1 1984
 --- error_log
 get variable value 'GET' by index
 get variable value '58' by index
@@ -312,9 +312,9 @@ get variable value is declined by index
     location = /test {
         content_by_lua '
             ngx.say(ngx.var.remote_addr, " ",
-                    type(ngx.var.remote_port), " ",
+                    ngx.var.remote_port, " ",
                     ngx.var.realip_remote_addr, " ",
-                    type(ngx.var.realip_remote_port)
+                    ngx.var.realip_remote_port
                     )
         ';
     }
@@ -322,8 +322,8 @@ get variable value is declined by index
 GET /test
 --- more_headers
 X-Real-IP: 1.2.3.4
---- response_body
-1.2.3.4 string 127.0.0.1 string
+--- response_body_like
+^1.2.3.4  127.0.0.1 \d+$
 --- error_log
 get variable value '1.2.3.4' by index
 get variable value '127.0.0.1' by index
@@ -331,7 +331,28 @@ get variable value '127.0.0.1' by index
 [error]
 [crit]
 [alert]
---- ONLY
 
 
-
+=== TEST 10: http2 variable
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say("http2:", ngx.var.http2)
+        ';
+    }
+--- request
+GET /test
+--- response_body
+http2:
+--- error_log
+get variable value '' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
