@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6) + 2;
+plan tests => repeat_each() * (blocks() * 6) + 4;
 
 #no_diff();
 #no_long_string();
@@ -19,7 +19,7 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: default indexed variables works well
+=== TEST 1: sanity: directive works well
 --- http_config
     lua_kong_load_default_var_indexes;
 
@@ -68,7 +68,7 @@ get variable value 'hello=world' by index
 
 
 
-=== TEST 3: variable $scheme$request_uri
+=== TEST 3: variable $scheme$host$request_uri
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_default_var_indexes;
@@ -78,15 +78,18 @@ get variable value 'hello=world' by index
 --- config
     location = /test {
         content_by_lua '
-            ngx.say(ngx.var.scheme, " ", ngx.var.request_uri)
+            ngx.say(ngx.var.scheme, " ",
+                    ngx.var.host, " ",
+                    ngx.var.request_uri)
         ';
     }
 --- request
 GET /test
 --- response_body
-http /test
+http localhost /test
 --- error_log
 get variable value 'http' by index
+get variable value 'localhost' by index
 get variable value '/test' by index
 --- no_error_log
 [error]
@@ -94,4 +97,52 @@ get variable value '/test' by index
 [alert]
 
 
+
+=== TEST 4: variable $http_xxx
+-- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    #lua_kong_load_var_index $http_authorization;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.host --, " ",
+                    -- ngx.var.http_authorization, " ",
+                    -- ngx.var.http_connection, " ",
+                    -- ngx.var.http_host, " ",
+                    -- ngx.var.http_kong_debug, " ",
+                    -- ngx.var.http_proxy, " ",
+                    -- ngx.var.http_proxy_connection, " ",
+                    -- ngx.var.http_te, " ",
+                    -- ngx.var.http_upgrade
+                    )
+        ';
+    }
+--- request
+GET /test
+--- more_headers
+authorization: auth
+connection: close
+host: test.com
+kong-debug: 1
+proxy: xxx
+proxy-connection: xxx
+te: xxx
+upgrade: xxx
+--- response_body
+test.com
+#test.com auth close test.com 1 xxx xxx xxx xxx
+--- error_log
+get variable value 'test.com' by index
+get variable value 'auth' by index
+get variable value 'close' by index
+get variable value 'test.com' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+--- ONLY
 
