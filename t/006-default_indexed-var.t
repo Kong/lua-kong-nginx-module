@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6) + 4;
+plan tests => repeat_each() * (blocks() * 8) + 8;
 
 #no_diff();
 #no_long_string();
@@ -102,7 +102,6 @@ get variable value '/test' by index
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_default_var_indexes;
-    #lua_kong_load_var_index $http_authorization;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -127,24 +126,67 @@ authorization: auth
 connection: close
 host: test.com
 kong-debug: 1
-proxy: xxx
-proxy-connection: xxx
-te: xxx
-upgrade: xxx
+proxy: 111
+proxy-connection: 222
+te: 333
+upgrade: 444
 --- response_body
-auth close test.com 1 xxx xxx xxx xxx
+auth close test.com 1 111 222 333 444
 --- error_log
 get variable value 'auth' by index
 get variable value 'close' by index
 get variable value 'test.com' by index
 get variable value '1' by index
-get variable value 'xxx' by index
-get variable value 'xxx' by index
-get variable value 'xxx' by index
-get variable value 'xxx' by index
+get variable value '111' by index
+get variable value '222' by index
+get variable value '333' by index
+get variable value '444' by index
 --- no_error_log
 [error]
 [crit]
 [alert]
---- ONLY
+
+
+
+=== TEST 5: variable $http_x_forwarded_xxx
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_default_var_indexes;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+--- config
+    location = /test {
+        content_by_lua '
+            ngx.say(ngx.var.http_x_forwarded_for, " ",
+                    ngx.var.http_x_forwarded_host, " ",
+                    ngx.var.http_x_forwarded_path, " ",
+                    ngx.var.http_x_forwarded_port, " ",
+                    ngx.var.http_x_forwarded_prefix, " ",
+                    ngx.var.http_x_forwarded_proto
+                    )
+        ';
+    }
+--- request
+GET /test
+--- more_headers
+x-forwarded-for: 111
+x-forwarded-host: 222
+x-forwarded-path: 333
+x-forwarded-port: 444
+x-forwarded-prefix: 555
+x-forwarded-proto: 666
+--- response_body
+111 222 333 444 555 666
+--- error_log
+get variable value '111' by index
+get variable value '222' by index
+get variable value '333' by index
+get variable value '444' by index
+get variable value '555' by index
+get variable value '666' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
 
