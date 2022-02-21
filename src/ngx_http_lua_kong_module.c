@@ -45,6 +45,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       0,
       NULL },
 
+    { ngx_string("lua_kong_load_default_var_indexes"),
+      NGX_HTTP_MAIN_CONF|NGX_CONF_NOARGS,
+      ngx_http_lua_kong_load_default_var_indexes,
+      0,
+      0,
+      NULL },
+
     ngx_null_command
 };
 
