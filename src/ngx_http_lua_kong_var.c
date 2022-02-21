@@ -91,6 +91,28 @@ static ngx_str_t default_vars[] = {
 };
 
 
+static char *
+ngx_http_lua_kong_load_default_var_indexes()
+{
+    ngx_str_t                     *var;
+    ngx_int_t                      index;
+
+    for (var = default_vars; var->len; var++) {
+
+        index = ngx_http_get_variable_index(cf, var);
+
+        if (index == NGX_ERROR) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "unable to mark variable \"%V\" as indexed: no memory",
+                               var);
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    return NGX_CONF_OK;
+}
+
+
 char *
 ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -98,6 +120,10 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_int_t                      index;
 
     value = cf->args->elts;
+
+    if (ngx_strcmp(value[1].data, "default") == 0) {
+        return ngx_http_lua_kong_load_default_var_indexes();
+    }
 
     if (value[1].data[0] != '$') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -115,29 +141,6 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                            "unable to mark variable \"%V\" as indexed: no memory",
                            &value[1]);
         return NGX_CONF_ERROR;
-    }
-
-    return NGX_CONF_OK;
-}
-
-
-char *
-ngx_http_lua_kong_load_default_var_indexes(ngx_conf_t *cf, ngx_command_t *cmd,
-    void *conf)
-{
-    ngx_str_t                     *var;
-    ngx_int_t                      index;
-
-    for (var = default_vars; var->len; var++) {
-
-        index = ngx_http_get_variable_index(cf, var);
-
-        if (index == NGX_ERROR) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "unable to mark variable \"%V\" as indexed: no memory",
-                               var);
-            return NGX_CONF_ERROR;
-        }
     }
 
     return NGX_CONF_OK;
