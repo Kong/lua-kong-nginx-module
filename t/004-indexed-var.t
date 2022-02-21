@@ -148,7 +148,7 @@ value4_2
 
 --- error_code: 200
 --- error_log
-get variable value 'value4_2' by index 3
+get variable value 'value4_2' by index
 --- no_error_log
 [error]
 [crit]
