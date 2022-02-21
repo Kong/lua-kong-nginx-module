@@ -68,7 +68,14 @@ ngx_module_t ngx_http_lua_kong_module = {
 static ngx_int_t
 ngx_http_lua_kong_init(ngx_conf_t *cf)
 {
-    return ngx_http_lua_kong_ssl_init(cf);
+    int                  ret;
+
+    ret = ngx_http_lua_kong_ssl_init(cf);
+    if (ret != NGX_OK) {
+        return ret;
+    }
+
+    return NGX_OK;
 }
 
 
