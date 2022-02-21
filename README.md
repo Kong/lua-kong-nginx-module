@@ -86,7 +86,7 @@ lua_kong_load_default_var_indexes
 **context:** *http*
 
 Ensure *commonly used variable* is indexed,
-it is a shortcut for `lua_kong_load_var_index`[#lua_kong_load_var_index].
+it is a shortcut for [`lua_kong_load_var_index`](#lua_kong_load_var_index).
 
 Here is the list of indexed variables by this directive:
 
