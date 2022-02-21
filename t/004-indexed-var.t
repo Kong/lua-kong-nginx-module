@@ -3,7 +3,7 @@
 use Test::Nginx::Socket::Lua;
 use Cwd qw(cwd);
 
-plan tests => repeat_each() * (blocks() * 5);
+plan tests => repeat_each() * (blocks() * 5) + 2;
 
 my $pwd = cwd();
 
@@ -106,6 +106,8 @@ GET /t
 value3
 
 --- error_code: 200
+--- error_log
+get variable value 'value3' by index
 --- no_error_log
 [error]
 [crit]
@@ -145,6 +147,8 @@ GET /t
 value4_2
 
 --- error_code: 200
+--- error_log
+get variable value 'value4_2' by index 3
 --- no_error_log
 [error]
 [crit]
