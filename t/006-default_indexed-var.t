@@ -21,7 +21,7 @@ __DATA__
 
 === TEST 1: sanity: directive works well
 --- http_config
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
 
 --- config
     location = /test {
@@ -43,7 +43,7 @@ ok
 === TEST 2: variable $is_args$args
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -71,7 +71,7 @@ get variable value 'hello=world' by index
 === TEST 3: variable $scheme$host$request_uri
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -101,7 +101,7 @@ get variable value '/test' by index
 === TEST 4: variable $http_xxx
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -151,7 +151,7 @@ get variable value '444' by index
 === TEST 5: variable $http_x_forwarded_xxx
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -195,7 +195,7 @@ get variable value '666' by index
 === TEST 6: request variables
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -232,7 +232,7 @@ get variable value '1984' by index
 === TEST 7: upstream variables
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -265,7 +265,7 @@ variable value is not found by index
 === TEST 8: ssl/https variables
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -302,7 +302,7 @@ variable value is not found by index
 === TEST 9: reomte variables
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -329,7 +329,7 @@ get variable value '127.0.0.1' by index
 === TEST 10: realip variables
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -362,7 +362,7 @@ get variable value '127.0.0.1' by index
 === TEST 11: http2 variable
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }
@@ -386,7 +386,7 @@ get variable value '' by index
 === TEST 12: variable $content_type$bytes_sent
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_load_default_var_indexes;
+    lua_kong_load_var_index default;
     init_by_lua_block {
         require("resty.kong.var").patch_metatable()
     }

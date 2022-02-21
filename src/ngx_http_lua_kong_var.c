@@ -92,7 +92,7 @@ static ngx_str_t default_vars[] = {
 
 
 static char *
-ngx_http_lua_kong_load_default_var_indexes()
+ngx_http_lua_kong_load_default_var_indexes(ngx_conf_t *cf)
 {
     ngx_str_t                     *var;
     ngx_int_t                      index;
@@ -122,7 +122,7 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     value = cf->args->elts;
 
     if (ngx_strcmp(value[1].data, "default") == 0) {
-        return ngx_http_lua_kong_load_default_var_indexes();
+        return ngx_http_lua_kong_load_default_var_indexes(cf);
     }
 
     if (value[1].data[0] != '$') {
