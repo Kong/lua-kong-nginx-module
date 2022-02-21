@@ -11,6 +11,7 @@ Table of Contents
 * [Install](#install)
 * [Directives](#directives)
     * [lua_kong_load_var_index](#lua_kong_load_var_index)
+    * [lua_kong_load_default_var_indexes](#lua_kong_load_default_var_indexes)
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
@@ -72,6 +73,62 @@ Common variables defined by other modules that are already indexed:
 - `$http_referer`
 - `$http_user_agent`
 - `$host`
+
+See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
+indexed variable access.
+
+[Back to TOC](#table-of-contents)
+
+lua_kong_load_default_var_indexes
+-------------------------------------------
+**syntax:** *lua_kong_load_default_var_indexes;*
+
+**context:** *http*
+
+Ensure *commonly used variable* is indexed,
+it is a shortcut for `lua_kong_load_var_index`[#lua_kong_load_var_index].
+
+Here is the list of indexed variables by this directive:
+
+- `$args`
+- `$is_args`
+- `$bytes_sent`
+- `$content_type`
+- `$http_authorization`
+- `$http_connection`
+- `$http_host`
+- `$http_kong_debug`
+- `$http_proxy`
+- `$http_proxy_connection`
+- `$http_te`
+- `$http_upgrade`
+- `$http_x_forwarded_for`
+- `$http_x_forwarded_host`
+- `$http_x_forwarded_path`
+- `$http_x_forwarded_port`
+- `$http_x_forwarded_prefix`
+- `$http_x_forwarded_proto`
+- `$https`
+- `$http2`
+- `$realip_remote_addr`
+- `$realip_remote_port`
+- `$remote_port`
+- `$request_length`
+- `$request_method`
+- `$request_time`
+- `$request_uri`
+- `$scheme`
+- `$server_addr`
+- `$server_port`
+- `$ssl_cipher`
+- `$ssl_client_raw_cert`
+- `$ssl_client_verify`
+- `$ssl_protocol`
+- `$ssl_server_name`
+- `$upstream_http_connection`
+- `$upstream_http_trailer`
+- `$upstream_http_upgrade`
+- `$upstream_status`
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
