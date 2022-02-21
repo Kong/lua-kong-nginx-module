@@ -20,12 +20,6 @@ export PATH=$BUILD_TOOLS_DOWNLOAD/openresty-build-tools:$PATH
 # Install
 #--------
 
-# test
-echo ${GITHUB_BASE_REF}
-echo ${GITHUB_REF}
-echo ${GITHUB_HEAD_REF}
-echo ${GITHUB_REF_NAME}
-
 kong-ngx-build \
     --work $DOWNLOAD_ROOT \
     --prefix $INSTALL_ROOT \
