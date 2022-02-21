@@ -11,7 +11,6 @@ Table of Contents
 * [Install](#install)
 * [Directives](#directives)
     * [lua_kong_load_var_index](#lua_kong_load_var_index)
-    * [lua_kong_load_default_var_indexes](#lua_kong_load_default_var_indexes)
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
@@ -55,7 +54,7 @@ Directives
 
 lua_kong_load_var_index
 -------------------------------------------
-**syntax:** *lua_kong_load_var_index $variable;*
+**syntax:** *lua_kong_load_var_index $variable | default;*
 
 **context:** *http*
 
@@ -74,21 +73,10 @@ Common variables defined by other modules that are already indexed:
 - `$http_user_agent`
 - `$host`
 
-See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
-indexed variable access.
+If the parameter is `default`, then this directive will try to
+load *commonly used variables*.
 
-[Back to TOC](#table-of-contents)
-
-lua_kong_load_default_var_indexes
--------------------------------------------
-**syntax:** *lua_kong_load_default_var_indexes;*
-
-**context:** *http*
-
-Ensure *commonly used variable* is indexed,
-it is a shortcut for [`lua_kong_load_var_index`](#lua_kong_load_var_index).
-
-Here is the list of indexed variables by this directive:
+Here is the list of indexed variables by `default`:
 
 - `$args`
 - `$is_args`
