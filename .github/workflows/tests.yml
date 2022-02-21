@@ -1,0 +1,74 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        include:
+        # TODO: arm64
+        - openresty: "1.19.3.2"
+          luarocks: "3.7.0"
+          openssl: "1.1.1k"
+        - openresty: "1.19.9.1"
+          luarocks: "3.8.0"
+          openssl: "1.1.1m"
+
+    env:
+      JOBS: 1  # must be 1 as socket tests interfere with each other
+
+      INSTALL_ROOT: /home/runner/work/install-root
+      DOWNLOAD_ROOT: /home/runner/work/download-root
+
+      OPENSSL_INSTALL: /home/runner/work/install-root/openssl
+      OPENSSL_DIR: /home/runner/work/install-root/openssl
+      OPENRESTY_INSTALL: /home/runner/work/install-root/openresty
+      LUAROCKS_INSTALL: /home/runner/work/install-root/luarocks
+
+      BUILD_TOOLS_DOWNLOAD: /home/runner/work/download-root/kong-build-tools
+      BUILD_TOOLS_BRANCH: master
+
+      OPENRESTY: ${{ matrix.openresty }}
+      LUAROCKS: ${{ matrix.luarocks }}
+      OPENSSL: ${{ matrix.openssl }}
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: 'true'
+
+    - name: Setup cache
+      uses: actions/cache@v2
+      id: cache-deps
+      with:
+        path: |
+          ${{ env.INSTALL_ROOT }}
+        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-openresty-${{ matrix.openresty }}-luarocks-${{ matrix.luarocks }}-openssl-${{ matrix.openssl }}
+
+    - name: Install packages
+      run: |
+        sudo apt update
+        sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
+
+    - name: Setup tools
+      run: |
+        source .github/workflows/setup_env.sh
+
+    - name: Run Test
+      run: |
+        export PATH=$OPENSSL_INSTALL/bin:$OPENRESTY_INSTALL/nginx/sbin:$OPENRESTY_INSTALL/bin:$LUAROCKS_INSTALL/bin:$PATH
+        export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI invoked in the test suite
+
+        nginx -V
+        resty -V
+        luarocks --version
+        openssl version
+
+        eval `luarocks path`
+        prove -j$JOBS -r t
+
