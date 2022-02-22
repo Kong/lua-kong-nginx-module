@@ -24,7 +24,7 @@ kong-ngx-build \
     --work $DOWNLOAD_ROOT \
     --prefix $INSTALL_ROOT \
     --openresty $OPENRESTY \
-    --kong-nginx-module ${GITHUB_BASE_REF:-$GITHUB_REF_NAME} \
+    --kong-nginx-module ${GITHUB_HEAD_REF:-$GITHUB_REF_NAME} \
     --luarocks $LUAROCKS \
     --openssl $OPENSSL \
     --debug \

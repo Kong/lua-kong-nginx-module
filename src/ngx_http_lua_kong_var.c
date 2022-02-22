@@ -18,6 +18,99 @@
 #include "ngx_http_lua_kong_common.h"
 
 
+/* default variable indexes will be loaded */
+static ngx_str_t default_vars[] = {
+    ngx_string("args"),
+    ngx_string("is_args"),
+    ngx_string("bytes_sent"),
+    ngx_string("content_type"),
+    /* ngx_string("host"), */
+
+    /* http request headers */
+    ngx_string("http_authorization"),
+    ngx_string("http_connection"),
+    ngx_string("http_host"),
+    ngx_string("http_kong_debug"),
+    ngx_string("http_proxy"),
+    ngx_string("http_proxy_connection"),
+    ngx_string("http_te"),
+    ngx_string("http_upgrade"),
+
+    /* http request headers */
+    ngx_string("http_x_forwarded_for"),
+    ngx_string("http_x_forwarded_host"),
+    ngx_string("http_x_forwarded_path"),
+    ngx_string("http_x_forwarded_port"),
+    ngx_string("http_x_forwarded_prefix"),
+    ngx_string("http_x_forwarded_proto"),
+
+    /* --with-http_ssl_module */
+#if (NGX_HTTP_SSL)
+    ngx_string("https"),
+#endif
+
+    /* --with-http_v2_module */
+#if (NGX_HTTP_V2)
+    ngx_string("http2"),
+#endif
+
+    /* --with-http_realip_module */
+#if (NGX_HTTP_REALIP)
+    ngx_string("realip_remote_addr"),
+    ngx_string("realip_remote_port"),
+#endif
+
+    /* ngx_string("remote_addr"), */
+    ngx_string("remote_port"),
+
+    /* ngx_string("request"), */
+    ngx_string("request_length"),
+    ngx_string("request_method"),
+    ngx_string("request_time"),
+    ngx_string("request_uri"),
+    ngx_string("scheme"),
+    ngx_string("server_addr"),
+    ngx_string("server_port"),
+
+/* --with-http_ssl_module */
+#if (NGX_SSL)
+    ngx_string("ssl_cipher"),
+    ngx_string("ssl_client_raw_cert"),
+    ngx_string("ssl_client_verify"),
+    ngx_string("ssl_protocol"),
+    ngx_string("ssl_server_name"),
+#endif
+
+    ngx_string("upstream_http_connection"),
+    ngx_string("upstream_http_trailer"),
+    ngx_string("upstream_http_upgrade"),
+    ngx_string("upstream_status"),
+
+    ngx_null_string
+};
+
+
+static char *
+ngx_http_lua_kong_load_default_var_indexes(ngx_conf_t *cf)
+{
+    ngx_str_t                     *var;
+    ngx_int_t                      index;
+
+    for (var = default_vars; var->len; var++) {
+        index = ngx_http_get_variable_index(cf, var);
+
+        if (index == NGX_ERROR) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "unable to mark variable \"%V\" as indexed: no memory",
+                               var);
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    return NGX_CONF_OK;
+}
+
+
 char *
 ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -25,6 +118,10 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_int_t                      index;
 
     value = cf->args->elts;
+
+    if (ngx_strcmp(value[1].data, "default") == 0) {
+        return ngx_http_lua_kong_load_default_var_indexes(cf);
+    }
 
     if (value[1].data[0] != '$') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -93,11 +190,17 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
 
     vv = ngx_http_get_indexed_variable(r, index);
     if (vv == NULL || vv->not_found) {
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                "variable value is not found by index %d", index);
+
         return NGX_DECLINED;
     }
 
     *value = vv->data;
     *value_len = vv->len;
+
+    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "get variable value '%v' by index %d", vv, index);
 
     return NGX_OK;
 }
