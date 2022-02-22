@@ -36,6 +36,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("http_te"),
     ngx_string("http_upgrade"),
 
+    /* http request headers */
     ngx_string("http_x_forwarded_for"),
     ngx_string("http_x_forwarded_host"),
     ngx_string("http_x_forwarded_path"),

@@ -25,9 +25,9 @@ __DATA__
 
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say("ok")
-        ';
+        }
     }
 --- request
 GET /test
@@ -40,7 +40,7 @@ ok
 
 
 
-=== TEST 2: variable $is_args$args
+=== TEST 2: variable $is_args, $args
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_var_index default;
@@ -50,9 +50,9 @@ ok
 
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say("var: ", ngx.var.is_args, ngx.var.args)
-        ';
+        }
     }
 --- request
 GET /test?hello=world
@@ -68,7 +68,7 @@ get variable value 'hello=world' by index
 
 
 
-=== TEST 3: variable $scheme$host$request_uri
+=== TEST 3: variable $scheme, $host, $request_uri
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_var_index default;
@@ -77,11 +77,11 @@ get variable value 'hello=world' by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.scheme, " ",
                     ngx.var.host, " ",
                     ngx.var.request_uri)
-        ';
+        }
     }
 --- request
 GET /test
@@ -107,7 +107,7 @@ get variable value '/test' by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.http_authorization, " ",
                     ngx.var.http_connection, " ",
                     ngx.var.http_host, " ",
@@ -117,7 +117,7 @@ get variable value '/test' by index
                     ngx.var.http_te, " ",
                     ngx.var.http_upgrade
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -157,7 +157,7 @@ get variable value '444' by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.http_x_forwarded_for, " ",
                     ngx.var.http_x_forwarded_host, " ",
                     ngx.var.http_x_forwarded_path, " ",
@@ -165,7 +165,7 @@ get variable value '444' by index
                     ngx.var.http_x_forwarded_prefix, " ",
                     ngx.var.http_x_forwarded_proto
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -201,7 +201,7 @@ get variable value '666' by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.request_method, " ",
                     ngx.var.request_length, " ",
                     ngx.var.request_uri, " ",
@@ -209,7 +209,7 @@ get variable value '666' by index
                     ngx.var.server_addr, " ",
                     ngx.var.server_port
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -238,13 +238,13 @@ get variable value '1984' by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.upstream_http_connection, " ",
                     ngx.var.upstream_http_trailer, " ",
                     ngx.var.upstream_http_upgrade, " ",
                     ngx.var.upstream_status
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -271,7 +271,7 @@ variable value is not found by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.https, " ",
                     ngx.var.ssl_cipher, " ",
                     ngx.var.ssl_client_raw_cert, " ",
@@ -279,7 +279,7 @@ variable value is not found by index
                     ngx.var.ssl_protocol, " ",
                     ngx.var.ssl_server_name
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -308,11 +308,11 @@ variable value is not found by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.remote_addr, " ",
                     ngx.var.remote_port
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -337,12 +337,12 @@ get variable value '127.0.0.1' by index
     real_ip_header X-Real-IP;
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.remote_addr, " ",
                     ngx.var.realip_remote_addr, " ",
                     ngx.var.realip_remote_port
                     )
-        ';
+        }
     }
 --- request
 GET /test
@@ -368,9 +368,9 @@ get variable value '127.0.0.1' by index
     }
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say("http2:", ngx.var.http2)
-        ';
+        }
     }
 --- request
 GET /test
@@ -383,7 +383,7 @@ get variable value '' by index
 [crit]
 [alert]
 
-=== TEST 12: variable $content_type$bytes_sent
+=== TEST 12: variable $content_type, $bytes_sent
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_var_index default;
@@ -393,10 +393,10 @@ get variable value '' by index
 
 --- config
     location = /test {
-        content_by_lua '
+        content_by_lua_block {
             ngx.say(ngx.var.content_type, " ",
                     ngx.var.bytes_sent)
-        ';
+        }
     }
 --- request
 GET /test
