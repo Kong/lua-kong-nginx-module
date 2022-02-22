@@ -26,8 +26,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("content_type"),
     /* ngx_string("host"), */
 
-/* http request headers */
-#if 1
+    /* http request headers */
     ngx_string("http_authorization"),
     ngx_string("http_connection"),
     ngx_string("http_host"),
@@ -43,19 +42,18 @@ static ngx_str_t default_vars[] = {
     ngx_string("http_x_forwarded_port"),
     ngx_string("http_x_forwarded_prefix"),
     ngx_string("http_x_forwarded_proto"),
-#endif
 
-/* --with-http_ssl_module */
+    /* --with-http_ssl_module */
 #if (NGX_HTTP_SSL)
     ngx_string("https"),
 #endif
 
-/* --with-http_v2_module */
+    /* --with-http_v2_module */
 #if (NGX_HTTP_V2)
     ngx_string("http2"),
 #endif
 
-/* --with-http_realip_module */
+    /* --with-http_realip_module */
 #if (NGX_HTTP_REALIP)
     ngx_string("realip_remote_addr"),
     ngx_string("realip_remote_port"),
@@ -98,7 +96,6 @@ ngx_http_lua_kong_load_default_var_indexes(ngx_conf_t *cf)
     ngx_int_t                      index;
 
     for (var = default_vars; var->len; var++) {
-
         index = ngx_http_get_variable_index(cf, var);
 
         if (index == NGX_ERROR) {
