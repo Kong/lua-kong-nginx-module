@@ -73,10 +73,8 @@ Common variables defined by other modules that are already indexed:
 - `$http_user_agent`
 - `$host`
 
-If the parameter is `default`, then this directive will try to
-load *commonly used variables*.
-
-Here is the list of indexed variables by `default`:
+Specially, use `lua_kong_load_var_index default` to
+index *commonly used variables* as follows:
 
 - `$args`
 - `$is_args`
