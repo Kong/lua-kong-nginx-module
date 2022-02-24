@@ -17,26 +17,8 @@
 
 #include "ngx_http_lua_kong_common.h"
 
-static ngx_listening_t*
-ngx_http_lua_kong_find_listening_socket(in_port_t port)
-{
-    ngx_uint_t           i;
-    ngx_listening_t     *ls;
-    struct sockaddr     *sa;
-
-    ls = ngx_cycle->listening.elts;
-    for (i = 0; i < ngx_cycle->listening.nelts; i++) {
-        sa = ls[i].sockaddr;
-        if (ngx_inet_get_port(sa) == port) {
-            return &ls[i];
-        }
-    }
-
-    return NULL;
-}
-
-int
-ngx_http_lua_kong_close_listening_socket(ngx_listening_t *ls)
+static void
+ngx_http_lua_kong_socket_close_listening(ngx_listening_t *ls)
 {
     ngx_connection_t  *c = ls->connection;
 
@@ -75,20 +57,21 @@ ngx_http_lua_kong_close_listening_socket(ngx_listening_t *ls)
     ls->fd = (ngx_socket_t) -1;
 
     ls->connection = NULL;
-
-    return NGX_OK;
 }
 
-int
-ngx_http_lua_kong_ffi_close_listening_socket(unsigned short port)
+void
+ngx_http_lua_kong_ffi_socket_close_listening(unsigned short port)
 {
-    ngx_listening_t   *ls;
+    ngx_uint_t           i;
+    ngx_listening_t     *ls;
+    struct sockaddr     *sa;
 
-    ls = ngx_http_lua_kong_find_listening_socket(port);
-    if (ls == NULL) {
-        return NGX_ERROR;
+    ls = ngx_cycle->listening.elts;
+    for (i = 0; i < ngx_cycle->listening.nelts; i++) {
+        sa = ls[i].sockaddr;
+        if (ngx_inet_get_port(sa) == port) {
+            ngx_http_lua_kong_socket_close_listening(&ls[i]);
+        }
     }
-
-    return ngx_http_lua_kong_close_listening_socket(ls);
 }
 

@@ -11,12 +11,12 @@ local NGX_ERROR = ngx.ERROR
 
 if subsystem == "http" then
     ffi.cdef[[
-    int
-    ngx_http_lua_kong_ffi_close_listening_socket(unsigned short port);
+    void
+    ngx_http_lua_kong_ffi_socket_close_listening(unsigned short port);
     ]]
 end
 
-local function close(port)
+local function close_listening(port)
     if get_phase() ~= "init_worker" then
         return nil, "close can only be called in init_worker phase"
     end
@@ -29,20 +29,16 @@ local function close(port)
         return nil, "port must between 0 and 65535"
     end
 
-    local rc = C.ngx_http_lua_kong_ffi_close_listening_socket(port)
-
-    if rc ~= NGX_OK then
-        return nil, "close listening socket failed"
-    end
+    C.ngx_http_lua_kong_ffi_socket_close_listening(port)
 
     return true
 end
 
 if subsystem == "stream" then
-    close = function() end
+    close_listening = function() end
 end
 
 
 return {
-    close = close,
+    close_listening = close_listening,
 }
