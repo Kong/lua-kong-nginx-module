@@ -3,6 +3,7 @@ local base = require "resty.core.base"
 
 
 local C = ffi.C
+local ffi_new = ffi.new
 
 local str_sub   = string.sub
 local get_phase = ngx.get_phase
