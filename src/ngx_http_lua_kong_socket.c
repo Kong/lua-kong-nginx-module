@@ -75,6 +75,7 @@ ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name)
         if (ngx_strncmp(ls[i].addr_text.data + 5,
                          sock_name->data, sock_name->len) == 0) {
             ngx_http_lua_kong_socket_close_listening(&ls[i]);
+            break;
         }
 #endif
 
