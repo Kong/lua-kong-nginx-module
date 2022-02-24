@@ -50,6 +50,8 @@ ngx_http_lua_kong_socket_close_listening(ngx_listening_t *ls)
 void
 ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name)
 {
+#if (NGX_HAVE_UNIX_DOMAIN)
+
     ngx_uint_t           i;
     ngx_listening_t     *ls;
 
@@ -64,7 +66,6 @@ ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name)
         }
 #endif
 
-#if (NGX_HAVE_UNIX_DOMAIN)
         if (ls[i].sockaddr->sa_family != AF_UNIX) {
             continue;
         }
@@ -77,8 +78,8 @@ ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name)
             ngx_http_lua_kong_socket_close_listening(&ls[i]);
             break;
         }
-#endif
-
     }
+
+#endif
 }
 

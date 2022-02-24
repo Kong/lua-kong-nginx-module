@@ -19,7 +19,7 @@ end
 
 local function close_listening(sock_name)
     if get_phase() ~= "init_worker" then
-        return nil, "close can only be called in init_worker phase"
+        return nil, "close_listening can only be called in init_worker phase"
     end
 
     if type(sock_name) == "string" then
