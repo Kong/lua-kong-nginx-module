@@ -4,32 +4,38 @@ local base = require "resty.core.base"
 
 local C = ffi.C
 
+local str_sub   = string.sub
 local get_phase = ngx.get_phase
 local subsystem = ngx.config.subsystem
-local NGX_OK = ngx.OK
-local NGX_ERROR = ngx.ERROR
 
 if subsystem == "http" then
     ffi.cdef[[
     void
-    ngx_http_lua_kong_ffi_socket_close_listening(unsigned short port);
+    ngx_http_lua_kong_ffi_socket_close_listening(ngx_str_t *sock_name);
     ]]
 end
 
-local function close_listening(port)
+local sock_name_str = ffi_new("ngx_str_t[1]")
+
+local function close_listening(sock_name)
     if get_phase() ~= "init_worker" then
         return nil, "close can only be called in init_worker phase"
     end
 
-    if type(port) ~= "number" then
-        return nil, "port must be a number"
+    if type(sock_name) ~= "string" then
+        return nil, "sock_name must be a string"
     end
 
-    if port < 0 or port > 65535 then
-        return nil, "port must between 0 and 65535"
+    if str_sub(sock_name, 5) ~= "unix:" then
+        return nil, "sock_name must start with 'unix:'"
     end
 
-    C.ngx_http_lua_kong_ffi_socket_close_listening(port)
+    sock_name = str_sub(sock_bame, 5)
+
+    sock_name_str[0].data = sock_name
+    sock_name_str[0].len = #sock_name
+
+    C.ngx_http_lua_kong_ffi_socket_close_listening(sock_name)
 
     return true
 end
