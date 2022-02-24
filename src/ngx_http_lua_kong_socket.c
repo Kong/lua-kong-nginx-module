@@ -72,7 +72,7 @@ ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name)
         ngx_log_debug2(NGX_LOG_DEBUG_HTTP, ngx_cycle->log, 0,
                 "try to close listening %V #%d", &ls[i].addr_text, ls[i].fd);
 
-        if (ngx_rstrncmp(ls[i].addr_text.data + 5,
+        if (ngx_strncmp(ls[i].addr_text.data + 5,
                          sock_name->data, sock_name->len) == 0) {
             ngx_http_lua_kong_socket_close_listening(&ls[i]);
         }
