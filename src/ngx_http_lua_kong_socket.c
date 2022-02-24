@@ -66,9 +66,28 @@ ngx_http_lua_kong_ffi_socket_close_listening(unsigned short port)
     ngx_listening_t     *ls;
     struct sockaddr     *sa;
 
+    /* copied from ngx_close_listening_sockets */
+
     ls = ngx_cycle->listening.elts;
     for (i = 0; i < ngx_cycle->listening.nelts; i++) {
+
+        ngx_log_debug2(NGX_LOG_DEBUG_HTTP, ngx_cycle->log, 0,
+                "try to close listening %V #%d", &ls[i].addr_text, ls[i].fd);
+
+
+#if (NGX_HAVE_REUSEPORT)
+        if (ls[i].fd == (ngx_socket_t) -1) {
+            continue;
+        }
+#endif
         sa = ls[i].sockaddr;
+
+#if (NGX_HAVE_UNIX_DOMAIN)
+        if (sa->sa_family == AF_UNIX) {
+            continue;
+        }
+#endif
+
         if (ngx_inet_get_port(sa) == port) {
             ngx_http_lua_kong_socket_close_listening(&ls[i]);
         }
