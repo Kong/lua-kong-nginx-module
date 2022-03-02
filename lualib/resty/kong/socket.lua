@@ -1,6 +1,7 @@
 local ffi = require "ffi"
 local base = require "resty.core.base"
 
+base.allows_subsystem("http")
 
 local C = ffi.C
 local ffi_new = ffi.new
@@ -10,12 +11,10 @@ local str_sub   = string.sub
 local get_phase = ngx.get_phase
 local subsystem = ngx.config.subsystem
 
-if subsystem == "http" then
-    ffi.cdef[[
-    void
-    ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name);
-    ]]
-end
+ffi.cdef[[
+void
+ngx_http_lua_kong_ffi_socket_close_unix_listening(ngx_str_t *sock_name);
+]]
 
 local UNIX_PREFIX = "unix:"
 
@@ -46,10 +45,6 @@ local function close_listening(sock_name)
     end
 
     return nil, "sock_name must be number or string"
-end
-
-if subsystem == "stream" then
-    close_listening = function() end
 end
 
 
