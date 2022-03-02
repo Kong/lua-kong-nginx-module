@@ -17,17 +17,19 @@ if subsystem == "http" then
     ]]
 end
 
+local UNIX_PREFIX = "unix:"
+
 local function close_listening(sock_name)
     if get_phase() ~= "init_worker" then
         return nil, "close_listening can only be called in init_worker phase"
     end
 
     if type(sock_name) == "string" then
-        if str_sub(sock_name, 1, 5) ~= "unix:" then
-            return nil, "sock_name must start with 'unix:'"
+        if str_sub(sock_name, 1, #UNIX_PREFIX) ~= UNIX_PREFIX then
+            return nil, "sock_name must start with " .. UNIX_PREFIX
         end
 
-        sock_name = str_sub(sock_name, 6)
+        sock_name = str_sub(sock_name, #UNIX_PREFIX + 1)
 
         local sock_name_str = ffi_new("ngx_str_t[1]")
 
