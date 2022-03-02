@@ -7,6 +7,9 @@ use Test::Nginx::Socket::Lua;
 #master_process_enabled(1);
 #log_level('warn');
 
+master_on();
+workers(2);
+
 repeat_each(2);
 
 plan tests => repeat_each() * (blocks() * 5) - 2;
@@ -23,7 +26,6 @@ __DATA__
 
 === TEST 1: sanity: unix domain socket works well
 --- http_config
-    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
         location / {
@@ -59,18 +61,20 @@ connect unix ok
 
 
 
-=== TEST 2: close unix domain socket
+=== TEST 2: enable unix domain socket in worker #1
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     init_worker_by_lua_block {
+      if ngx.worker.id() ~= 1 then
         require("resty.kong.socket").close_listening("unix:$TEST_NGINX_HTML_DIR/nginx.sock")
+      end
     }
 
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
         location / {
             content_by_lua_block {
-                ngx.say("unix ok")
+                ngx.say("unix ok #", ngx.worker.id())
             }
         }
     }
@@ -103,6 +107,7 @@ connect unix ok
                 return
             end
             ngx.say("receive unix ok")
+            ngx.say(line)
 
             sock:close()
         }
@@ -112,7 +117,8 @@ GET /test
 --- response_body
 connect unix ok
 send unix ok
-failed to receive unix request: timeout
+receive unix ok
+unix ok #1
 --- no_error_log
 [crit]
 [alert]
