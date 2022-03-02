@@ -9,7 +9,6 @@ local ffi_new = ffi.new
 local type = type
 local str_sub   = string.sub
 local get_phase = ngx.get_phase
-local subsystem = ngx.config.subsystem
 
 ffi.cdef[[
 void
