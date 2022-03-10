@@ -405,7 +405,7 @@ resty.kong.socket.close\_listening
 Disable socket listening in a Nginx worker process,
 then this worker process will not accept any message which the client sends to `sock_name`.
 
-Now, this API can only disable unix domain socket like `unix:...`.
+Now, this API can only disable unix domain socket like `unix:/tmp/ngx.sock`.
 
 [Back to TOC](#table-of-contents)
 
