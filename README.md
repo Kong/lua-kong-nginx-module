@@ -22,6 +22,7 @@ Table of Contents
     * [resty.kong.grpc.set\_authority](#restykonggrpcset_authority)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
+    * [resty.kong.socket.close\_listening](#restykongsocketclose_listening)
 * [License](#license)
 
 Description
@@ -390,6 +391,21 @@ be used instead (this is the OpenResty default behavior).
 
 To ensure a variable can be accessed using index, you can use the [lua_kong_load_var_index](#lua_kong_load_var_index)
 directive.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.socket.close\_listening
+----------------------------------
+**syntax:** *ok, err = resty.kong.socket.close_listening(sock_name)*
+
+**context:** *init_worker_by_lua*
+
+**subsystems:** *http*
+
+Disable socket listening in a Nginx worker process,
+then this worker process will not accept any message which the client sends to `sock_name`.
+
+Now, this API can only disable unix domain socket like `unix:...`.
 
 [Back to TOC](#table-of-contents)
 
