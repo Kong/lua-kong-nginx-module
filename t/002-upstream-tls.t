@@ -5,7 +5,7 @@ use Cwd qw(cwd);
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6);
+plan tests => repeat_each() * (blocks() * 6) - 2;
 
 my $pwd = cwd();
 
@@ -529,6 +529,8 @@ upstream SSL certificate verify error: (20:unable to get local issuer certificat
             if not ok then
                 ngx.say("set_upstream_ssl_verify_depth failed: ", err)
             end
+            -- note, the error log thrown is different on BoringSSL
+            -- see https://www.openssl.org/docs/man1.0.2/man3/SSL_set_verify_depth.html BUGS
         }
         proxy_ssl_trusted_certificate ../../cert/ca.crt;
         proxy_ssl_verify on;
@@ -542,8 +544,8 @@ GET /t
 --- response_body_like
 .+502 Bad Gateway.+
 
---- error_log
-upstream SSL certificate verify error: (22:certificate chain too long)
+--- error_log_like eval
+"upstream SSL certificate verify error: \((?:22\:certificate chain too long|20\:unable to get local issuer certificate)\)"
 
 --- error_code: 502
 --- no_error_log

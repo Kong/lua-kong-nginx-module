@@ -367,7 +367,15 @@ ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r, ngx_connection_t *c)
     if (ctx->upstream_ssl_verify_depth_set) {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
                        "overriding upstream SSL verify depth");
+#ifdef OPENSSL_IS_BORINGSSL
+    /*
+     * BoringSSL (OpenSSL 1.0.2 compat API treated root CA as depth)
+     * thus we amend depth by 1 to align with OpenSSL >= 1.1.0 behaviour
+     */
+        SSL_set_verify_depth(sc, ctx->upstream_ssl_verify_depth + 1);
+#else
         SSL_set_verify_depth(sc, ctx->upstream_ssl_verify_depth);
+#endif
     }
 
 
