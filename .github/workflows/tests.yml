@@ -33,7 +33,7 @@ jobs:
       LUAROCKS_INSTALL: /home/runner/work/install-root/luarocks
 
       BUILD_TOOLS_DOWNLOAD: /home/runner/work/download-root/kong-build-tools
-      BUILD_TOOLS_BRANCH: master
+      BUILD_TOOLS_BRANCH: boringssl-depth-patch
 
       OPENRESTY: ${{ matrix.openresty }}
       LUAROCKS: ${{ matrix.luarocks }}
