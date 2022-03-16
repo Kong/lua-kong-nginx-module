@@ -17,6 +17,9 @@ jobs:
         - openresty: "1.19.9.1"
           luarocks: "3.8.0"
           openssl: "1.1.1m"
+        - openresty: "1.19.9.1"
+          luarocks: "3.8.0"
+          boringssl: "ae223d6138807a13006342edfeef32e813246b39"
 
     env:
       JOBS: 1  # must be 1 as socket tests interfere with each other
@@ -35,6 +38,7 @@ jobs:
       OPENRESTY: ${{ matrix.openresty }}
       LUAROCKS: ${{ matrix.luarocks }}
       OPENSSL: ${{ matrix.openssl }}
+      BORINGSSL: ${{ matrix.boringssl }}
 
     steps:
     - name: Checkout source code
@@ -48,7 +52,7 @@ jobs:
       with:
         path: |
           ${{ env.INSTALL_ROOT }}
-        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-openresty-${{ matrix.openresty }}-luarocks-${{ matrix.luarocks }}-openssl-${{ matrix.openssl }}
+        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-openresty-${{ matrix.openresty }}-luarocks-${{ matrix.luarocks }}-openssl-${{ matrix.openssl }}-boringssl-${{ matrix.boringssl }}
 
     - name: Install packages
       run: |
@@ -63,6 +67,10 @@ jobs:
       run: |
         export PATH=$OPENSSL_INSTALL/bin:$OPENRESTY_INSTALL/nginx/sbin:$OPENRESTY_INSTALL/bin:$LUAROCKS_INSTALL/bin:$PATH
         export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI invoked in the test suite
+
+        if [[ $BORINGSSL ]]; then
+          export LD_LIBRARY_PATH=$DOWNLOAD_ROOT/boringssl-${BORINGSSL}/.openssl/lib:$LD_LIBRARY_PATH
+        fi
 
         nginx -V
         resty -V
