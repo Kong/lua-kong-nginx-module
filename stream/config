@@ -1,3 +1,20 @@
+# search ngx_stream_lua's src path
+for inc in $CORE_INCS
+do
+  ngx_stream_lua_path=${inc%/api}
+
+  if [ "$inc" != "$ngx_stream_lua_path" ]; then
+
+    ngx_stream_lua_header="$ngx_stream_lua_path/ngx_stream_lua_common.h"
+
+    if [ -f "$ngx_stream_lua_header" ]; then
+      CORE_INCS="$CORE_INCS $ngx_stream_lua_path"
+      break
+    fi
+
+  fi
+done
+
 ngx_module_type=STREAM
 ngx_module_name=ngx_stream_lua_kong_module
 ngx_module_srcs="$ngx_addon_dir/src/ngx_stream_lua_kong_module.c"
