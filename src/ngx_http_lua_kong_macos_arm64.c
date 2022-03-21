@@ -18,7 +18,7 @@
 #include "ngx_http_lua_kong_common.h"
 
 
-// macOS with M1 fixes, see: https://github.com/LuaJIT/LuaJIT/issues/205
+/* macOS with M1 fixes, see: https://github.com/LuaJIT/LuaJIT/issues/205 */
 
 typedef struct {
     ngx_shm_zone_t *zone;
