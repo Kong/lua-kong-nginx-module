@@ -22,44 +22,44 @@ ngx_stream_lua_kong_get_proxy_ssl_disable(ngx_stream_session_t *s);
 
 
 typedef struct {
-    ngx_shm_zone_t *zone;
+    ngx_shm_zone_t      *zone;
     const unsigned char *key;
-    size_t key_len;
-    int *value_type;
-    unsigned char **str_value_buf;
-    size_t *str_value_len;
-    double *num_value;
-    int *user_flags;
-    int get_stale;
-    int *is_stale;
-    char **errmsg;
+    size_t               key_len;
+    int                 *value_type;
+    unsigned char      **str_value_buf;
+    size_t              *str_value_len;
+    double              *num_value;
+    int                 *user_flags;
+    int                  get_stale;
+    int                 *is_stale;
+    char               **errmsg;
 } ngx_stream_lua_kong_shdict_get_t;
 
 typedef struct {
-    ngx_shm_zone_t *zone;
-    int op;
+    ngx_shm_zone_t      *zone;
+    int                  op;
     const unsigned char *key;
-    size_t key_len;
-    int value_type;
+    size_t               key_len;
+    int                  value_type;
     const unsigned char *str_value_buf;
-    size_t str_value_len;
-    double num_value;
-    long exptime;
-    int user_flags;
-    char **errmsg;
-    int *forcible;
+    size_t               str_value_len;
+    double               num_value;
+    long                 exptime;
+    int                  user_flags;
+    char               **errmsg;
+    int                 *forcible;
 } ngx_stream_lua_kong_shdict_store_t;
 
 typedef struct {
-    ngx_shm_zone_t *zone;
+    ngx_shm_zone_t      *zone;
     const unsigned char *key;
-    size_t key_len;
-    double *num_value;
-    char **errmsg;
-    int has_init;
-    double init;
-    long init_ttl;
-    int *forcible;
+    size_t               key_len;
+    double              *num_value;
+    char               **errmsg;
+    int                  has_init;
+    double               init;
+    long                 init_ttl;
+    int                 *forcible;
 } ngx_stream_lua_kong_shdict_incr_t;
 
 int ngx_stream_lua_ffi_shdict_get(ngx_shm_zone_t *zone, const unsigned char *key,
