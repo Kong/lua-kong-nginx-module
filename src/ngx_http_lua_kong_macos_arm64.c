@@ -19,7 +19,7 @@
 
 
 int
-ngx_http_lua_ffi_shdict_get_m1(ngx_shdict_get_t *s)
+ngx_http_lua_ffi_shdict_get_m1(ngx_http_lua_kong_shdict_get_t *s)
 {
     return ngx_http_lua_ffi_shdict_get(s->zone, s->key, s->key_len, s->value_type,
         s->str_value_buf, s->str_value_len, s->num_value, s->user_flags, s->get_stale,
@@ -28,7 +28,7 @@ ngx_http_lua_ffi_shdict_get_m1(ngx_shdict_get_t *s)
 
 
 int
-ngx_http_lua_ffi_shdict_store_m1(ngx_shdict_store_t *s)
+ngx_http_lua_ffi_shdict_store_m1(ngx_http_lua_kong_shdict_store_t *s)
 {
     return ngx_http_lua_ffi_shdict_store(s->zone, s->op, s->key, s->key_len, s->value_type,
         s->str_value_buf, s->str_value_len, s->num_value, s->exptime, s->user_flags, s->errmsg,
@@ -37,7 +37,7 @@ ngx_http_lua_ffi_shdict_store_m1(ngx_shdict_store_t *s)
 
 
 int
-ngx_http_lua_ffi_shdict_incr_m1(ngx_shdict_incr_t *s)
+ngx_http_lua_ffi_shdict_incr_m1(ngx_http_lua_kong_shdict_incr_t *s)
 {
     return ngx_http_lua_ffi_shdict_incr(s->zone, s->key, s->key_len, s->num_value,
         s->errmsg, s->has_init, s->init, s->init_ttl, s->forcible);
@@ -45,7 +45,7 @@ ngx_http_lua_ffi_shdict_incr_m1(ngx_shdict_incr_t *s)
 
 
 int
-ngx_http_lua_ffi_set_resp_header_m1(ngx_set_resp_header_t *s)
+ngx_http_lua_ffi_set_resp_header_m1(ngx_http_lua_kong_set_resp_header_t *s)
 {
     return ngx_http_lua_ffi_set_resp_header(s->r, s->key_data, s->key_len, s->is_nil,
         s->sval, s->sval_len, s->mvals, s->mvals_len, s->override, s->errmsg);

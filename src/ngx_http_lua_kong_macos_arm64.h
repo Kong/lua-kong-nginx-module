@@ -39,7 +39,7 @@ typedef struct {
     int get_stale;
     int *is_stale;
     char **errmsg;
-} ngx_shdict_get_t;
+} ngx_http_lua_kong_shdict_get_t;
 
 
 typedef struct {
@@ -55,7 +55,7 @@ typedef struct {
     int user_flags;
     char **errmsg;
     int *forcible;
-} ngx_shdict_store_t;
+} ngx_http_lua_kong_shdict_store_t;
 
 
 typedef struct {
@@ -68,7 +68,7 @@ typedef struct {
     double init;
     long init_ttl;
     int *forcible;
-} ngx_shdict_incr_t;
+} ngx_http_lua_kong_shdict_incr_t;
 
 
 typedef struct {
@@ -82,7 +82,7 @@ typedef struct {
     size_t mvals_len;
     int override;
     char **errmsg;
-} ngx_set_resp_header_t;
+} ngx_http_lua_kong_set_resp_header_t;
 
 
 /* copied from ngx_http_lua_shdict.c */
