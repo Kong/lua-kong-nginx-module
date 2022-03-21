@@ -15,88 +15,8 @@
  */
 
 
-#include "ngx_http_lua_kong_common.h"
+#include "ngx_http_lua_kong_macos_arm64.h"
 
-
-/* macOS with M1 fixes, see: https://github.com/LuaJIT/LuaJIT/issues/205 */
-
-typedef struct {
-    ngx_shm_zone_t *zone;
-    const unsigned char *key;
-    size_t key_len;
-    int *value_type;
-    unsigned char **str_value_buf;
-    size_t *str_value_len;
-    double *num_value;
-    int *user_flags;
-    int get_stale;
-    int *is_stale;
-    char **errmsg;
-} ngx_shdict_get_t;
-
-typedef struct {
-    ngx_shm_zone_t *zone;
-    int op;
-    const unsigned char *key;
-    size_t key_len;
-    int value_type;
-    const unsigned char *str_value_buf;
-    size_t str_value_len;
-    double num_value;
-    long exptime;
-    int user_flags;
-    char **errmsg;
-    int *forcible;
-} ngx_shdict_store_t;
-
-typedef struct {
-    ngx_shm_zone_t *zone;
-    const unsigned char *key;
-    size_t key_len;
-    double *num_value;
-    char **errmsg;
-    int has_init;
-    double init;
-    long init_ttl;
-    int *forcible;
-} ngx_shdict_incr_t;
-
-typedef struct {
-    ngx_http_request_t *r;
-    const char *key_data;
-    size_t key_len;
-    int is_nil;
-    const char *sval;
-    size_t sval_len;
-    void *mvals;
-    size_t mvals_len;
-    int override;
-    char **errmsg;
-} ngx_set_resp_header_t;
-
-/* copied from ngx_http_lua_shdict.c */
-
-int ngx_http_lua_ffi_shdict_get(ngx_shm_zone_t *zone, const unsigned char *key,
-    size_t key_len, int *value_type, unsigned char **str_value_buf,
-    size_t *str_value_len, double *num_value, int *user_flags,
-    int get_stale, int *is_stale, char **errmsg);
-
-int ngx_http_lua_ffi_shdict_store(ngx_shm_zone_t *zone, int op,
-    const unsigned char *key, size_t key_len, int value_type,
-    const unsigned char *str_value_buf, size_t str_value_len,
-    double num_value, long exptime, int user_flags, char **errmsg,
-    int *forcible);
-
-int ngx_http_lua_ffi_shdict_incr(ngx_shm_zone_t *zone, const unsigned char *key,
-    size_t key_len, double *num_value, char **errmsg, int has_init,
-    double init, long init_ttl, int *forcible);
-
-/* copied from ngx_http_lua_headers.c */
-
-int ngx_http_lua_ffi_set_resp_header(ngx_http_request_t *r,
-    const char *key_data, size_t key_len, int is_nil,
-    const char *sval, size_t sval_len, void *mvals,
-    size_t mvals_len, int override, char **errmsg);
 
 int
 ngx_http_lua_ffi_shdict_get_m1(ngx_shdict_get_t *s)
