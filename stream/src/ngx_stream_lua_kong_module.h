@@ -35,7 +35,10 @@ ngx_stream_lua_kong_get_proxy_ssl_disable(ngx_stream_session_t *s);
 #endif
 
 
-/* macOS with Apple Silicon fixes, see: https://github.com/LuaJIT/LuaJIT/issues/205 */
+/*
+ * macOS with Apple Silicon fixes,
+ * see: https://github.com/LuaJIT/LuaJIT/issues/205
+ */
 
 
 typedef struct {

@@ -24,7 +24,10 @@
 #include <ngx_http.h>
 
 
-/* macOS with Apple Silicon fixes, see: https://github.com/LuaJIT/LuaJIT/issues/205 */
+/*
+ * macOS with Apple Silicon fixes,
+ * see: https://github.com/LuaJIT/LuaJIT/issues/205
+ */
 
 
 typedef struct {
