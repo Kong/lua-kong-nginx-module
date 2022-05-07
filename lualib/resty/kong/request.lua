@@ -17,13 +17,13 @@ if subsystem == "http" then
 
     local DEFAULT_HEADER_LIMIT = 100
 
-    local name_ffi = ffi_new("ngx_str_t")
+    local name_str = ffi_new("ngx_str_t")
     get_header = function (name, limit)
         local r = get_request()
-        name_ffi.data = name
-        name_ffi.len = #name
+        name_str.data = name
+        name_str.len = #name
         local ret =
-            C.ngx_http_lua_kong_request_get_header(r, name_ffi, limit or DEFAULT_HEADER_LIMIT)
+            C.ngx_http_lua_kong_request_get_header(r, name_str, limit or DEFAULT_HEADER_LIMIT)
         if ret ~= nil then
             return ffi_str(ret.data, ret.len)
         end
