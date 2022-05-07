@@ -28,7 +28,7 @@ static ngx_str_t *search_known_header(ngx_http_request_t *r, ngx_str_t name) {
     }
 
     // The header value was already cached in some field of the r->headers_in struct (hh->offset tells in which one).
-    return ((ngx_table_elt_t **) ((char *) &r->headers_in + hh->offset))->value;
+    return (*(ngx_table_elt_t **) ((char *) &r->headers_in + hh->offset))->value;
 }
 
 // linear search
@@ -52,7 +52,8 @@ static ngx_str_t *search_unknown_header(ngx_http_request_t *r, ngx_str_t name, s
             continue;
         }
 
-        for (size_t n = 0u; n < name.len && n < header[i].key.len; n++) {
+        size_t n;
+        for (n = 0u; n < name.len && n < header[i].key.len; n++) {
             u_char ch = tolower(header[i].key.data[n]);
 
             if (ch == '-') {
@@ -65,7 +66,7 @@ static ngx_str_t *search_unknown_header(ngx_http_request_t *r, ngx_str_t name, s
         }
 
         if (n == name.len && n == header[i].key.len) {
-            return &header[i].value
+            return &header[i].value;
         }
     }
 
