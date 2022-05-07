@@ -33,7 +33,7 @@ static ngx_str_t *search_known_header(ngx_http_request_t *r, ngx_str_t name) {
 
 // linear search
 static ngx_str_t *search_unknown_header(ngx_http_request_t *r, ngx_str_t name, size_t search_limit) {
-    ngx_list_part_t *part = r->headers_in.headers.part;
+    ngx_list_part_t *part = &(r->headers_in.headers.part);
     ngx_table_elt_t *header = part->elts;
 
     // not limit when search_limit == 0
