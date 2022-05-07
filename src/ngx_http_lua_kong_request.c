@@ -7,16 +7,17 @@
 /* by hash */
 static ngx_str_t *search_known_header(ngx_http_request_t *r, ngx_str_t name)
 {
-    /* Calculate a hash of lowercased header name */
+    ngx_http_core_main_conf_t *cmcf;
+    ngx_http_header_t *hh;
+    size_t i;
     ngx_uint_t hash = 0;
-    for (size_t i = 0; i < name.len; i++) {
+    /* Calculate a hash of lowercased header name */
+    for (i = 0; i < name.len; i++) {
         hash = ngx_hash(hash, name.data[i]);
     }
 
-    ngx_http_core_main_conf_t *cmcf =
-        ngx_http_get_module_main_conf(r, ngx_http_core_module);
-    ngx_http_header_t *hh =
-        ngx_hash_find(&cmcf->headers_in_hash, hash, name.data, name.len);
+    cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+    hh = ngx_hash_find(&cmcf->headers_in_hash, hash, name.data, name.len);
 
     /* There header is unknown or is not hashed yet. */
     if (hh == NULL) {
@@ -38,11 +39,14 @@ static ngx_str_t *search_known_header(ngx_http_request_t *r, ngx_str_t name)
 static ngx_str_t *search_unknown_header(
     ngx_http_request_t *r, ngx_str_t name, size_t search_limit)
 {
+    size_t n;
+    u_char ch;
+    size_t i;
     ngx_list_part_t *part = &(r->headers_in.headers.part);
     ngx_table_elt_t *header = part->elts;
 
     /* not limit when search_limit == 0 */
-    for (size_t i = 0u; search_limit == 0 || i < search_limit; i++) {
+    for (i = 0u; search_limit == 0 || i < search_limit; i++) {
         if (i >= part->nelts) {
             if (part->next == NULL) {
                 break;
@@ -57,9 +61,8 @@ static ngx_str_t *search_unknown_header(
             continue;
         }
 
-        size_t n;
         for (n = 0u; n < name.len && n < header[i].key.len; n++) {
-            u_char ch = ngx_tolower(header[i].key.data[n]);
+            ch = ngx_tolower(header[i].key.data[n]);
 
             if (ch == '-') {
                 ch = '_';
@@ -82,11 +85,13 @@ static ngx_str_t header_preprocess(
     ngx_http_request_t *r, ngx_str_t name)
 {
     ngx_str_t ret;
+    size_t n;
+    u_char ch;
     ret.data = ngx_palloc(r->pool, name.len);
     ret.len = name.len;
 
-    for (size_t n = 0u; n < name.len; ++n) {
-        u_char ch = ngx_tolower(name.data[n]);
+    for (n = 0u; n < name.len; ++n) {
+        ch = ngx_tolower(name.data[n]);
         if (ch == '-') {
             ch = '_';
         }
