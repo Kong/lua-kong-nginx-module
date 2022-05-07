@@ -62,7 +62,7 @@ test
             ngx.say(get_header("Content-Type",3))
             ngx.say(get_header("content-Type",3))
             ngx.say(get_header("Content_Type",3))
-            ngx.say(get_header("X-TEST",3))
+            ngx.say(get_header("X-TEST",3) == nil)
         }
     }
 --- request
@@ -80,7 +80,7 @@ X-TEST: test
 text/plain
 text/plain
 text/plain
-
+true
 
 --- no_error_log
 [error]
