@@ -27,10 +27,10 @@ __DATA__
     location = /test {
         content_by_lua_block {
             local get_header = require("resty.kong.request").get_header
-            ngx.print(get_header("Content-Type"))
-            ngx.print(get_header("content-Type"))
-            ngx.print(get_header("Content_Type"))
-            ngx.print(get_header("X-TEST"))
+            ngx.say(get_header("Content-Type"))
+            ngx.say(get_header("content-Type"))
+            ngx.say(get_header("Content_Type"))
+            ngx.say(get_header("X-TEST"))
         }
     }
 --- request
@@ -59,16 +59,16 @@ test
     location = /test {
         content_by_lua_block {
             local get_header = require("resty.kong.request").get_header
-            ngx.print(get_header("Content-Type",3))
-            ngx.print(get_header("content-Type",3))
-            ngx.print(get_header("Content_Type",3))
-            ngx.print(get_header("X-TEST",3))
+            ngx.say(get_header("Content-Type",3))
+            ngx.say(get_header("content-Type",3))
+            ngx.say(get_header("Content_Type",3))
+            ngx.say(get_header("X-TEST",3))
         }
     }
 --- request
 GET /test
 --- more_headers
-Content-Type: test
+Content-Type: text/plain
 Referer: http://www.foo.com/
 Referer: http://www.foo.com/
 Referer: http://www.foo.com/
@@ -80,6 +80,7 @@ X-TEST: test
 text/plain
 text/plain
 text/plain
+
 --- no_error_log
 [error]
 [crit]
