@@ -18,7 +18,7 @@ if subsystem == "http" then
         local name_ffi = ffi_new("ngx_str_t")
         name_ffi.data = name
         name_ffi.len = #name
-        local ret = C.ngx_http_lua_kong_request_get_header(r, name_ffi, limit or 0)
+        local ret = C.ngx_http_lua_kong_request_get_header(r, name_ffi, limit or 100)
         if ret ~= nil then
             return ffi_str(ret.data, ret.len)
         end
