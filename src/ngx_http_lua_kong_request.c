@@ -59,7 +59,7 @@ static ngx_str_t *search_unknown_header(
 
         size_t n;
         for (n = 0u; n < name.len && n < header[i].key.len; n++) {
-            u_char ch = tolower(header[i].key.data[n]);
+            u_char ch = ngx_tolower(header[i].key.data[n]);
 
             if (ch == '-') {
                 ch = '_';
