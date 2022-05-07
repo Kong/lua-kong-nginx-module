@@ -102,7 +102,7 @@ ngx_str_t * ngx_http_lua_kong_request_get_header(
 {
     ngx_str_t processed_name = header_preprocess(r, name);
     ngx_str_t * ret = search_known_header(r, processed_name);
-    if (ret != NULL) {
+    if (ret == NULL) {
         ret = search_unknown_header(r, processed_name, search_limit);
     }
     return ret;
