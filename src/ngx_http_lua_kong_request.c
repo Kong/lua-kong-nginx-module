@@ -28,7 +28,7 @@ static ngx_str_t *search_known_header(ngx_http_request_t *r, ngx_str_t name) {
     }
 
     // The header value was already cached in some field of the r->headers_in struct (hh->offset tells in which one).
-    return (*(ngx_table_elt_t **) ((char *) &r->headers_in + hh->offset))->value;
+    return &((*(ngx_table_elt_t **) ((char *) &r->headers_in + hh->offset))->value);
 }
 
 // linear search
