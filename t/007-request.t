@@ -5,7 +5,7 @@ use Test::Nginx::Socket::Lua;
 
 #worker_connections(1014);
 #master_process_enabled(1);
-#log_level('debug');
+log_level('debug');
 
 repeat_each(2);
 
