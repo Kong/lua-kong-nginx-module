@@ -70,8 +70,8 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
     header = part->elts;
     part = &(r->headers_in.headers.part);
 
-    /* not limit when search_limit == 0 */
-    for (i = 0u; search_limit == 0 || i < search_limit; i++) {
+    /* not limited when search_limit == 0 */
+    for (i = 0u; search_limit == 0u || i < search_limit; i++) {
         if (i >= part->nelts) {
             if (part->next == NULL) {
                 break;
@@ -79,16 +79,14 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
 
             part = part->next;
             header = part->elts;
-            i = 0;
+            i = 0u;
         }
 
-        if (header[i].hash == 0) {
+        if (header[i].hash == 0u) {
             continue;
         }
 
-        for (n = 0u; n < name.len && n < header[i].key.len; n++) {
-            ch = header[i].lowcase_key[n];
-
+        for (n = 0u; n < name.len && ch = header[i].lowcase_key[n]; n++) {
             if (ch == '-') {
                 ch = '_';
             }
@@ -138,7 +136,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
 {
     ngx_str_t    processed_name;
     ngx_str_t   *value;
-    ngx_log_t *log;
+    ngx_log_t   *log;
 
     processed_name = ngx_http_lua_kong_header_preprocess(r, name);
 
