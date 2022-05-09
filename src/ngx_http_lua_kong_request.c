@@ -67,8 +67,8 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
     ngx_list_part_t     *part;
     ngx_table_elt_t     *header;
 
-    header = part->elts;
     part = &(r->headers_in.headers.part);
+    header = part->elts;
 
     /* not limited when search_limit == 0 */
     for (i = 0u; search_limit == 0u || i < search_limit; i++) {
