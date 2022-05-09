@@ -82,7 +82,7 @@ search_unknown_header(ngx_http_request_t *r,
         }
 
         for (n = 0u; n < name.len && n < header[i].key.len; n++) {
-            ch = header[i].lowcase_key.data[n];
+            ch = header[i].lowcase_key[n];
 
             if (ch == '-') {
                 ch = '_';
