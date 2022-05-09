@@ -156,6 +156,8 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
         ngx_log_debug2(NGX_LOG_DEBUG_ALL, log, 0,
             "%*s not found from all", name.len, name.data);
     }
+    ngx_log_debug4(NGX_LOG_DEBUG_ALL, log, 0,
+        "%*s:%*s", name.len, name.data, value.len, value.data);
 
     return value;
 }
