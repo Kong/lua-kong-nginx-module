@@ -1,3 +1,19 @@
+/**
+ * Copyright 2019-2022 Kong Inc.
+
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+
+ *    http://www.apache.org/licenses/LICENSE-2.0
+
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -5,45 +21,50 @@
 /* name should be lowercased and preprocessed for both search functions */
 
 /* by hash */
-static ngx_str_t *search_known_header(ngx_http_request_t *r, ngx_str_t name)
+static ngx_str_t *
+search_known_header(ngx_http_request_t *r, ngx_str_t name)
 {
     ngx_http_core_main_conf_t *cmcf;
-    ngx_http_header_t *hh;
-    size_t i;
-    ngx_uint_t hash = 0;
+    ngx_http_header_t         *hh;
+    size_t                    i;
+    ngx_uint_t                hash;
+    ngx_table_elt_t           *header_found;
+
     /* Calculate a hash of lowercased header name */
-    for (i = 0; i < name.len; i++) {
-        hash = ngx_hash(hash, name.data[i]);
-    }
+    hash = ngx_hash_key(name.data, name.len);
 
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
     hh = ngx_hash_find(&cmcf->headers_in_hash, hash, name.data, name.len);
 
-    /* There header is unknown or is not hashed yet. */
+    /* The header is unknown or is not hashed yet. */
     if (hh == NULL) {
         return NULL;
     }
 
-    /* There header is hashed but not cached yet for some reason. */
+    /* The header is hashed but not cached yet for some reason. */
     if (hh->offset == 0) {
         return NULL;
     }
 
     /* The header value was already cached in some field of the r->headers_in
         struct (hh->offset tells in which one). */
-    return &((*(ngx_table_elt_t **)
-        ((char *) &r->headers_in + hh->offset))->value);
+    header_found = *(ngx_table_elt_t **)((char *) &r->headers_in + hh->offset);
+    return &(header_found->value);
 }
 
 /* linear search */
-static ngx_str_t *search_unknown_header(
-    ngx_http_request_t *r, ngx_str_t name, size_t search_limit)
+static ngx_str_t *
+search_unknown_header(ngx_http_request_t *r,
+    ngx_str_t name, size_t search_limit)
 {
-    size_t n;
-    u_char ch;
-    size_t i;
-    ngx_list_part_t *part = &(r->headers_in.headers.part);
-    ngx_table_elt_t *header = part->elts;
+    size_t          n;
+    u_char          ch;
+    size_t          i;
+    ngx_list_part_t *part;
+    ngx_table_elt_t *header;
+
+    header = part->elts;
+    part = &(r->headers_in.headers.part);
 
     /* not limit when search_limit == 0 */
     for (i = 0u; search_limit == 0 || i < search_limit; i++) {
@@ -62,7 +83,7 @@ static ngx_str_t *search_unknown_header(
         }
 
         for (n = 0u; n < name.len && n < header[i].key.len; n++) {
-            ch = ngx_tolower(header[i].key.data[n]);
+            ch = header[i].lowcase_key.data[n];
 
             if (ch == '-') {
                 ch = '_';
@@ -81,34 +102,49 @@ static ngx_str_t *search_unknown_header(
     return NULL;
 }
 
-static ngx_str_t header_preprocess(
-    ngx_http_request_t *r, ngx_str_t name)
+static ngx_str_t
+header_preprocess(ngx_http_request_t *r, ngx_str_t name)
 {
     ngx_str_t ret;
-    size_t n;
-    u_char ch;
+    size_t    i;
+    u_char    ch;
+
     ret.data = ngx_palloc(r->pool, name.len);
     ret.len = name.len;
 
-    for (n = 0u; n < name.len; ++n) {
-        ch = ngx_tolower(name.data[n]);
+    for (i = 0u; i < name.len; ++i) {
+        ch = ngx_tolower(name.data[i]);
         if (ch == '-') {
             ch = '_';
         }
-        ret.data[n] = ch;
+        ret.data[i] = ch;
     }
 
     return ret;
 }
 
 /* search request header named "name" and within search_limit */
-ngx_str_t * ngx_http_lua_kong_request_get_header(
-        ngx_http_request_t *r, ngx_str_t name, size_t search_limit)
+ngx_str_t *
+ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
+    ngx_str_t name, size_t search_limit)
 {
-    ngx_str_t processed_name = header_preprocess(r, name);
-    ngx_str_t * ret = search_known_header(r, processed_name);
+    ngx_str_t processed_name;
+    ngx_str_t *ret;
+
+    processed_name = header_preprocess(r, name);
+    ret = search_known_header(r, processed_name);
+
     if (ret == NULL) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, "header is not found from hashed"
+            " headers(not exist or not hashed or not cached). "
+            "Now trying linear search...")
         ret = search_unknown_header(r, processed_name, search_limit);
     }
+
+    if (ret == NULL) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, "header is not found"
+            "(not exist or over the limit)")
+    }
+
     return ret;
 }
