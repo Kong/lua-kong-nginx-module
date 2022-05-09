@@ -145,7 +145,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     value = ngx_http_lua_kong_search_known_header(r, processed_name);
 
     if (value == NULL) {
-        ngx_log_debug2(NGX_LOG_DEBUG_HTTP, log, 0,
+        ngx_log_debug2(NGX_LOG_DEBUG_ALL, log, 0,
             "%*s not found from hashed headers", name.len, name.data);
 
         value = ngx_http_lua_kong_search_unknown_header(r,
@@ -153,7 +153,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     }
 
     if (value == NULL) {
-        ngx_log_debug2(NGX_LOG_DEBUG_HTTP, log, 0,
+        ngx_log_debug2(NGX_LOG_DEBUG_ALL, log, 0,
             "%*s not found from all", name.len, name.data);
     }
 
