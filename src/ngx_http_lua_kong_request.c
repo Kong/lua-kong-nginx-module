@@ -26,7 +26,7 @@ search_known_header(ngx_http_request_t *r, ngx_str_t name)
 {
     ngx_http_core_main_conf_t *cmcf;
     ngx_http_header_t         *hh;
-    ngx_uint_t                hash;
+    ngx_uint_t                 hash;
     ngx_table_elt_t           *header_found;
 
     /* Calculate a hash of lowercased header name */
@@ -57,9 +57,9 @@ static ngx_str_t *
 search_unknown_header(ngx_http_request_t *r,
     ngx_str_t name, size_t search_limit)
 {
-    size_t          n;
-    u_char          ch;
-    size_t          i;
+    size_t           n;
+    u_char           ch;
+    size_t           i;
     ngx_list_part_t *part;
     ngx_table_elt_t *header;
 
@@ -130,7 +130,7 @@ ngx_str_t *
 ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     ngx_str_t name, size_t search_limit)
 {
-    ngx_str_t processed_name;
+    ngx_str_t  processed_name;
     ngx_str_t *ret;
 
     processed_name = header_preprocess(r, name);
