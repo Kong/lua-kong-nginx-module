@@ -137,7 +137,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     processed_name = header_preprocess(r, name);
     ret = search_known_header(r, processed_name);
 
-    log = r->connection->log
+    log = r->connection->log;
 
     if (ret == NULL) {
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, log, 0,
