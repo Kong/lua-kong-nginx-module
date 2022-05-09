@@ -44,8 +44,11 @@ text/plain
 text/plain
 text/plain
 test
---- error_log
-x_test not found from hashed headers
+--- no_error_log
+[debug]
+[error]
+[crit]
+[alert]
 
 
 
@@ -80,6 +83,8 @@ text/plain
 text/plain
 true
 
---- error_log
-x_test not found from hashed headers
-x_test not found from all
+--- no_error_log
+[debug]
+[error]
+[crit]
+[alert]
