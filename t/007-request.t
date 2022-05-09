@@ -5,7 +5,7 @@ use Test::Nginx::Socket::Lua;
 
 #worker_connections(1014);
 #master_process_enabled(1);
-#log_level('warn');
+#log_level('debug');
 
 repeat_each(2);
 
@@ -44,10 +44,8 @@ text/plain
 text/plain
 text/plain
 test
---- no_error_log
-[error]
-[crit]
-[alert]
+--- error_log
+x_test not found from hashed headers
 
 
 
@@ -82,7 +80,6 @@ text/plain
 text/plain
 true
 
---- no_error_log
-[error]
-[crit]
-[alert]
+--- error_log
+x_test not found from hashed headers
+x_test not found from all
