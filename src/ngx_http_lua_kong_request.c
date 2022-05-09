@@ -155,9 +155,10 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     if (value == NULL) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
             "%V not found from all", name);
+    } else {
+        ngx_log_debug2(NGX_LOG_DEBUG_HTTP, log, 0,
+            "%V:%V",name, *value);
     }
-    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, log, 0,
-        "%V:%V",name, value);
 
     return value;
 }
