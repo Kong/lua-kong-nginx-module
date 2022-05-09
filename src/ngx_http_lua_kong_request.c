@@ -86,7 +86,7 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
             continue;
         }
 
-        for (n = 0u; n < name.len && ch = header[i].lowcase_key[n]; n++) {
+        for (n = 0u; n < name.len && (ch = header[i].lowcase_key[n]); n++) {
             if (ch == '-') {
                 ch = '_';
             }
