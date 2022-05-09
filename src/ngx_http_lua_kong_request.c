@@ -51,6 +51,7 @@ search_known_header(ngx_http_request_t *r, ngx_str_t name)
     return &(header_found->value);
 }
 
+
 /* linear search */
 static ngx_str_t *
 search_unknown_header(ngx_http_request_t *r,
@@ -101,6 +102,7 @@ search_unknown_header(ngx_http_request_t *r,
     return NULL;
 }
 
+
 static ngx_str_t
 header_preprocess(ngx_http_request_t *r, ngx_str_t name)
 {
@@ -121,6 +123,7 @@ header_preprocess(ngx_http_request_t *r, ngx_str_t name)
 
     return ret;
 }
+
 
 /* search request header named "name" and within search_limit */
 ngx_str_t *
