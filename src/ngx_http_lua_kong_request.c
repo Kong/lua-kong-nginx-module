@@ -137,14 +137,14 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     ret = search_known_header(r, processed_name);
 
     if (ret == NULL) {
-        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, "header is not found from hashed"
-            " headers(not exist or not hashed or not cached). "
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0, "header is not found"
+            " from hashed headers(not exist or not hashed or not cached). "
             "Now trying linear search...");
         ret = search_unknown_header(r, processed_name, search_limit);
     }
 
     if (ret == NULL) {
-        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, "header is not found"
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0, "header is not found"
             "(not exist or over the limit)");
     }
 
