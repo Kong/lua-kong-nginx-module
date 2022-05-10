@@ -48,7 +48,6 @@ found content_type by hash, value is text/plain
 found content_type by hash, value is text/plain
 found content_type by hash, value is text/plain
 found x_text by linear search, value is test
---- ONLY
 --- no_error_log
 [error]
 [crit]
@@ -86,9 +85,7 @@ text/plain
 text/plain
 text/plain
 true
-
 --- no_error_log
-[debug]
 [error]
 [crit]
 [alert]
