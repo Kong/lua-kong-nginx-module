@@ -8,7 +8,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) - 12;
+plan tests => repeat_each() * (blocks() * 9);
 
 #no_diff();
 #no_long_string();
@@ -21,7 +21,6 @@ __DATA__
 === TEST 1: sanity: get_header
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
---- ONLY
 --- config
     location = /test {
         content_by_lua_block {
@@ -44,14 +43,15 @@ text/plain
 text/plain
 test
 --- error_log
-found content_type by hash, value is text/plain
-found content_type by hash, value is text/plain
-found content_type by hash, value is text/plain
-found x_text by linear search, value is test
+found content-type by hash, value is text/plain
+found content-type by hash, value is text/plain
+found content-type by hash, value is text/plain
+found x-test by linear search, value is test
 --- no_error_log
 [error]
 [crit]
 [alert]
+[]
 
 
 
@@ -84,6 +84,10 @@ text/plain
 text/plain
 text/plain
 true
+--- error_log
+found content-type by hash, value is text/plain
+found content-type by hash, value is text/plain
+found content-type by hash, value is text/plain
 --- no_error_log
 [error]
 [crit]

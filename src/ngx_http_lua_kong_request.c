@@ -91,9 +91,9 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
         }
 
         for (n = 0; n < name.len; n++) {
-            ch = ngx_tolower(header[i].key.data[n]);
-            if (ch == '-') {
-                ch = '_';
+            ch = header[i].lowcase_key[n];
+            if (ch == '_') {
+                ch = '-';
             }
 
             if (name.data[n] != ch) {
