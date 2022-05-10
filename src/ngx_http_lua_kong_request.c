@@ -101,7 +101,7 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
             }
         }
 
-        if (n == name.len && n == header[i].key.len) {
+        if (n == name.len) {
             ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "found %V by linear search, value is %V",
                     &name, &header[i].value);
