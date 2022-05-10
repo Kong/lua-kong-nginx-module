@@ -2,6 +2,9 @@ local ffi = require "ffi"
 local base = require "resty.core.base"
 local get_request = base.get_request
 
+local type = type
+local assert = assert
+
 local C = ffi.C
 local ffi_new = ffi.new
 local ffi_str = ffi.string
@@ -22,11 +25,11 @@ if subsystem == "http" then
 
     get_header = function (name, limit)
         assert(type(name) == "string" and name ~= "",
-               "name must be string")
+               "name must be a string")
 
         if limit then
             assert(type(limit) == "number" and limit >= 0,
-                   "limit must be number")
+                   "limit must be a number")
         end
 
         local r = get_request()
