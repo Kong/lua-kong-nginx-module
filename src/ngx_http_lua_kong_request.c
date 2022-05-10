@@ -70,7 +70,7 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
     part = &r->headers_in.headers.part;
     header = part->elts;
 
-    /* not limited if search_limit == 0 */
+    /* not limit if search_limit == 0 */
     for (i = 0; search_limit == 0 || i < search_limit; i++) {
         if (i >= part->nelts) {
             if (part->next == NULL) {
@@ -109,6 +109,9 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
             return &header[i].value;
         }
     }
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            "not found %V by linear search", &name);
 
     return NULL;
 }

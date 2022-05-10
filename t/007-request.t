@@ -18,7 +18,7 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: sanity: get_header
+=== TEST 1: sanity: get hashed header
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -28,7 +28,43 @@ __DATA__
             ngx.say(get_header("Content-Type"))
             ngx.say(get_header("content-Type"))
             ngx.say(get_header("Content_Type"))
+            ngx.say(get_header("referer"))
+        }
+    }
+--- request
+GET /test
+--- more_headers
+Content-type: text/plain
+Referer: http://www.foo.com/
+--- response_body
+text/plain
+text/plain
+text/plain
+http://www.foo.com/
+--- error_log
+found content-type by hash, value is text/plain
+found content-type by hash, value is text/plain
+found content-type by hash, value is text/plain
+found referer by hash, value is http://www.foo.com/
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 2: linear search header
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        content_by_lua_block {
+            local get_header = require("resty.kong.request").get_header
             ngx.say(get_header("X-TEST"))
+            ngx.say(get_header("x-TEST"))
+            ngx.say(get_header("x-test"))
+            ngx.say(get_header("x_test"))
+            ngx.say(get_header("hello_WORLD"))
         }
     }
 --- request
@@ -36,36 +72,36 @@ GET /test
 --- more_headers
 Content-type: text/plain
 X-TEST: test
-Referer: http://www.foo.com/
+Hello-World: 111
 --- response_body
-text/plain
-text/plain
-text/plain
 test
+test
+test
+test
+111
 --- error_log
-found content-type by hash, value is text/plain
-found content-type by hash, value is text/plain
-found content-type by hash, value is text/plain
 found x-test by linear search, value is test
+found x-test by linear search, value is test
+found x-test by linear search, value is test
+found x-test by linear search, value is test
+found hello-world by linear search, value is 111
 --- no_error_log
 [error]
 [crit]
 [alert]
-[]
 
 
 
-=== TEST 2: get_header limit
+=== TEST 3: get header with limit
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
     location = /test {
         content_by_lua_block {
             local get_header = require("resty.kong.request").get_header
-            ngx.say(get_header("Content-Type",6))
-            ngx.say(get_header("content-Type",6))
-            ngx.say(get_header("Content_Type",6))
-            ngx.say(get_header("X-TEST",6) == nil)
+            ngx.say(get_header("Content-Type", 6))
+            ngx.say(get_header("content_Type", 6))
+            ngx.say(get_header("X-TEST", 6) == nil)
         }
     }
 --- request
@@ -82,12 +118,11 @@ X-TEST: test
 --- response_body
 text/plain
 text/plain
-text/plain
 true
 --- error_log
 found content-type by hash, value is text/plain
 found content-type by hash, value is text/plain
-found content-type by hash, value is text/plain
+not found x-test by linear search
 --- no_error_log
 [error]
 [crit]
