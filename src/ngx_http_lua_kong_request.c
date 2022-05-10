@@ -86,7 +86,8 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
             continue;
         }
 
-        for (n = 0u; n < name.len && (ch = header[i].lowcase_key[n]); n++) {
+        for (n = 0u; n < name.len && n < header[i].key.len; n++) {
+            ch = header[i].key.data[n];
             if (ch == '-') {
                 ch = '_';
             }
@@ -157,7 +158,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
             "%V not found from all", name);
     } else {
         ngx_log_debug2(NGX_LOG_DEBUG_HTTP, log, 0,
-            "%V:%V",name, *value);
+            "%V:%V", name, *value);
     }
 
     return value;
