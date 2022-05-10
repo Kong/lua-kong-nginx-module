@@ -22,7 +22,8 @@
 
 /* by hash */
 static ngx_str_t*
-ngx_http_lua_kong_search_known_header(ngx_http_request_t *r, ngx_str_t name)
+ngx_http_lua_kong_search_known_header(ngx_http_request_t *r,
+    ngx_str_t name, ngx_str_t processed_name)
 {
     ngx_uint_t                   hash;
     ngx_http_core_main_conf_t   *cmcf;
@@ -34,7 +35,8 @@ ngx_http_lua_kong_search_known_header(ngx_http_request_t *r, ngx_str_t name)
 
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
-    hh = ngx_hash_find(&cmcf->headers_in_hash, hash, name.data, name.len);
+    hh = ngx_hash_find(&cmcf->headers_in_hash, hash,
+            processed_name.data, processed_name.len);
 
     /* The header is unknown or is not hashed yet. */
     if (hh == NULL) {
@@ -127,8 +129,8 @@ ngx_http_lua_kong_header_preprocess(ngx_http_request_t *r, ngx_str_t name)
     for (i = 0; i < name.len; ++i) {
         ch = ngx_tolower(name.data[i]);
 
-        if (ch == '-') {
-            ch = '_';
+        if (ch == '_') {
+            ch = '-';
         }
 
         value.data[i] = ch;
@@ -148,7 +150,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
 
     processed_name = ngx_http_lua_kong_header_preprocess(r, name);
 
-    value = ngx_http_lua_kong_search_known_header(r, name);
+    value = ngx_http_lua_kong_search_known_header(r, name, processed_name);
 
     if (value != NULL) {
         return value;

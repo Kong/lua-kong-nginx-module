@@ -21,7 +21,7 @@ __DATA__
 === TEST 1: sanity: get_header
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-
+--- ONLY
 --- config
     location = /test {
         content_by_lua_block {
@@ -58,7 +58,6 @@ found x_text by linear search, value is test
 === TEST 2: get_header limit
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-
 --- config
     location = /test {
         content_by_lua_block {
