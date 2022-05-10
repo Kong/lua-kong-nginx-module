@@ -18,7 +18,38 @@
 #include "ngx_http_lua_kong_common.h"
 
 
+#define         HEADER_LEN 32
+static u_char   header_name[HEADER_LEN];
+
+
 /* name should be lowercased and preprocessed for both search functions */
+static ngx_str_t
+ngx_http_lua_kong_header_preprocess(ngx_http_request_t *r, ngx_str_t name)
+{
+    ngx_str_t   value;
+    size_t      i;
+    u_char      ch;
+
+    value.len = name.len;
+    value.data = header_name;
+
+    if (value.len > HEADER_LEN) {
+        value.data = ngx_palloc(r->pool, name.len);
+    }
+
+    for (i = 0; i < name.len; i++) {
+        ch = ngx_tolower(name.data[i]);
+
+        if (ch == '_') {
+            ch = '-';
+        }
+
+        value.data[i] = ch;
+    }
+
+    return value;
+}
+
 
 /* by hash */
 static ngx_str_t*
@@ -96,7 +127,7 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
                 ch = '-';
             }
 
-            if (name.data[n] != ch) {
+            if (ch != name.data[n]) {
                 break;
             }
         }
@@ -117,32 +148,8 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
 }
 
 
-static ngx_str_t
-ngx_http_lua_kong_header_preprocess(ngx_http_request_t *r, ngx_str_t name)
-{
-    ngx_str_t   value;
-    size_t      i;
-    u_char      ch;
-
-    value.data = ngx_palloc(r->pool, name.len);
-    value.len = name.len;
-
-    for (i = 0; i < name.len; ++i) {
-        ch = ngx_tolower(name.data[i]);
-
-        if (ch == '_') {
-            ch = '-';
-        }
-
-        value.data[i] = ch;
-    }
-
-    return value;
-}
-
-
 /* search request header named "name" and within search_limit */
-ngx_str_t *
+ngx_str_t*
 ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
     ngx_str_t name, size_t search_limit)
 {
