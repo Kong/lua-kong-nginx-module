@@ -50,6 +50,9 @@ ngx_http_lua_kong_search_known_header(ngx_http_request_t *r, ngx_str_t name)
         struct (hh->offset tells in which one). */
     header_found = *(ngx_table_elt_t **)((char *) &r->headers_in + hh->offset);
 
+    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+        "found %V by hash, value is %V", &name, &header_found->value);
+
     return &header_found->value;
 }
 
@@ -67,7 +70,7 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
     part = &r->headers_in.headers.part;
     header = part->elts;
 
-    /* not limited when search_limit == 0 */
+    /* not limited if search_limit == 0 */
     for (i = 0; search_limit == 0 || i < search_limit; i++) {
         if (i >= part->nelts) {
             if (part->next == NULL) {
@@ -95,6 +98,10 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
         }
 
         if (n == name.len && n == header[i].key.len) {
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                    "found %V by linear search, value is %V",
+                    &name, &header[i].value);
+
             return &header[i].value;
         }
     }
@@ -139,22 +146,10 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
 
     value = ngx_http_lua_kong_search_known_header(r, processed_name);
 
-    if (value == NULL) {
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "%V not found from hashed headers", &name);
-
-        value = ngx_http_lua_kong_search_unknown_header(r,
-                    processed_name, search_limit);
+    if (value != NULL) {
+        return value;
     }
 
-    if (value == NULL) {
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "%V not found from all", &name);
-    }
-    // } else {
-    //     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-    //         "%V:%V", name, *value);
-    // }
-
-    return value;
+    return ngx_http_lua_kong_search_unknown_header(r,
+                processed_name, search_limit);
 }
