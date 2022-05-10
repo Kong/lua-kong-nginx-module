@@ -65,6 +65,7 @@ found referer by hash, value is http://www.foo.com/
             ngx.say(get_header("x-test"))
             ngx.say(get_header("x_test"))
             ngx.say(get_header("hello_WORLD"))
+            ngx.say(get_header("XXX") == nil)
         }
     }
 --- request
@@ -79,12 +80,14 @@ test
 test
 test
 111
+true
 --- error_log
 found x-test by linear search, value is test
 found x-test by linear search, value is test
 found x-test by linear search, value is test
 found x-test by linear search, value is test
 found hello-world by linear search, value is 111
+not found xxx by linear search
 --- no_error_log
 [error]
 [crit]
@@ -102,6 +105,7 @@ found hello-world by linear search, value is 111
             ngx.say(get_header("Content-Type", 6))
             ngx.say(get_header("content_Type", 6))
             ngx.say(get_header("X-TEST", 6) == nil)
+            ngx.say(get_header("X-TEST", 0))
         }
     }
 --- request
@@ -119,11 +123,54 @@ X-TEST: test
 text/plain
 text/plain
 true
+test
 --- error_log
 found content-type by hash, value is text/plain
 found content-type by hash, value is text/plain
 not found x-test by linear search
+found x-test by linear search, value is test
 --- no_error_log
 [error]
 [crit]
 [alert]
+
+
+
+=== TEST 4: get more hashed header
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        content_by_lua_block {
+            local get_header = require("resty.kong.request").get_header
+            ngx.say(get_header("HOST"))
+            ngx.say(get_header("content_Type"))
+            ngx.say(get_header("referer"))
+            ngx.say(get_header("usER_aGENT"))
+        }
+    }
+--- request
+GET /test
+--- more_headers
+Host: test.com
+Content-type: text/plain
+Referer: http://www.foo.com/
+User-Agent: resty
+--- response_body
+test.com
+text/plain
+http://www.foo.com/
+resty
+--- ONLY
+--- error_log
+found host by hash, value is test.com
+found content-type by hash, value is text/plain
+found referer by hash, value is http://www.foo.com/
+found user-agent by hash, value is resty
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
