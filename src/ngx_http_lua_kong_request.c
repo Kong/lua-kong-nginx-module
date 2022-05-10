@@ -15,15 +15,13 @@
  */
 
 
-#include <ngx_config.h>
-#include <ngx_core.h>
-#include <ngx_http.h>
+#include "ngx_http_lua_kong_common.h"
 
 
 /* name should be lowercased and preprocessed for both search functions */
 
 /* by hash */
-static ngx_str_t *
+static ngx_str_t*
 ngx_http_lua_kong_search_known_header(ngx_http_request_t *r, ngx_str_t name)
 {
     ngx_uint_t                   hash;
@@ -57,21 +55,20 @@ ngx_http_lua_kong_search_known_header(ngx_http_request_t *r, ngx_str_t name)
 
 
 /* linear search */
-static ngx_str_t *
+static ngx_str_t*
 ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
     ngx_str_t name, size_t search_limit)
 {
-    size_t               i;
-    size_t               n;
+    size_t               i, n;
     u_char               ch;
     ngx_list_part_t     *part;
     ngx_table_elt_t     *header;
 
-    part = &(r->headers_in.headers.part);
+    part = &r->headers_in.headers.part;
     header = part->elts;
 
     /* not limited when search_limit == 0 */
-    for (i = 0u; search_limit == 0u || i < search_limit; i++) {
+    for (i = 0; search_limit == 0 || i < search_limit; i++) {
         if (i >= part->nelts) {
             if (part->next == NULL) {
                 break;
@@ -79,14 +76,14 @@ ngx_http_lua_kong_search_unknown_header(ngx_http_request_t *r,
 
             part = part->next;
             header = part->elts;
-            i = 0u;
+            i = 0;
         }
 
-        if (header[i].hash == 0u) {
+        if (header[i].hash == 0) {
             continue;
         }
 
-        for (n = 0u; n < name.len && n < header[i].key.len; n++) {
+        for (n = 0; n < name.len && n < header[i].key.len; n++) {
             ch = ngx_tolower(header[i].key.data[n]);
             if (ch == '-') {
                 ch = '_';
@@ -116,7 +113,7 @@ ngx_http_lua_kong_header_preprocess(ngx_http_request_t *r, ngx_str_t name)
     value.data = ngx_palloc(r->pool, name.len);
     value.len = name.len;
 
-    for (i = 0u; i < name.len; ++i) {
+    for (i = 0; i < name.len; ++i) {
         ch = ngx_tolower(name.data[i]);
 
         if (ch == '-') {
@@ -137,28 +134,25 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
 {
     ngx_str_t    processed_name;
     ngx_str_t   *value;
-    ngx_log_t   *log;
 
     processed_name = ngx_http_lua_kong_header_preprocess(r, name);
-
-    log = r->connection->log;
 
     value = ngx_http_lua_kong_search_known_header(r, processed_name);
 
     if (value == NULL) {
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-            "%V not found from hashed headers", name);
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            "%V not found from hashed headers", &name);
 
         value = ngx_http_lua_kong_search_unknown_header(r,
                     processed_name, search_limit);
     }
 
     if (value == NULL) {
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-            "%V not found from all", name);
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            "%V not found from all", &name);
     }
     // } else {
-    //     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, log, 0,
+    //     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
     //         "%V:%V", name, *value);
     // }
 
