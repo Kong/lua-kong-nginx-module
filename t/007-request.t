@@ -5,7 +5,6 @@ use Test::Nginx::Socket::Lua;
 
 #worker_connections(1014);
 #master_process_enabled(1);
-log_level('debug');
 
 repeat_each(2);
 
@@ -44,8 +43,13 @@ text/plain
 text/plain
 text/plain
 test
+--- error_log
+found content_type by hash, value is text/plain
+found content_type by hash, value is text/plain
+found content_type by hash, value is text/plain
+found x_text by linear search, value is test
+--- ONLY
 --- no_error_log
-[debug]
 [error]
 [crit]
 [alert]

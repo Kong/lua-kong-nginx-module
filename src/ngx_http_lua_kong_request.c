@@ -30,7 +30,7 @@ ngx_http_lua_kong_search_known_header(ngx_http_request_t *r, ngx_str_t name)
     ngx_table_elt_t             *header_found;
 
     /* Calculate a hash of lowercased header name */
-    hash = ngx_hash_key(name.data, name.len);
+    hash = ngx_hash_key_lc(name.data, name.len);
 
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
@@ -144,7 +144,7 @@ ngx_http_lua_kong_ffi_request_get_header(ngx_http_request_t *r,
 
     processed_name = ngx_http_lua_kong_header_preprocess(r, name);
 
-    value = ngx_http_lua_kong_search_known_header(r, processed_name);
+    value = ngx_http_lua_kong_search_known_header(r, name);
 
     if (value != NULL) {
         return value;
