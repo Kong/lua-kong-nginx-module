@@ -21,6 +21,14 @@ if subsystem == "http" then
     local name_str = ffi_new("ngx_str_t")
 
     get_header = function (name, limit)
+        assert(type(name) == "string" and name ~= "",
+               "name must be string")
+
+        if limit then
+            assert(type(limit) == "number" and limit >= 0,
+                   "limit must be number")
+        end
+
         local r = get_request()
 
         name_str.data = name
