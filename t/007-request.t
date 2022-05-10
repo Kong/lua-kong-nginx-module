@@ -8,7 +8,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 9);
+plan tests => repeat_each() * (blocks() * 10);
 
 #no_diff();
 #no_long_string();
@@ -147,6 +147,8 @@ found x-test by linear search, value is test
             ngx.say(get_header("content_Type"))
             ngx.say(get_header("referer"))
             ngx.say(get_header("usER_aGENT"))
+            ngx.say(get_header("te"))
+            ngx.say(get_header("expect"))
         }
     }
 --- request
@@ -156,17 +158,22 @@ Host: test.com
 Content-type: text/plain
 Referer: http://www.foo.com/
 User-Agent: resty
+TE: 1234
+Expect: xxx
 --- response_body
 test.com
 text/plain
 http://www.foo.com/
 resty
---- ONLY
+1234
+xxx
 --- error_log
 found host by hash, value is test.com
 found content-type by hash, value is text/plain
 found referer by hash, value is http://www.foo.com/
 found user-agent by hash, value is resty
+found te by hash, value is 1234
+found expect by hash, value is xxx
 --- no_error_log
 [error]
 [crit]
