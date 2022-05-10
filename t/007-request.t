@@ -60,10 +60,10 @@ test
     location = /test {
         content_by_lua_block {
             local get_header = require("resty.kong.request").get_header
-            ngx.say(get_header("Content-Type",3))
-            ngx.say(get_header("content-Type",3))
-            ngx.say(get_header("Content_Type",3))
-            ngx.say(get_header("X-TEST",3) == nil)
+            ngx.say(get_header("Content-Type",6))
+            ngx.say(get_header("content-Type",6))
+            ngx.say(get_header("Content_Type",6))
+            ngx.say(get_header("X-TEST",6) == nil)
         }
     }
 --- request
