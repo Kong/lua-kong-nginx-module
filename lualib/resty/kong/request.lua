@@ -13,6 +13,7 @@ local subsystem = ngx.config.subsystem
 
 local get_header
 
+
 if subsystem == "http" then
     ffi.cdef[[
         ngx_str_t* ngx_http_lua_kong_ffi_request_get_header(
@@ -27,24 +28,29 @@ if subsystem == "http" then
         assert(type(name) == "string" and name ~= "",
                "name must be a string")
 
-        if limit then
-            assert(type(limit) == "number" and limit >= 0,
+        local limit = limit or DEFAULT_HEADER_LIMIT
+        assert(type(limit) == "number" and limit >= 0,
                    "limit must be a number")
-        end
 
         local r = get_request()
 
         name_str.data = name
         name_str.len = #name
 
-        local value = C.ngx_http_lua_kong_ffi_request_get_header(
-                            r, name_str, limit or DEFAULT_HEADER_LIMIT)
+        local value = C.ngx_http_lua_kong_ffi_request_get_header(r, name_str,
+                                                                 limit)
 
         if value ~= nil then
             return ffi_str(value.data, value.len)
         end
     end
 end
+
+
+if subsystem == "stream" then
+    get_header = function() end
+end
+
 
 return {
     get_header = get_header,
