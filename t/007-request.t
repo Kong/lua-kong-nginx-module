@@ -8,7 +8,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 10);
+plan tests => repeat_each() * (blocks() * 10) + 2;
 
 #no_diff();
 #no_long_string();
@@ -106,6 +106,7 @@ not found xxx by linear search
             ngx.say(get_header("content_Type", 6))
             ngx.say(get_header("X-TEST", 6) == nil)
             ngx.say(get_header("X-TEST", 0))
+            ngx.say(get_header("x_test"))
         }
     }
 --- request
@@ -124,10 +125,12 @@ text/plain
 text/plain
 true
 test
+test
 --- error_log
 found content-type by hash, value is text/plain
 found content-type by hash, value is text/plain
 not found x-test by linear search
+found x-test by linear search, value is test
 found x-test by linear search, value is test
 --- no_error_log
 [error]

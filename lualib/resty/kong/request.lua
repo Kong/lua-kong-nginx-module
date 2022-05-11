@@ -23,7 +23,7 @@ if subsystem == "http" then
 
     local name_str = ffi_new("ngx_str_t")
 
-    get_header = function (name, limit)
+    get_header = function(name, limit)
         assert(type(name) == "string" and name ~= "",
                "name must be a string")
 
@@ -37,8 +37,8 @@ if subsystem == "http" then
         name_str.data = name
         name_str.len = #name
 
-        local value = C.ngx_http_lua_kong_ffi_request_get_header(r,
-            name_str, limit or DEFAULT_HEADER_LIMIT)
+        local value = C.ngx_http_lua_kong_ffi_request_get_header(
+                            r, name_str, limit or DEFAULT_HEADER_LIMIT)
 
         if value ~= nil then
             return ffi_str(value.data, value.len)
