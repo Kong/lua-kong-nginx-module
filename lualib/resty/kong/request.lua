@@ -39,10 +39,12 @@ if subsystem == "http" then
 
         local value = C.ngx_http_lua_kong_ffi_request_get_header(r, name_str,
                                                                  limit)
-
-        if value ~= nil then
-            return ffi_str(value.data, value.len)
+        -- same behavior as ngx.var.http_xxx
+        if value == nil then
+            return
         end
+
+        return ffi_str(value.data, value.len)
     end
 end
 
