@@ -30,7 +30,7 @@ if subsystem == "http" then
 
         local limit = limit or DEFAULT_HEADER_LIMIT
         assert(type(limit) == "number" and limit >= 0,
-                   "limit must be a number")
+               "limit must be a number")
 
         local r = get_request()
 
