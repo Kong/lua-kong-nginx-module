@@ -46,7 +46,7 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       0,
       NULL },
 
-    { ngx_string("lua_kong_static_tag"),
+    { ngx_string("lua_kong_set_static_tag"),
       NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,

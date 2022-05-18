@@ -12,16 +12,16 @@ local get_request = base.get_request
 local subsystem = ngx.config.subsystem
 
 
-local ngx_lua_kong_static_tag
+local ngx_lua_kong_get_static_tag
 
 
 if subsystem == "http" then
 
     ffi.cdef[[
-    ngx_str_t * ngx_http_lua_kong_ffi_static_tag(ngx_http_request_t *r);
+    ngx_str_t * ngx_http_lua_kong_ffi_get_static_tag(ngx_http_request_t *r);
     ]]
 
-    ngx_lua_kong_static_tag = C.ngx_http_lua_kong_ffi_static_tag
+    ngx_lua_kong_get_static_tag = C.ngx_http_lua_kong_ffi_get_static_tag
 
 elseif subsystem == "stream" then
 
@@ -36,7 +36,7 @@ local function get()
         error("no request found")
     end
 
-    local tag = ngx_lua_kong_static_tag(r)
+    local tag = ngx_lua_kong_get_static_tag(r)
 
     --assert(tag ~= nil)
 

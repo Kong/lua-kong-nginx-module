@@ -24,7 +24,7 @@ __DATA__
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
     location = /test {
-        lua_kong_static_tag "it works";
+        lua_kong_set_static_tag "it works";
         content_by_lua_block {
             local tag = require "resty.kong.tag"
             ngx.say(tag.get())
