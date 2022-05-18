@@ -120,7 +120,7 @@ ngx_http_lua_kong_get_module_ctx(ngx_http_request_t *r)
 }
 
 
-static void*
+static void *
 ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf)
 {
     ngx_http_lua_kong_loc_conf_t* conf;

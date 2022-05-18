@@ -18,7 +18,7 @@
 #include "ngx_http_lua_kong_common.h"
 
 
-ngx_str_t*
+ngx_str_t *
 ngx_http_lua_kong_ffi_static_tag(ngx_http_request_t *r)
 {
     ngx_http_lua_kong_loc_conf_t* lcf;

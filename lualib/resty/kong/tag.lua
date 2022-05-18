@@ -18,7 +18,7 @@ local ngx_lua_kong_static_tag
 if subsystem == "http" then
 
     ffi.cdef[[
-    ngx_str_t* ngx_http_lua_kong_ffi_static_tag(ngx_http_request_t *r);
+    ngx_str_t * ngx_http_lua_kong_ffi_static_tag(ngx_http_request_t *r);
     ]]
 
     ngx_lua_kong_static_tag = C.ngx_http_lua_kong_ffi_static_tag
