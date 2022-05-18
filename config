@@ -5,6 +5,7 @@ ngx_module_srcs=" \
                 $ngx_addon_dir/src/ngx_http_lua_kong_grpc.c \
                 $ngx_addon_dir/src/ngx_http_lua_kong_ssl.c \
                 $ngx_addon_dir/src/ngx_http_lua_kong_var.c \
+                $ngx_addon_dir/src/ngx_http_lua_kong_tag.c \
                 $ngx_addon_dir/src/ngx_http_lua_kong_module.c \
                 "
 
