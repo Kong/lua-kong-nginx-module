@@ -2,11 +2,7 @@ local ffi = require "ffi"
 local base = require "resty.core.base"
 
 
-local assert = assert
-
-
 local C = ffi.C
-local ffi_new = ffi.new
 local ffi_str = ffi.string
 local get_request = base.get_request
 local subsystem = ngx.config.subsystem
@@ -26,6 +22,7 @@ if subsystem == "http" then
 elseif subsystem == "stream" then
 
     -- TODO: implement static tag in stream module
+    ngx_lua_kong_get_static_tag = function() end
 
 end
 
