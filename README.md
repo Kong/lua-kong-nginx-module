@@ -398,7 +398,7 @@ License
 =======
 
 ```
-Copyright 2020 Kong Inc.
+Copyright 2020 - 2022 Kong Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
