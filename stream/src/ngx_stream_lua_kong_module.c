@@ -85,34 +85,4 @@ ngx_stream_lua_kong_get_proxy_ssl_disable(ngx_stream_session_t *s)
 }
 
 
-// macOS with M1 fixes, see: https://github.com/LuaJIT/LuaJIT/issues/205
-
-int
-ngx_stream_lua_ffi_shdict_get_m1(ngx_shdict_get_t *s)
-{
-    return ngx_stream_lua_ffi_shdict_get(s->zone, s->key, s->key_len, s->value_type,
-        s->str_value_buf, s->str_value_len, s->num_value, s->user_flags, s->get_stale,
-        s->is_stale, s->errmsg);
-}
-
-
-int
-ngx_stream_lua_ffi_shdict_store_m1(ngx_shdict_store_t *s)
-{
-    return ngx_stream_lua_ffi_shdict_store(s->zone, s->op, s->key, s->key_len, s->value_type,
-        s->str_value_buf, s->str_value_len, s->num_value, s->exptime, s->user_flags, s->errmsg,
-        s->forcible);
-}
-
-
-int
-ngx_stream_lua_ffi_shdict_incr_m1(ngx_shdict_incr_t *s)
-{
-    return ngx_stream_lua_ffi_shdict_incr(s->zone, s->key, s->key_len, s->num_value,
-        s->errmsg, s->has_init, s->init, s->init_ttl, s->forcible);
-}
-
-// macOS with M1 fixes end
-
-
 #endif
