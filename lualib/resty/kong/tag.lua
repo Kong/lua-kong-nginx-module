@@ -2,6 +2,10 @@ local ffi = require "ffi"
 local base = require "resty.core.base"
 
 
+local error = error
+local assert = assert
+
+
 local C = ffi.C
 local ffi_str = ffi.string
 local get_request = base.get_request
@@ -33,9 +37,7 @@ local function get()
         error("no request found")
     end
 
-    local tag = ngx_lua_kong_get_static_tag(r)
-
-    --assert(tag ~= nil)
+    local tag = assert(ngx_lua_kong_get_static_tag(r))
 
     return ffi_str(tag.data, tag.len)
 end

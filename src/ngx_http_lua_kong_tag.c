@@ -21,7 +21,7 @@
 ngx_str_t *
 ngx_http_lua_kong_ffi_get_static_tag(ngx_http_request_t *r)
 {
-    ngx_http_lua_kong_loc_conf_t* lcf;
+    ngx_http_lua_kong_loc_conf_t *lcf;
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
 
