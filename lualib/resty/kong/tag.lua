@@ -2,10 +2,6 @@ local ffi = require "ffi"
 local base = require "resty.core.base"
 
 
-local error = error
-local assert = assert
-
-
 local C = ffi.C
 local ffi_str = ffi.string
 local get_request = base.get_request
