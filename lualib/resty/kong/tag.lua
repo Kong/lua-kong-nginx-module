@@ -37,9 +37,13 @@ local function get()
         error("no request found")
     end
 
-    local tag = assert(ngx_lua_kong_get_static_tag(r))
+    local tag = ngx_lua_kong_get_static_tag(r)
 
-    return ffi_str(tag.data, tag.len)
+    if tag and tag.len > 0 then
+        return ffi_str(tag.data, tag.len)
+    end
+
+    return nil
 end
 
 

@@ -41,7 +41,7 @@ it works
 
 
 
-=== TEST 2: default tag is empty string
+=== TEST 2: default tag is nil
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -54,7 +54,7 @@ it works
 --- request
 GET /test
 --- response_body
-value:
+value:nil
 --- no_error_log
 [error]
 [crit]
