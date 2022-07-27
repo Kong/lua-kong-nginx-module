@@ -37,10 +37,23 @@ static ngx_stream_module_t ngx_stream_lua_kong_module_ctx = {
 };
 
 
+static ngx_command_t ngx_stream_lua_kong_commands[] = {
+
+    { ngx_string("lua_kong_set_static_tag"),
+      NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_lua_kong_srv_conf_t, tag),
+      NULL },
+
+    ngx_null_command
+};
+
+
 ngx_module_t ngx_stream_lua_kong_module = {
     NGX_MODULE_V1,
     &ngx_stream_lua_kong_module_ctx,   /* module context */
-    NULL,                              /* module directives */
+    ngx_stream_lua_kong_commands,      /* module directives */
     NGX_STREAM_MODULE,                 /* module type */
     NULL,                              /* init master */
     NULL,                              /* init module */
@@ -64,6 +77,17 @@ ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf)
     }
 
     return conf;
+}
+
+
+ngx_str_t *
+ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_session_t *s)
+{
+    ngx_stream_lua_kong_srv_conf_t *scf;
+
+    scf = ngx_stream_get_module_srv_conf(s, ngx_stream_lua_kong_module);
+
+    return &scf->tag;
 }
 
 
