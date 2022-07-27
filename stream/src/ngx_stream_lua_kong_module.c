@@ -22,6 +22,9 @@
 #include "ngx_stream_lua_kong_module.h"
 
 
+static void* ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf);
+
+
 static ngx_stream_module_t ngx_stream_lua_kong_module_ctx = {
     NULL,                                  /* preconfiguration */
     NULL,                                  /* postconfiguration */
@@ -29,7 +32,7 @@ static ngx_stream_module_t ngx_stream_lua_kong_module_ctx = {
     NULL,                                  /* create main configuration */
     NULL,                                  /* init main configuration */
 
-    NULL,                                  /* create server configuration */
+    ngx_stream_lua_kong_create_srv_conf,   /* create server configuration */
     NULL                                   /* merge server configuration */
 };
 
@@ -48,6 +51,20 @@ ngx_module_t ngx_stream_lua_kong_module = {
     NULL,                              /* exit master */
     NGX_MODULE_V1_PADDING
 };
+
+
+static void *
+ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf)
+{
+    ngx_stream_lua_kong_srv_conf_t *conf;
+
+    conf = ngx_pcalloc(cf->pool, sizeof(ngx_stream_lua_kong_srv_conf_t));
+    if (conf == NULL) {
+        return NULL;
+    }
+
+    return conf;
+}
 
 
 #if (NGX_STREAM_SSL)
