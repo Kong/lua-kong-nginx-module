@@ -22,7 +22,7 @@ if subsystem == "http" then
 elseif subsystem == "stream" then
 
     ffi.cdef[[
-    ngx_str_t * ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_request_t *r);
+    ngx_str_t * ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_lua_request_t *r);
     ]]
 
     ngx_lua_kong_get_static_tag = C.ngx_stream_lua_kong_ffi_get_static_tag
