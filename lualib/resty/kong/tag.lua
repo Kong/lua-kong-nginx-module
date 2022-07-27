@@ -21,8 +21,11 @@ if subsystem == "http" then
 
 elseif subsystem == "stream" then
 
-    -- TODO: implement static tag in stream module
-    ngx_lua_kong_get_static_tag = function() end
+    ffi.cdef[[
+    ngx_str_t * ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_request_t *r);
+    ]]
+
+    ngx_lua_kong_get_static_tag = C.ngx_stream_lua_kong_ffi_get_static_tag
 
 end
 

@@ -81,11 +81,12 @@ ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf)
 
 
 ngx_str_t *
-ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_session_t *s)
+ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_lua_request_t *r)
 {
     ngx_stream_lua_kong_srv_conf_t *scf;
 
-    scf = ngx_stream_get_module_srv_conf(s, ngx_stream_lua_kong_module);
+    scf = ngx_stream_get_module_srv_conf(
+            r->session, ngx_stream_lua_kong_module);
 
     return &scf->tag;
 }
