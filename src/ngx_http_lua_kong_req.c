@@ -21,7 +21,23 @@
 int
 ngx_http_lua_kong_ffi_req_is_https(ngx_http_request_t *r)
 {
+#if (NGX_HTTP_SSL)
     return r->connection->ssl != NULL;
+#else
+    return 0;
+#endif
+}
+
+
+int
+ngx_http_lua_kong_ffi_req_get_scheme(ngx_http_request_t *r)
+{
+#if (NGX_HTTP_SSL)
+    if (r->connection->ssl) {
+        return 1;
+    }
+#endif
+    return 0;
 }
 
 
@@ -44,5 +60,16 @@ ngx_http_lua_kong_ffi_req_get_request_uri(ngx_http_request_t *r)
 {
     return &r->unparsed_uri;
 }
+
+int
+ngx_http_lua_kong_ffi_req_get_server_port(ngx_http_request_t *r)
+{
+    if (ngx_connection_local_sockaddr(r->connection, NULL, 0) != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    return ngx_inet_get_port(r->connection->local_sockaddr);
+}
+
 
 
