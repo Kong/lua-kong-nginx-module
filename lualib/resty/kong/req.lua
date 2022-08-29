@@ -16,6 +16,7 @@ ffi.cdef[[
 int ngx_http_lua_kong_ffi_req_is_https(ngx_http_request_t *r);
 int ngx_http_lua_kong_ffi_req_has_args(ngx_http_request_t *r);
 int ngx_http_lua_kong_ffi_req_get_server_port(ngx_http_request_t *r);
+
 ngx_str_t * ngx_http_lua_kong_ffi_req_get_args(ngx_http_request_t *r);
 ngx_str_t * ngx_http_lua_kong_ffi_req_get_request_uri(ngx_http_request_t *r);
 ]]
@@ -69,7 +70,39 @@ local function get_args()
 end
 
 
+local function get_request_uri()
+    local r = get_request()
+
+    if not r then
+        error("no request found")
+    end
+
+    local request_uri = C.ngx_http_lua_kong_ffi_req_get_request_uri(r)
+
+    return ffi_str(request_uri.data, request_uri.len)
+end
+
+
+local function get_server_port()
+    local r = get_request()
+
+    if not r then
+        error("no request found")
+    end
+
+    local port = C.ngx_http_lua_kong_ffi_req_get_server_port(r)
+    if port < 0 then
+        return nil
+    end
+
+    return tonumber(port)
+end
+
+
 return {
-    is_https = is_https,
-    get_scheme = get_scheme,
+    is_https        = is_https,
+    get_scheme      = get_scheme,
+    get_args        = get_args,
+    get_request_uri = get_request_uri,
+    get_server_port = get_server_port,
 }
