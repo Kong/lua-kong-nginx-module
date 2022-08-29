@@ -15,10 +15,10 @@ local get_request = base.get_request
 ffi.cdef[[
 int ngx_http_lua_kong_ffi_req_is_https(ngx_http_request_t *r);
 int ngx_http_lua_kong_ffi_req_has_args(ngx_http_request_t *r);
-int ngx_http_lua_kong_ffi_req_get_server_port(ngx_http_request_t *r);
+int ngx_http_lua_kong_ffi_req_server_port(ngx_http_request_t *r);
 
-ngx_str_t * ngx_http_lua_kong_ffi_req_get_args(ngx_http_request_t *r);
-ngx_str_t * ngx_http_lua_kong_ffi_req_get_request_uri(ngx_http_request_t *r);
+ngx_str_t * ngx_http_lua_kong_ffi_req_args(ngx_http_request_t *r);
+ngx_str_t * ngx_http_lua_kong_ffi_req_request_uri(ngx_http_request_t *r);
 ]]
 
 
@@ -35,7 +35,7 @@ local function is_https()
 end
 
 
-local function get_scheme()
+local function scheme()
     return is_https() and "https" or "http"
 end
 
@@ -53,14 +53,14 @@ local function has_args()
 end
 
 
-local function get_args()
+local function args()
     local r = get_request()
 
     if not r then
         error("no request found")
     end
 
-    local args = C.ngx_http_lua_kong_ffi_req_get_args(r)
+    local args = C.ngx_http_lua_kong_ffi_req_args(r)
 
     if args.len == 0 then
         return ""
@@ -70,27 +70,27 @@ local function get_args()
 end
 
 
-local function get_request_uri()
+local function request_uri()
     local r = get_request()
 
     if not r then
         error("no request found")
     end
 
-    local request_uri = C.ngx_http_lua_kong_ffi_req_get_request_uri(r)
+    local request_uri = C.ngx_http_lua_kong_ffi_req_request_uri(r)
 
     return ffi_str(request_uri.data, request_uri.len)
 end
 
 
-local function get_server_port()
+local function server_port()
     local r = get_request()
 
     if not r then
         error("no request found")
     end
 
-    local port = C.ngx_http_lua_kong_ffi_req_get_server_port(r)
+    local port = C.ngx_http_lua_kong_ffi_req_server_port(r)
     if port < 0 then
         return nil
     end
@@ -100,9 +100,10 @@ end
 
 
 return {
-    is_https        = is_https,
-    get_scheme      = get_scheme,
-    get_args        = get_args,
-    get_request_uri = get_request_uri,
-    get_server_port = get_server_port,
+    is_https    = is_https,
+    scheme      = scheme,
+    has_args    = has_args,
+    args        = args,
+    request_uri = request_uri,
+    server_port = server_port,
 }
