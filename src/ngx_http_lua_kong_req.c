@@ -30,18 +30,6 @@ ngx_http_lua_kong_ffi_req_is_https(ngx_http_request_t *r)
 
 
 int
-ngx_http_lua_kong_ffi_req_get_scheme(ngx_http_request_t *r)
-{
-#if (NGX_HTTP_SSL)
-    if (r->connection->ssl) {
-        return 1;
-    }
-#endif
-    return 0;
-}
-
-
-int
 ngx_http_lua_kong_ffi_req_has_args(ngx_http_request_t *r)
 {
     return r->args.len != 0;
