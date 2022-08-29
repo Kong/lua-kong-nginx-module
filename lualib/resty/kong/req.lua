@@ -14,7 +14,7 @@ local get_request = base.get_request
 
 ffi.cdef[[
 int ngx_http_lua_kong_ffi_req_is_https(ngx_http_request_t *r);
-int ngx_http_lua_kong_ffi_req_has_args(ngx_http_request_t *r);
+int ngx_http_lua_kong_ffi_req_is_args(ngx_http_request_t *r);
 int ngx_http_lua_kong_ffi_req_server_port(ngx_http_request_t *r);
 
 ngx_str_t * ngx_http_lua_kong_ffi_req_args(ngx_http_request_t *r);
@@ -40,14 +40,14 @@ local function scheme()
 end
 
 
-local function has_args()
+local function is_args()
     local r = get_request()
 
     if not r then
         error("no request found")
     end
 
-    local flag = C.ngx_http_lua_kong_ffi_req_has_args(r)
+    local flag = C.ngx_http_lua_kong_ffi_req_is_args(r)
 
     return tonumber(flag) == 1
 end
@@ -102,7 +102,7 @@ end
 return {
     is_https    = is_https,
     scheme      = scheme,
-    has_args    = has_args,
+    is_args     = is_args,
     args        = args,
     request_uri = request_uri,
     server_port = server_port,

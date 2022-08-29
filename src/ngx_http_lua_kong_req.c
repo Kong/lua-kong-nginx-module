@@ -30,7 +30,7 @@ ngx_http_lua_kong_ffi_req_is_https(ngx_http_request_t *r)
 
 
 int
-ngx_http_lua_kong_ffi_req_has_args(ngx_http_request_t *r)
+ngx_http_lua_kong_ffi_req_is_args(ngx_http_request_t *r)
 {
     return r->args.len != 0;
 }
