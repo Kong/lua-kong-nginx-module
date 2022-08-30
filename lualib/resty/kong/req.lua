@@ -62,10 +62,6 @@ local function args()
 
     local args = C.ngx_http_lua_kong_ffi_req_args(r)
 
-    if args.len == 0 then
-        return ""
-    end
-
     return ffi_str(args.data, args.len)
 end
 

@@ -125,7 +125,6 @@ uri:/test?a=1&b=2
 
 
 === TEST 5: var.server_port
---- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
