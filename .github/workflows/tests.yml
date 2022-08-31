@@ -17,6 +17,9 @@ jobs:
         - openresty: "1.19.9.1"
           luarocks: "3.8.0"
           openssl: "1.1.1m"
+        - openresty: "1.21.4.1"
+          luarocks: "3.9.1"
+          openssl: "1.1.1q"
 
     env:
       JOBS: 1  # must be 1 as socket tests interfere with each other
