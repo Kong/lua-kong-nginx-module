@@ -49,6 +49,7 @@ ngx_http_lua_kong_ffi_req_request_uri(ngx_http_request_t *r)
     return &r->unparsed_uri;
 }
 
+
 int
 ngx_http_lua_kong_ffi_req_server_port(ngx_http_request_t *r)
 {
