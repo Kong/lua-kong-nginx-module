@@ -9,7 +9,6 @@ local tonumber = tonumber
 
 local C = ffi.C
 local ffi_str = ffi.string
-local get_request = base.get_request
 
 
 ffi.cdef[[
@@ -22,12 +21,24 @@ ngx_str_t * ngx_http_lua_kong_ffi_req_request_uri(ngx_http_request_t *r);
 ]]
 
 
+local get_request
+do
+    local base_get_request = base.get_request
+
+    get_request = function()
+        local r = base_get_request()
+
+        if not r then
+            error("no request found")
+        end
+
+        return r
+    end
+end
+
+
 local function is_https()
     local r = get_request()
-
-    if not r then
-        error("no request found")
-    end
 
     local flag = C.ngx_http_lua_kong_ffi_req_is_https(r)
 
@@ -43,10 +54,6 @@ end
 local function is_args()
     local r = get_request()
 
-    if not r then
-        error("no request found")
-    end
-
     local flag = C.ngx_http_lua_kong_ffi_req_is_args(r)
 
     return tonumber(flag) == 1
@@ -55,10 +62,6 @@ end
 
 local function args()
     local r = get_request()
-
-    if not r then
-        error("no request found")
-    end
 
     local args = C.ngx_http_lua_kong_ffi_req_args(r)
 
@@ -73,10 +76,6 @@ end
 local function request_uri()
     local r = get_request()
 
-    if not r then
-        error("no request found")
-    end
-
     local request_uri = C.ngx_http_lua_kong_ffi_req_request_uri(r)
 
     return ffi_str(request_uri.data, request_uri.len)
@@ -86,16 +85,12 @@ end
 local function server_port()
     local r = get_request()
 
-    if not r then
-        error("no request found")
-    end
-
-    local port = C.ngx_http_lua_kong_ffi_req_server_port(r)
+    local port = tonumber(C.ngx_http_lua_kong_ffi_req_server_port(r))
     if port < 0 then
         return nil
     end
 
-    return tonumber(port)
+    return port
 end
 
 
