@@ -58,7 +58,8 @@ http
             local req = require "resty.kong.req"
 
             assert(not req.is_args())
-            assert(req.args() == "")
+            assert(ngx.var.args == nil)
+            assert(ngx.var.args == req.args())
 
             ngx.say("is_args:", req.is_args())
             ngx.say("args:", req.args())
@@ -68,7 +69,7 @@ http
 GET /test
 --- response_body
 is_args:false
-args:
+args:nil
 --- no_error_log
 [error]
 [crit]
@@ -85,6 +86,9 @@ args:
             local req = require "resty.kong.req"
 
             assert(req.is_args())
+            assert(ngx.var.is_args == "?")
+            assert(ngx.var.args == req.args())
+
             ngx.say("is_args:", req.is_args())
             ngx.say("args:", req.args())
         }
@@ -110,6 +114,8 @@ args:a=1&b=2
             local req = require "resty.kong.req"
 
             assert(req.request_uri())
+            assert(ngx.var.request_uri == req.request_uri())
+
             ngx.say("uri:", req.request_uri())
         }
     }
