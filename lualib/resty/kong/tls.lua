@@ -29,7 +29,7 @@ if ngx.config.subsystem == "http" then
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
     // STACK_OF(X509_NAME)
     const char *ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
-        OPENSSL_STACK *name_list);
+        void *name_list);
     int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
         void *_chain, void *_key);
     int ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(ngx_http_request_t *r,
