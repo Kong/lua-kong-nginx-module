@@ -62,3 +62,37 @@ value:nil
 
 
 
+=== TEST 3: set tag for internal location block
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        lua_kong_set_static_tag "test-tag";
+        content_by_lua_block {
+            local tag = require "resty.kong.tag"
+            ngx.say("value:", tag.get())
+
+            local res = ngx.location.capture("/inner")
+            ngx.say(res.body)
+        }
+    }
+    location = /inner {
+        internal;
+        lua_kong_set_static_tag "inner-tag";
+        content_by_lua_block {
+            local tag = require "resty.kong.tag"
+            ngx.print("value:", tag.get())
+        }
+    }
+--- request
+GET /test
+--- response_body
+value:test-tag
+value:inner-tag
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
