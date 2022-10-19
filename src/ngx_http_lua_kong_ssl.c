@@ -192,11 +192,13 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
 
 const char *
 ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
-                                         STACK_OF(X509_NAME) *name_list)
+                                         STACK_OF(X509) *ca_list)
 {
 #if (NGX_SSL)
     ngx_connection_t    *c = r->connection;
     ngx_ssl_conn_t      *sc;
+    X509                *ca;
+    int                  i;
 
     if (c->ssl == NULL) {
         return "server does not have TLS enabled";
@@ -205,7 +207,14 @@ ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
     sc = c->ssl->connection;
 
 
-    SSL_set_client_CA_list(sc, name_list);
+    for (i = 0; i < sk_X509_num(ca_list); i++) {
+        ca = sk_X509_value(ca_list, i);
+
+        /* will call X509_NAME_dup() internally */
+        if (SSL_add_client_CA(sc, ca) == 0) {
+            return "unable to add the CA name to the list";
+        }
+    }
 
     return NULL;
 

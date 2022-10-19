@@ -166,7 +166,7 @@ This function returns `true` when the call is successful. Otherwise it returns
 
 resty.kong.tls.set\_client\_ca\_list
 -------------------------------------------
-**syntax:** *succ, err = resty.kong.tls.set\_client\_ca\_list(name_list)*
+**syntax:** *succ, err = resty.kong.tls.set\_client\_ca\_list(ca_list)*
 
 **context:** *ssl_certificate_by_lua&#42;*
 
@@ -178,8 +178,8 @@ Certificate Request Message of downstram TLS handshake.
 The downstream client then can use this DN information to filter certificates,
 and chooses an appropriate certificate issued by a CA in the list.
 
-`name_list` is of type `STACK(X509_NAME) *` which a raw C pointer returned by
-the OpenSSL API.
+`name_list` is of type `STACK_OF(X509) *` which can be created by using the API
+of `resty.openssl.x509.chain`
 
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.
