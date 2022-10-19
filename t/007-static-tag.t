@@ -96,3 +96,29 @@ value:inner-tag
 
 
 
+=== TEST 4: set tag for nested location block
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location /test {
+        lua_kong_set_static_tag "test-tag";
+
+        location /test/nested {
+            lua_kong_set_static_tag "nested-tag";
+            content_by_lua_block {
+                local tag = require "resty.kong.tag"
+                ngx.say("value:", tag.get())
+            }
+        }
+    }
+--- request
+GET /test/nested
+--- response_body
+value:nested-tag
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
