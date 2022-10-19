@@ -27,6 +27,9 @@ if ngx.config.subsystem == "http" then
     int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
         ngx_http_request_t *r, char *buf, size_t *buf_len);
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
+    // STACK_OF(X509_NAME)
+    const char *ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
+        OPENSSL_STACK *name_list);
     int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
         void *_chain, void *_key);
     int ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(ngx_http_request_t *r,
@@ -91,6 +94,22 @@ if ngx.config.subsystem == "http" then
         local r = get_request()
 
         local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
+        if errmsg == nil then
+            return true
+        end
+
+        return nil, ffi_string(errmsg)
+    end
+
+
+    function _M.set_client_ca_list(name_list)
+        if get_phase() ~= 'ssl_cert' then
+            error("API disabled in the current context")
+        end
+
+        local r = get_request()
+
+        local errmsg = C.ngx_http_lua_kong_ffi_set_client_ca_list(r, name_list)
         if errmsg == nil then
             return true
         end

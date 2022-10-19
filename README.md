@@ -14,6 +14,7 @@ Table of Contents
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
+    * [resty.kong.tls.set\_client\_ca\_list](#restykongtlsset_client_ca_list)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
     * [resty.kong.tls.set\_upstream\_cert\_and\_key](#restykongtlsset_upstream_cert_and_key)
     * [resty.kong.tls.set\_upstream\_ssl\_trusted\_store](#restykongtlsset_upstream_ssl_trusted_store)
@@ -157,6 +158,28 @@ resty.kong.tls.disable\_session\_reuse
 
 Prevents the TLS session for the current connection from being reused by
 disabling session ticket and session ID for the current TLS connection.
+
+This function returns `true` when the call is successful. Otherwise it returns
+`nil` and a string describing the error.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.set\_client\_ca\_list
+-------------------------------------------
+**syntax:** *succ, err = resty.kong.tls.set\_client\_ca\_list(name_list)*
+
+**context:** *ssl_certificate_by_lua&#42;*
+
+**subsystems:** *http*
+
+Set the CA DN list to the underlying SSL structure, which will be sent in the
+Certificate Request Message of downstram TLS handshake.
+
+The downstream client then can use this DN information to filter certificates,
+and chooses an appropriate certificate issued by a CA in the list.
+
+`name_list` is of type `STACK(X509_NAME) *` which a raw C pointer returned by
+the OpenSSL API.
 
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.
