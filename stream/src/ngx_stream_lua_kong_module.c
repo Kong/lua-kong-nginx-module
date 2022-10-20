@@ -22,6 +22,9 @@
 #include "ngx_stream_lua_kong_module.h"
 
 
+static void* ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf);
+
+
 static ngx_stream_module_t ngx_stream_lua_kong_module_ctx = {
     NULL,                                  /* preconfiguration */
     NULL,                                  /* postconfiguration */
@@ -29,15 +32,28 @@ static ngx_stream_module_t ngx_stream_lua_kong_module_ctx = {
     NULL,                                  /* create main configuration */
     NULL,                                  /* init main configuration */
 
-    NULL,                                  /* create server configuration */
+    ngx_stream_lua_kong_create_srv_conf,   /* create server configuration */
     NULL                                   /* merge server configuration */
+};
+
+
+static ngx_command_t ngx_stream_lua_kong_commands[] = {
+
+    { ngx_string("lua_kong_set_static_tag"),
+      NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_lua_kong_srv_conf_t, tag),
+      NULL },
+
+    ngx_null_command
 };
 
 
 ngx_module_t ngx_stream_lua_kong_module = {
     NGX_MODULE_V1,
     &ngx_stream_lua_kong_module_ctx,   /* module context */
-    NULL,                              /* module directives */
+    ngx_stream_lua_kong_commands,      /* module directives */
     NGX_STREAM_MODULE,                 /* module type */
     NULL,                              /* init master */
     NULL,                              /* init module */
@@ -48,6 +64,32 @@ ngx_module_t ngx_stream_lua_kong_module = {
     NULL,                              /* exit master */
     NGX_MODULE_V1_PADDING
 };
+
+
+static void *
+ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf)
+{
+    ngx_stream_lua_kong_srv_conf_t *conf;
+
+    conf = ngx_pcalloc(cf->pool, sizeof(ngx_stream_lua_kong_srv_conf_t));
+    if (conf == NULL) {
+        return NULL;
+    }
+
+    return conf;
+}
+
+
+ngx_str_t *
+ngx_stream_lua_kong_ffi_get_static_tag(ngx_stream_lua_request_t *r)
+{
+    ngx_stream_lua_kong_srv_conf_t *scf;
+
+    scf = ngx_stream_get_module_srv_conf(
+            r->session, ngx_stream_lua_kong_module);
+
+    return &scf->tag;
+}
 
 
 #if (NGX_STREAM_SSL)

@@ -12,6 +12,11 @@ typedef struct {
 } ngx_stream_lua_kong_ctx_t;
 
 
+typedef struct {
+    ngx_str_t               tag;
+} ngx_stream_lua_kong_srv_conf_t;
+
+
 #if (NGX_STREAM_SSL)
 
 ngx_uint_t

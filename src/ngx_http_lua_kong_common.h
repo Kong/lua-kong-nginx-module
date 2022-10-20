@@ -36,6 +36,11 @@ typedef struct {
 } ngx_http_lua_kong_ctx_t;
 
 
+typedef struct {
+    ngx_str_t           tag;
+} ngx_http_lua_kong_loc_conf_t;
+
+
 #ifdef NGX_LUA_USE_ASSERT
 #include <assert.h>
 #   define ngx_http_lua_kong_assert(a)  assert(a)
