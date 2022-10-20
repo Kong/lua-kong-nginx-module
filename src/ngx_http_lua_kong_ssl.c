@@ -192,7 +192,7 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
 
 const char *
 ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
-                                         STACK_OF(X509) *ca_list)
+                                         const STACK_OF(X509) *ca_list)
 {
 #if (NGX_SSL)
     ngx_connection_t    *c = r->connection;
