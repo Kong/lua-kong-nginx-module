@@ -129,7 +129,7 @@ lua\_kong\_set\_static\_tag
 
 **context:** *location(http subsystem)* *server(stream subsystem)*
 
-Add a static tag string for Nginx's `location`(http subsystem) or `server`(stream subsystem),
+Add a static tag string for Nginx's `location`(http subsystem) or `server`(stream subsystem) block,
 which can be accessed in Lua land by [`resty.kong.tag.get`](#restykongtagget).
 
 [Back to TOC](#table-of-contents)
@@ -414,9 +414,9 @@ resty.kong.tag.get
 
 **subsystems:** *http* *stream*
 
-Retrn the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_static_tag).
+Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_static_tag).
 
-If there is no tag in `location`(http subsystems) or `server`(stream subsystems),
+If there is no tag in `location`(http subsystems) or `server`(stream subsystems) block,
 it will return `nil`.
 
 
