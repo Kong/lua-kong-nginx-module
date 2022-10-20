@@ -178,8 +178,39 @@ Certificate Request Message of downstram TLS handshake.
 The downstream client then can use this DN information to filter certificates,
 and chooses an appropriate certificate issued by a CA in the list.
 
-`name_list` is of type `STACK_OF(X509) *` which can be created by using the API
-of `resty.openssl.x509.chain`
+`ca_list` is of type `STACK_OF(X509) *` which can be created by using the API
+of `resty.openssl.x509.chain` as follows:
+
+```lua
+local tls_lib = require "resty.kong.tls"
+local x509_lib = require "resty.openssl.x509"
+local chain_lib = require "resty.openssl.x509.chain"
+
+local suc, err
+local chain = chain_lib.new()
+-- err check
+local x509, err = x509_lib.new(pem_cert, "PEM")
+-- err check
+suc, err = chain:add(x509)
+-- err check
+
+-- `chain.ctx` is the raw data of the chain, i.e. `STACK_OF(X509) *`
+suc, err = tls_lib.set_client_ca_list(chain.ctx)
+-- err check
+```
+
+Or by using `ngx.ssl` as follows:
+
+```lua
+local ssl = require "ngx.ssl"
+
+local chain, err = ssl.parse_pem_cert(pem_cert_chain)
+-- note the `chain` returned by `ssl.parse_pem_cert` is already a raw `STACK_OF(X509) *`
+-- err check
+
+suc, err = tls_lib.set_client_ca_list(chain)
+-- err check
+```
 
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.
