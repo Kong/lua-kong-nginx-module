@@ -23,6 +23,7 @@ Table of Contents
     * [resty.kong.grpc.set\_authority](#restykonggrpcset_authority)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
+    * [resty.kong.tag.get](#restykongtagget)
 * [License](#license)
 
 Description
@@ -53,7 +54,7 @@ This module can be installed just like any ordinary Nginx C module, using the
 Directives
 =======
 
-lua_kong_load_var_index
+lua\_kong\_load\_var\_index
 -------------------------------------------
 **syntax:** *lua_kong_load_var_index $variable | default;*
 
@@ -129,7 +130,7 @@ lua\_kong\_set\_static\_tag
 **context:** *location(http subsystem)* *server(stream subsystem)*
 
 Add a static tag string for Nginx's `location`(http subsystem) or `server`(stream subsystem),
-which can be accessed in Lua land by `resty.kong.tag.get()`.
+which can be accessed in Lua land by [`resty.kong.tag.get`](#restykongtagget).
 
 [Back to TOC](#table-of-contents)
 
@@ -404,6 +405,18 @@ To ensure a variable can be accessed using index, you can use the [lua_kong_load
 directive.
 
 [Back to TOC](#table-of-contents)
+
+resty.kong.tag.get
+----------------------------------
+**syntax:** *resty.kong.tag.get()*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*
+
+**subsystems:** *http* *stream*
+
+Retrn the tag value which is set by [`lua\_kong\_set\_static\_tag`](#lua_kong_set_static_tag).
+If there is no tag in `location`(http subsystems) or `server`(stream subsystems),
+it will return `nil`.
 
 
 License
