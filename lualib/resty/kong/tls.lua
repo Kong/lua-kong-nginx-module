@@ -108,8 +108,9 @@ if ngx.config.subsystem == "http" then
         end
 
         local r = get_request()
-        -- no need to check if r is nil as phase check above
-        -- already ensured it
+        if not r then
+            error("no request found")
+        end
 
         local errmsg = C.ngx_http_lua_kong_ffi_set_client_ca_list(r, ca_list)
         if errmsg == nil then
