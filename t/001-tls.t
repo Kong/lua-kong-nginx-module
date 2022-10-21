@@ -619,11 +619,11 @@ nil, connection is not TLS or TLS support for Nginx not enabled
                 ngx.log(ngx.ERR, "unable to popen openssl: ", err)
                 return ngx.exit(ngx.ERROR)
             end
-	    ngx.sleep(2)
+            ngx.sleep(2)
             assert(handle:write("bad request\n"))
             handle:close()
 
-            handle = io.popen("grep -A 2 'Acceptable client certificate CA names' /tmp/output.txt")
+            handle = io.popen("grep '^Acceptable client certificate CA names$\\|^C = US,' /tmp/output.txt")
             if not handle then
                 ngx.log(ngx.ERR, "unable to popen grep: ", err)
                 return ngx.exit(ngx.ERROR)
@@ -696,11 +696,11 @@ ssl cert by lua complete!
                 ngx.log(ngx.ERR, "unable to popen openssl: ", err)
                 return ngx.exit(ngx.ERROR)
             end
-	    ngx.sleep(2)
+            ngx.sleep(2)
             assert(handle:write("bad request\n"))
             handle:close()
 
-            handle = io.popen("grep 'No client certificate CA names sent' /tmp/output.txt")
+            handle = io.popen("grep '^No client certificate CA names sent$' /tmp/output.txt")
             if not handle then
                 ngx.log(ngx.ERR, "unable to popen grep: ", err)
                 return ngx.exit(ngx.ERROR)
