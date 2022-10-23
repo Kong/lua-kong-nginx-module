@@ -419,6 +419,8 @@ Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_s
 If there is no tag in `location`(http subsystems) or `server`(stream subsystems) block,
 it will return `nil`.
 
+[Back to TOC](#table-of-contents)
+
 
 License
 =======
