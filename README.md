@@ -414,7 +414,7 @@ resty.kong.tag.get
 
 **subsystems:** *http* *stream*
 
-Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_static_tag).
+Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_static_tag) directive.
 
 If there is no tag in `location`(http subsystems) or `server`(stream subsystems) block,
 it will return `nil`.
