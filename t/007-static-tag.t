@@ -145,7 +145,7 @@ value:nested-tag
         }
     }
 --- request
-GET /test/nested
+GET /test
 --- response_headers
 tag: test-tag
 --- response_body
