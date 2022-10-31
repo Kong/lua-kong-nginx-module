@@ -132,6 +132,11 @@ lua\_kong\_set\_static\_tag
 Add a static tag string for Nginx's `location`(http subsystem) or `server`(stream subsystem) block,
 which can be accessed in Lua land by [`resty.kong.tag.get`](#restykongtagget).
 
+Notice: the value of tag is bound with the `location`(http subsystem) or `server`(stream subsystem) block
+where it is defined.
+So if you defined multi tags in different `location`(http subsystem) or `server`(stream subsystem) block,
+you will always get the value where your Lua code runs in but not others.
+
 [Back to TOC](#table-of-contents)
 
 Methods
