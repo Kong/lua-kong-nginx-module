@@ -10,7 +10,8 @@ Table of Contents
 * [Description](#description)
 * [Install](#install)
 * [Directives](#directives)
-    * [lua_kong_load_var_index](#lua_kong_load_var_index)
+    * [lua\_kong\_load\_var\_index](#lua_kong_load_var_index)
+    * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
@@ -22,6 +23,7 @@ Table of Contents
     * [resty.kong.grpc.set\_authority](#restykonggrpcset_authority)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
+    * [resty.kong.tag.get](#restykongtagget)
 * [License](#license)
 
 Description
@@ -52,7 +54,7 @@ This module can be installed just like any ordinary Nginx C module, using the
 Directives
 =======
 
-lua_kong_load_var_index
+lua\_kong\_load\_var\_index
 -------------------------------------------
 **syntax:** *lua_kong_load_var_index $variable | default;*
 
@@ -118,6 +120,22 @@ index *commonly used variables* as follows:
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
+
+[Back to TOC](#table-of-contents)
+
+lua\_kong\_set\_static\_tag
+-------------------------------------------
+**syntax:** *lua_kong_set_static_tag value;*
+
+**context:** *location(http subsystem)* *server(stream subsystem)*
+
+Add a static tag string for Nginx's `location`(http subsystem) or `server`(stream subsystem) block,
+which can be accessed in Lua land by [`resty.kong.tag.get`](#restykongtagget).
+
+Notice: the value of tag is bound with the `location`(http subsystem) or `server`(stream subsystem) block
+where it is defined.
+So if you defined multi tags in different `location`(http subsystem) or `server`(stream subsystem) block,
+you will always get the value where your Lua code runs in but not others.
 
 [Back to TOC](#table-of-contents)
 
@@ -390,6 +408,21 @@ be used instead (this is the OpenResty default behavior).
 
 To ensure a variable can be accessed using index, you can use the [lua_kong_load_var_index](#lua_kong_load_var_index)
 directive.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tag.get
+----------------------------------
+**syntax:** *resty.kong.tag.get()*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42, header_filter_by_lua&#42;, body_filter_by_lua&#42;*
+
+**subsystems:** *http* *stream*
+
+Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_static_tag) directive.
+
+If there is no tag in `location`(http subsystems) or `server`(stream subsystems) block,
+it will return `nil`.
 
 [Back to TOC](#table-of-contents)
 

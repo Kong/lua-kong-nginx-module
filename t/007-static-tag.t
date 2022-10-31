@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 5);
+plan tests => repeat_each() * (blocks() * 5) + 2;
 
 #no_diff();
 #no_long_string();
@@ -115,6 +115,41 @@ value:inner-tag
 GET /test/nested
 --- response_body
 value:nested-tag
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 5: works well in header_filter and body_filter
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location /test {
+        lua_kong_set_static_tag "test-tag";
+
+        content_by_lua_block {
+            ngx.say("hello")
+        }
+
+        header_filter_by_lua_block {
+            local tag = require "resty.kong.tag"
+            ngx.header['tag'] = tag.get()
+        }
+
+        body_filter_by_lua_block {
+            local tag = require "resty.kong.tag"
+            ngx.arg[1] = tag.get() .. '\n'
+            ngx.arg[2] = true
+        }
+    }
+--- request
+GET /test
+--- response_headers
+tag: test-tag
+--- response_body
+test-tag
 --- no_error_log
 [error]
 [crit]
