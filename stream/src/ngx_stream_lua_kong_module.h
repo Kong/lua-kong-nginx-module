@@ -8,7 +8,14 @@
 
 
 typedef struct {
-    ngx_uint_t              proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
+    STACK_OF(X509)          *upstream_client_certificate_chain;
+    EVP_PKEY                *upstream_client_private_key;
+    X509_STORE              *upstream_trusted_store;
+    ngx_uint_t               upstream_ssl_verify_depth;
+    unsigned                 upstream_ssl_verify:1;
+    unsigned                 upstream_ssl_verify_set:1;
+    unsigned                 upstream_ssl_verify_depth_set:1;
+    ngx_uint_t               proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
 } ngx_stream_lua_kong_ctx_t;
 
 
@@ -91,6 +98,14 @@ int ngx_stream_lua_ffi_shdict_incr_m1(ngx_shdict_incr_t *s);
 
 // macOS with M1 fixes end
 
+
+void
+ngx_stream_lua_kong_set_upstream_ssl(ngx_stream_session_t *s, 
+    ngx_connection_t *c);
+
+ngx_flag_t
+ngx_stream_lua_kong_get_upstream_ssl_verify(ngx_stream_session_t *s,
+    ngx_flag_t proxy_ssl_verify);
 
 #endif
 
