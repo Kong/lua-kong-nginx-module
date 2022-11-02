@@ -206,7 +206,6 @@ ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
 
     sc = c->ssl->connection;
 
-
     for (i = 0; i < sk_X509_num(ca_list); i++) {
         ca = sk_X509_value(ca_list, i);
 
@@ -219,7 +218,7 @@ ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
     return NULL;
 
 #else
-    return "TLS support is not enabled in Nginx build"
+    return "TLS support is not enabled in Nginx build";
 #endif
 }
 
