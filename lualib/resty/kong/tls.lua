@@ -27,7 +27,6 @@ if ngx.config.subsystem == "http" then
     int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
         ngx_http_request_t *r, char *buf, size_t *buf_len);
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
-    // STACK_OF(X509)
     const char *ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
         void *ca_list);
     int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
