@@ -30,13 +30,23 @@ int ngx_http_lua_kong_ffi_set_grpc_authority(ngx_http_request_t *r,
 local error = error
 local type = type
 local C = ffi.C
-local get_request = base.get_request
+local orig_get_request = base.get_request
 local get_phase = ngx.get_phase
 
 
 local NGX_OK = ngx.OK
 local NGX_ERROR = ngx.ERROR
 
+
+local function get_request()
+    local r = orig_get_request()
+
+    if not r then
+        error("no request found")
+    end
+
+    return r
+end
 
 do
     local ALLOWED_PHASES = {
@@ -60,9 +70,6 @@ do
         end
 
         local r = get_request()
-        if not r then
-            error("no request found")
-        end
 
         local ret = C.ngx_http_lua_kong_ffi_set_grpc_authority(r, authority,
                                                                #authority)

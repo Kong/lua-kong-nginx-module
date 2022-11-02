@@ -12,7 +12,7 @@ local assert = assert
 local tostring = tostring
 local tonumber = tonumber
 local getmetatable = getmetatable
-local get_request = base.get_request
+local orig_get_request = base.get_request
 local get_size_ptr = base.get_size_ptr
 local get_phase = ngx.get_phase
 local subsystem = ngx.config.subsystem
@@ -56,6 +56,16 @@ local value_ptr = ffi_new("unsigned char *[1]")
 local errmsg = base.get_errmsg_ptr()
 
 
+local function get_request()
+    local r = orig_get_request()
+
+    if not r then
+        error("no request found")
+    end
+
+    return r
+end
+
 local function load_indexes()
     if get_phase() ~= "init" then
         error("load_indexes can only be called in init phase")
@@ -87,9 +97,6 @@ end
 
 local function var_get_by_index(index)
     local r = get_request()
-    if not r then
-        error("no request found")
-    end
 
     local value_len = get_size_ptr()
 
@@ -114,9 +121,6 @@ end
 
 local function var_set_by_index(index, value)
     local r = get_request()
-    if not r then
-        error("no request found")
-    end
 
     local value_len
     if value == nil then
