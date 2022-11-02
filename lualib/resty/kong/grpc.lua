@@ -60,6 +60,9 @@ do
         end
 
         local r = get_request()
+        if not r then
+            error("no request found")
+        end
 
         local ret = C.ngx_http_lua_kong_ffi_set_grpc_authority(r, authority,
                                                                #authority)

@@ -71,8 +71,9 @@ if ngx.config.subsystem == "http" then
         end
 
         local r = get_request()
-        -- no need to check if r is nil as phase check above
-        -- already ensured it
+        if not r then
+            error("no request found")
+        end
 
         local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r)
         if errmsg == nil then
@@ -89,6 +90,9 @@ if ngx.config.subsystem == "http" then
         end
 
         local r = get_request()
+        if not r then
+            error("no request found")
+        end
 
         local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
         if errmsg == nil then
@@ -114,6 +118,9 @@ if ngx.config.subsystem == "http" then
             end
 
             local r = get_request()
+            if not r then
+                error("no request found")
+            end
 
             size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
 
@@ -166,6 +173,9 @@ if ngx.config.subsystem == "http" then
             end
 
             local r = get_request()
+            if not r then
+                error("no request found")
+            end
 
             local ret = C.ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(
                 r, chain, key)
@@ -194,6 +204,9 @@ if ngx.config.subsystem == "http" then
               end
 
               local r = get_request()
+              if not r then
+                  error("no request found")
+              end
 
               local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(
                   r, store.ctx)
@@ -219,6 +232,9 @@ if ngx.config.subsystem == "http" then
             end
 
             local r = get_request()
+            if not r then
+                error("no request found")
+            end
 
             local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify(
                 r, verify)
@@ -247,6 +263,9 @@ if ngx.config.subsystem == "http" then
             end
 
             local r = get_request()
+            if not r then
+                error("no request found")
+            end
 
             local ret = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth(
                 r, depth)
@@ -275,6 +294,9 @@ else -- stream
             end
 
             local r = get_request()
+            if not r then
+                error("no request found")
+            end
 
             local ret = C.ngx_stream_lua_kong_ffi_proxy_ssl_disable(r)
             if ret == NGX_OK then

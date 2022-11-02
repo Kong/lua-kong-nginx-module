@@ -141,7 +141,7 @@ ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r)
     return NULL;
 
 #else
-    return "TLS support is not enabled in Nginx build"
+    return "TLS support is not enabled in Nginx build";
 #endif
 }
 
@@ -174,7 +174,7 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
     return NULL;
 
 #else
-    return "TLS support is not enabled in Nginx build"
+    return "TLS support is not enabled in Nginx build";
 #endif
 }
 
