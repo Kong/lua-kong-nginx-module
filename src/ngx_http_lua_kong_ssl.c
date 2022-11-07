@@ -179,6 +179,50 @@ ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
 }
 
 
+/*
+ * Set the CA DN list to the underlying SSL structure, which will be sent in the
+ * Certificate Request Message of downstram TLS handshake.
+ *
+ * The downstream client can use this DN information to filter certificates,
+ * and chooses an appropriate certificate issued by a CA in the list.
+ *
+ * on success, NULL is returned, otherwise a static string indicating the
+ * failure reason is returned.
+ */
+
+const char *
+ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
+                                         const STACK_OF(X509) *ca_list)
+{
+#if (NGX_SSL)
+    ngx_connection_t    *c = r->connection;
+    ngx_ssl_conn_t      *sc;
+    X509                *ca;
+    int                  i;
+
+    if (c->ssl == NULL) {
+        return "server does not have TLS enabled";
+    }
+
+    sc = c->ssl->connection;
+
+    for (i = 0; i < sk_X509_num(ca_list); i++) {
+        ca = sk_X509_value(ca_list, i);
+
+        /* will call X509_NAME_dup() internally */
+        if (SSL_add_client_CA(sc, ca) == 0) {
+            return "unable to add the CA name to the list";
+        }
+    }
+
+    return NULL;
+
+#else
+    return "TLS support is not enabled in Nginx build";
+#endif
+}
+
+
 int
 ngx_http_lua_kong_ffi_get_full_client_certificate_chain(ngx_http_request_t *r,
     char *buf, size_t *buf_len)
