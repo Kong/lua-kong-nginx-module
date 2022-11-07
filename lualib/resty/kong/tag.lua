@@ -4,7 +4,7 @@ local base = require "resty.core.base"
 
 local C = ffi.C
 local ffi_str = ffi.string
-local get_request = base.get_request
+local orig_get_request = base.get_request
 local subsystem = ngx.config.subsystem
 
 
@@ -29,12 +29,18 @@ elseif subsystem == "stream" then
 
 end
 
-local function get()
-    local r = get_request()
+local function get_request()
+    local r = orig_get_request()
 
     if not r then
         error("no request found")
     end
+
+    return r
+end
+
+local function get()
+    local r = get_request()
 
     local tag = ngx_lua_kong_get_static_tag(r)
 

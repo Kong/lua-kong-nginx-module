@@ -55,7 +55,7 @@ local C = ffi.C
 local ffi_string = ffi.string
 local get_string_buf = base.get_string_buf
 local size_ptr = base.get_size_ptr()
-local get_request = base.get_request
+local orig_get_request = base.get_request
 
 
 local DEFAULT_CERT_CHAIN_SIZE = 10240
@@ -66,6 +66,16 @@ local NGX_DECLINED = ngx.DECLINED
 local NGX_ABORT = -6
 
 
+local function get_request()
+    local r = orig_get_request()
+
+    if not r then
+        error("no request found")
+    end
+
+    return r
+end
+
 if ngx.config.subsystem == "http" then
     function _M.request_client_certificate(no_session_reuse)
         if get_phase() ~= 'ssl_cert' then
@@ -73,8 +83,6 @@ if ngx.config.subsystem == "http" then
         end
 
         local r = get_request()
-        -- no need to check if r is nil as phase check above
-        -- already ensured it
 
         local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r)
         if errmsg == nil then
