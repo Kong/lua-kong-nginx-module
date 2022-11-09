@@ -89,5 +89,6 @@ jobs:
         openssl version
 
         eval `luarocks path`
-        prove -j$JOBS -r t
+        # fail if definite leak found
+        prove -j$JOBS -r t 2>&1 | tee /dev/stderr | grep -q "match-leak-kinds: definite" && exit 1 || exit 0
 
