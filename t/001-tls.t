@@ -618,12 +618,13 @@ nil, connection is not TLS or TLS support for Nginx not enabled
 
     location /t {
         content_by_lua_block {
-            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt")
+            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt", "w")
             if not handle then
                 ngx.log(ngx.ERR, "unable to popen openssl: ", err)
                 return ngx.exit(ngx.ERROR)
             end
             ngx.sleep(2)
+            assert(handle:write("bad request"))
             handle:close()
 
             handle = io.popen("grep '^Acceptable client certificate CA names$\\|^C = US,' /tmp/output.txt")
@@ -723,12 +724,13 @@ ssl cert by lua complete!
 
     location /t {
         content_by_lua_block {
-            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt")
+            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt", "w")
             if not handle then
                 ngx.log(ngx.ERR, "unable to popen openssl: ", err)
                 return ngx.exit(ngx.ERROR)
             end
             ngx.sleep(2)
+            assert(handle:write("bad request"))
             handle:close()
 
             handle = io.popen("grep '^Acceptable client certificate CA names$\\|^C = US,' /tmp/output.txt")
@@ -798,12 +800,13 @@ ssl cert by lua complete!
 
     location /t {
         content_by_lua_block {
-            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt")
+            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt", "w")
             if not handle then
                 ngx.log(ngx.ERR, "unable to popen openssl: ", err)
                 return ngx.exit(ngx.ERROR)
             end
             ngx.sleep(2)
+            assert(handle:write("bad request"))
             handle:close()
 
             handle = io.popen("grep '^No client certificate CA names sent$' /tmp/output.txt")
@@ -886,12 +889,13 @@ ssl cert by lua complete!
 
     location /t {
         content_by_lua_block {
-            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt")
+            local handle = io.popen("openssl s_client -unix $TEST_NGINX_HTML_DIR/nginx.sock > /tmp/output.txt", "w")
             if not handle then
                 ngx.log(ngx.ERR, "unable to popen openssl: ", err)
                 return ngx.exit(ngx.ERROR)
             end
             ngx.sleep(2)
+            assert(handle:write("bad request"))
             handle:close()
 
             handle = io.popen("grep '^No client certificate CA names sent$' /tmp/output.txt")
