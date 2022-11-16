@@ -25,6 +25,7 @@ Table of Contents
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
     * [resty.kong.tag.get](#restykongtagget)
+    * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
 * [License](#license)
 
 Description
@@ -477,6 +478,20 @@ Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_s
 
 If there is no tag in `location`(http subsystems) or `server`(stream subsystems) block,
 it will return `nil`.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.log.set\_log\_level
+----------------------------------
+**syntax:** *resty.kong.log.set_log_level(level)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, balancer_by_lua&#42;, ngx.timer.&#42;*
+
+**subsystems:** *http*
+
+Dynamically configures the [level](http://nginx.org/en/docs/ngx_core_module.html#error_log)
+of the current worker's for each socket listener, and **must** be one
+of the [Nginx log level constants](https://github.com/openresty/lua-nginx-module#nginx-log-level-constants).
 
 [Back to TOC](#table-of-contents)
 
