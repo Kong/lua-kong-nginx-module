@@ -56,15 +56,6 @@ ngx_http_lua_kong_ssl_init(ngx_conf_t *cf)
 
 #if (NGX_SSL)
 static int
-ngx_http_lua_kong_verify_callback(int ok, X509_STORE_CTX *x509_store)
-{
-    /* similar to ngx_ssl_verify_callback, always allow handshake
-     * to conclude before deciding the validity of client certificate */
-    return 1;
-}
-
-
-static int
 ngx_http_lua_kong_new_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
 {
     ngx_uint_t      flag;
@@ -136,83 +127,6 @@ ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r)
 
         /* install hook */
         SSL_CTX_sess_set_new_cb(ctx, ngx_http_lua_kong_new_session);
-    }
-
-    return NULL;
-
-#else
-    return "TLS support is not enabled in Nginx build";
-#endif
-}
-
-
-/*
- * request downstream to present a client certificate during TLS handshake,
- * but does not validate it
- *
- * this is roughly equivalent to setting ssl_verify_client to optional_no_ca
- *
- * on success, NULL is returned, otherwise a static string indicating the
- * failure reason is returned
- */
-
-const char *
-ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r)
-{
-#if (NGX_SSL)
-    ngx_connection_t    *c = r->connection;
-    ngx_ssl_conn_t      *sc;
-
-    if (c->ssl == NULL) {
-        return "server does not have TLS enabled";
-    }
-
-    sc = c->ssl->connection;
-
-    SSL_set_verify(sc, SSL_VERIFY_PEER, ngx_http_lua_kong_verify_callback);
-
-    return NULL;
-
-#else
-    return "TLS support is not enabled in Nginx build";
-#endif
-}
-
-
-/*
- * Set the CA DN list to the underlying SSL structure, which will be sent in the
- * Certificate Request Message of downstram TLS handshake.
- *
- * The downstream client can use this DN information to filter certificates,
- * and chooses an appropriate certificate issued by a CA in the list.
- *
- * on success, NULL is returned, otherwise a static string indicating the
- * failure reason is returned.
- */
-
-const char *
-ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
-                                         const STACK_OF(X509) *ca_list)
-{
-#if (NGX_SSL)
-    ngx_connection_t    *c = r->connection;
-    ngx_ssl_conn_t      *sc;
-    X509                *ca;
-    int                  i;
-
-    if (c->ssl == NULL) {
-        return "server does not have TLS enabled";
-    }
-
-    sc = c->ssl->connection;
-
-    for (i = 0; i < sk_X509_num(ca_list); i++) {
-        ca = sk_X509_value(ca_list, i);
-
-        /* will call X509_NAME_dup() internally */
-        if (SSL_add_client_CA(sc, ca) == 0) {
-            return "unable to add the CA name to the list";
-        }
     }
 
     return NULL;
