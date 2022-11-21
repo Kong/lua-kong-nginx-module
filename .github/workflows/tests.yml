@@ -81,6 +81,7 @@ jobs:
         export LD_LIBRARY_PATH=$OPENSSL_INSTALL/lib:$LD_LIBRARY_PATH # for openssl's CLI invoked in the test suite
 
         export TEST_NGINX_VALGRIND='--num-callers=100 -q --tool=memcheck --leak-check=full --show-possibly-lost=no --gen-suppressions=all --suppressions=valgrind.suppress --track-origins=yes' TEST_NGINX_TIMEOUT=60 TEST_NGINX_SLEEP=1
+        export TEST_NGINX_USE_VALGRIND=1
 
         nginx -V
         resty -V
@@ -88,5 +89,6 @@ jobs:
         openssl version
 
         eval `luarocks path`
-        prove -j$JOBS -r t
+        # fail if definite leak found
+        prove -j$JOBS -r t 2>&1 | tee /dev/stderr | grep -q "match-leak-kinds: definite" && exit 1 || exit 0
 
