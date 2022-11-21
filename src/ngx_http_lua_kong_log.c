@@ -21,10 +21,10 @@
 int
 ngx_http_lua_kong_ffi_set_log_level(ngx_http_request_t *r, int level)
 {
-    ngx_log_t                *log;
-    ngx_listening_t          *ls;
-    ngx_http_core_loc_conf_t *clcf;
-    ngx_uint_t                i;
+    ngx_log_t                   *log;
+    ngx_listening_t             *ls;
+    ngx_http_core_loc_conf_t    *clcf;
+    ngx_uint_t                   i;
 
     if (r == NULL) {
         return NGX_ERROR;
@@ -39,14 +39,15 @@ ngx_http_lua_kong_ffi_set_log_level(ngx_http_request_t *r, int level)
 
     if (r->connection && r->connection->log) {
         log = r->connection->log;
+
     } else {
         log = ngx_cycle->log;
     }
 
-    // current request
+    /* current request */
     log->log_level = (ngx_uint_t) level;
 
-    // for each listening socket (new requests)
+    /* for each listening socket (new requests) */
     ls = ngx_cycle->listening.elts;
     for (i = 0; i < ngx_cycle->listening.nelts; i++) {
         ls[i].log.log_level = (ngx_uint_t) level;
