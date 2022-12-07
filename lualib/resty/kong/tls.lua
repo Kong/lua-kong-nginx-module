@@ -23,12 +23,9 @@ base.allows_subsystem('http', 'stream')
 
 if ngx.config.subsystem == "http" then
     ffi.cdef([[
-    const char *ngx_http_lua_kong_ffi_request_client_certificate(ngx_http_request_t *r);
     int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
         ngx_http_request_t *r, char *buf, size_t *buf_len);
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
-    const char *ngx_http_lua_kong_ffi_set_client_ca_list(ngx_http_request_t *r,
-        void *ca_list);
     int ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_http_request_t *r,
         void *_chain, void *_key);
     int ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store(ngx_http_request_t *r,
@@ -77,22 +74,6 @@ local function get_request()
 end
 
 if ngx.config.subsystem == "http" then
-    function _M.request_client_certificate(no_session_reuse)
-        if get_phase() ~= 'ssl_cert' then
-            error("API disabled in the current context")
-        end
-
-        local r = get_request()
-
-        local errmsg = C.ngx_http_lua_kong_ffi_request_client_certificate(r)
-        if errmsg == nil then
-            return true
-        end
-
-        return nil, ffi_string(errmsg)
-    end
-
-
     function _M.disable_session_reuse()
         if get_phase() ~= 'ssl_cert' then
             error("API disabled in the current context")
@@ -101,25 +82,6 @@ if ngx.config.subsystem == "http" then
         local r = get_request()
 
         local errmsg = C.ngx_http_lua_kong_ffi_disable_session_reuse(r)
-        if errmsg == nil then
-            return true
-        end
-
-        return nil, ffi_string(errmsg)
-    end
-
-
-    function _M.set_client_ca_list(ca_list)
-        if get_phase() ~= 'ssl_cert' then
-            error("API disabled in the current context")
-        end
-
-        local r = get_request()
-        if not r then
-            error("no request found")
-        end
-
-        local errmsg = C.ngx_http_lua_kong_ffi_set_client_ca_list(r, ca_list)
         if errmsg == nil then
             return true
         end
