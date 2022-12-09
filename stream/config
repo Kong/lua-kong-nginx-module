@@ -1,7 +1,13 @@
 ngx_module_type=STREAM
 ngx_module_name=ngx_stream_lua_kong_module
 ngx_module_srcs="$ngx_addon_dir/src/ngx_stream_lua_kong_module.c"
-ngx_module_incs="$ngx_addon_dir/src"
+
+if [ -z "$NGX_STREAM_LUA_LOC" ]; then
+    ngx_stream_lua_loc="../ngx_stream_lua-*"
+else
+    ngx_stream_lua_loc="$NGX_STREAM_LUA_LOC"
+fi
+ngx_module_incs="$ngx_addon_dir/src $ngx_stream_lua_loc/src"
 
 . auto/module
 
