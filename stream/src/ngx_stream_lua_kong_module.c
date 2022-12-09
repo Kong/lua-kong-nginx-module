@@ -19,6 +19,7 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 #include <ngx_stream_lua_api.h>
+#include <ngx_stream_lua_socket_tcp.h>
 #include "ngx_stream_lua_kong_module.h"
 
 
