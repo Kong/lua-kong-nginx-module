@@ -107,7 +107,7 @@ client sent no required SSL certificate
 [error]
 
 
-=== TEST 4: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in access phase
+=== TEST 5: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in access phase
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -168,7 +168,7 @@ it works!
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
 
-=== TEST 5: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in balancer phase
+=== TEST 6: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in balancer phase
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -234,7 +234,7 @@ it works!
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
-=== TEST 5: repeatedly calling resty.kong.tls.set_upstream_cert_and_key does not leaks memory
+=== TEST 7: repeatedly calling resty.kong.tls.set_upstream_cert_and_key does not leaks memory
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -298,7 +298,7 @@ it works!
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
 
-=== TEST 6: setting proxy_ssl_verify with invalid verify chain, verify failed
+=== TEST 8: setting proxy_ssl_verify with invalid verify chain, verify failed
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -336,7 +336,7 @@ upstream SSL certificate verify error: (2:unable to get issuer certificate)
 
 
 
-=== TEST 7: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify
+=== TEST 9: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -383,7 +383,7 @@ skip overriding upstream SSL configuration
 
 
 
-=== TEST 8: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify
+=== TEST 10: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -428,7 +428,7 @@ upstream SSL certificate verify error: (20:unable to get local issuer certificat
 
 
 
-=== TEST 9: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify in balancer phase
+=== TEST 11: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify in balancer phase
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -481,7 +481,7 @@ upstream SSL certificate verify error: (20:unable to get local issuer certificat
 
 
 
-=== TEST 10: setting insufficient verify depth with tls.set_upstream_ssl_verify_depth, verify failed
+=== TEST 12: setting insufficient verify depth with tls.set_upstream_ssl_verify_depth, verify failed
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -530,7 +530,7 @@ upstream SSL certificate verify error: (22:certificate chain too long)
 
 
 
-=== TEST 11: setting deeper verify depth with tls.set_upstream_ssl_verify_depth, verify pass
+=== TEST 13: setting deeper verify depth with tls.set_upstream_ssl_verify_depth, verify pass
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -578,7 +578,7 @@ X509_check_host(): match
 
 
 
-=== TEST 12: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in access phase
+=== TEST 14: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in access phase
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -637,7 +637,7 @@ upstream SSL certificate verify error: (2:unable to get issuer certificate)
 
 
 
-=== TEST 13: setting trusted store with tls.set_upstream_ssl_trusted_store, verify passed
+=== TEST 15: setting trusted store with tls.set_upstream_ssl_trusted_store, verify passed
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -696,7 +696,7 @@ X509_check_host(): match
 
 
 
-=== TEST 14: setting trusted store multiple times tls.set_upstream_ssl_trusted_store, no leak detected
+=== TEST 16: setting trusted store multiple times tls.set_upstream_ssl_trusted_store, no leak detected
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
