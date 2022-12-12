@@ -5,10 +5,12 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_stream.h>
-
+#include <ngx_stream_lua_api.h>
+#include "../../src/ssl/ngx_lua_kong_ssl.h"
 
 typedef struct {
-    ngx_uint_t              proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
+    ngx_lua_kong_ssl_ctx_t  *ssl_ctx;
+    ngx_uint_t               proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
 } ngx_stream_lua_kong_ctx_t;
 
 
@@ -91,6 +93,13 @@ int ngx_stream_lua_ffi_shdict_incr_m1(ngx_shdict_incr_t *s);
 
 // macOS with M1 fixes end
 
+void
+ngx_stream_lua_kong_set_upstream_ssl(ngx_stream_session_t *s, 
+    ngx_connection_t *c);
+
+ngx_flag_t
+ngx_stream_lua_kong_get_upstream_ssl_verify(ngx_stream_session_t *s,
+    ngx_flag_t proxy_ssl_verify);
 
 #endif
 
