@@ -148,7 +148,7 @@ resty.kong.tls.disable\_session\_reuse
 
 **context:** *ssl_certificate_by_lua&#42;*
 
-**subsystems:** *http*
+**subsystems:** *http* *stream*
 
 Prevents the TLS session for the current connection from being reused by
 disabling session ticket and session ID for the current TLS connection.
@@ -162,9 +162,9 @@ resty.kong.tls.get\_full\_client\_certificate\_chain
 ----------------------------------------------------
 **syntax:** *pem_chain, err = resty.kong.tls.get\_full\_client\_certificate\_chain()*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*, *preread_by_lua&#42;*
 
-**subsystems:** *http*
+**subsystems:** *http* *stream*
 
 Returns the PEM encoded downstream client certificate chain with the client certificate
 at the top and intermediate certificates (if any) at the bottom.
@@ -192,9 +192,9 @@ resty.kong.tls.set\_upstream\_cert\_and\_key
 --------------------------------------------
 **syntax:** *ok, err = resty.kong.tls.set\_upstream\_cert\_and\_key(chain, key)*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*, *preread_by_lua&#42;*
 
-**subsystems:** *http*
+**subsystems:** *http* *stream*
 
 Overrides and enables sending client certificate while connecting to the
 upstream in the current request.
@@ -218,9 +218,9 @@ resty.kong.tls.set\_upstream\_ssl\_trusted\_store
 -------------------------------------------------
 **syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_trusted\_store(store)*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*, *preread_by_lua&#42;*
 
-**subsystems:** *http*
+**subsystems:** *http* *stream*
 
 Set upstream ssl verification trusted store of current request. Global setting set by
 `proxy_ssl_trusted_certificate` will be overwritten for the current request.
@@ -280,9 +280,9 @@ resty.kong.tls.set\_upstream\_ssl\_verify
 -----------------------------------------
 **syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_verify(verify)*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*, *preread_by_lua&#42;*
 
-**subsystems:** *http*
+**subsystems:** *http* *stream*
 
 Set upstream ssl verification enablement of current request to the given boolean
 argument `verify`. Global setting set by `proxy_ssl_verify` will be overwritten.
@@ -299,9 +299,9 @@ resty.kong.tls.set\_upstream\_ssl\_verify\_depth
 ------------------------------------------------
 **syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_verify\_depth(depth)*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*, *preread_by_lua&#42;*
 
-**subsystems:** *http*
+**subsystems:** *http* *stream*
 
 Set upstream ssl verification depth of current request to the given non-negative integer
 argument `depth`. Global setting set by `proxy_ssl_verify_depth` will be overwritten.
