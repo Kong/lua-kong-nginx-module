@@ -87,6 +87,10 @@ __DATA__
             echo 'it works!';
         }
     }
+
+--- stream_config
+    proxy_ssl_session_reuse off;
+
 --- stream_server_config
     proxy_ssl_trusted_certificate ../../cert/ca.crt;
     proxy_ssl_verify on;
