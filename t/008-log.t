@@ -889,7 +889,7 @@ qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:7: timer2 debug log/,
 qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):3: content debug log/,
 ]
 
-=== TEST 25: inside a timer, we can change log level of old timers
+=== TEST 25: inside a timer, we can change log level of old ngx.timer.every timers (rely on fake requests every time they expire)
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -925,5 +925,38 @@ GET /test
 [
 qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer1 debug log/,
 qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:7: timer2 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):3: content debug log/,
+]
+
+=== TEST 26: inside a timer, we can change log level of pending ngx.timer.at timer
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.timer.at(0.2, function()
+            ngx.log(ngx.DEBUG, "timer1 debug log")
+        end)
+
+        ngx.timer.every(0.1, function()
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG)
+        end)
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.timer.at(0.25, function()
+                ngx.log(ngx.DEBUG, "content debug log")
+            end)
+        }
+    }
+--- request
+GET /test
+--- wait: 0.3
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer1 debug log/,
 qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):3: content debug log/,
 ]
