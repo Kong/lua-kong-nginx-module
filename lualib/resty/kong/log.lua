@@ -40,6 +40,7 @@ local NGX_DEBUG = ngx.DEBUG
 
 
 local ALLOWED_PHASES = {
+    ["init_worker"] = true,
     ["balancer"] = true,
     ["rewrite"] = true,
     ["access"] = true,

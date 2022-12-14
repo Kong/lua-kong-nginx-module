@@ -407,7 +407,7 @@ resty.kong.log.set\_log\_level
 ----------------------------------
 **syntax:** *resty.kong.log.set_log_level(level)*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, balancer_by_lua&#42;, ngx.timer.&#42;*
+**context:** *init_worker_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, balancer_by_lua&#42;, ngx.timer.&#42;*
 
 **subsystems:** *http*
 

@@ -39,10 +39,9 @@ ngx_http_lua_kong_ffi_set_log_level(ngx_http_request_t *r, int level)
 
     if (r->connection && r->connection->log) {
         log = r->connection->log;
-
-    } else {
-        log = ngx_cycle->log;
     }
+
+    ngx_cycle->log->log_level = (ngx_uint_t) level;
 
     /* current request */
     log->log_level = (ngx_uint_t) level;

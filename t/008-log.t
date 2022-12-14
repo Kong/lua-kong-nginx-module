@@ -5,7 +5,7 @@ use Cwd qw(cwd);
 
 log_level('notice');
 
-plan tests => repeat_each() * (blocks() * 3) + 13;
+plan tests => repeat_each() * (blocks() * 3) + 18;
 
 my $pwd = cwd();
 
@@ -671,3 +671,259 @@ qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):2: content debug
 ]
 --- no_error_log
 init_worker debug log
+
+=== TEST 18: works on init_worker phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.log(ngx.NOTICE, "timer notice log")
+        local log = require("resty.kong.log")
+        log.set_log_level(ngx.DEBUG)
+        ngx.log(ngx.DEBUG, "timer debug log")
+    }
+
+--- config
+    location = /test {
+        return 200;
+    }
+--- request
+GET /test
+--- error_code: 200
+--- error_log eval
+[
+qr/\[notice\] \S+: \S+ \[lua\] init_worker_by_lua:2: timer notice log/,
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:5: timer debug log/,
+]
+
+=== TEST 19: with error_log file inherited from upper context, setting log level on init_worker affects other later phases
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        local log = require("resty.kong.log")
+        log.set_log_level(ngx.DEBUG)
+        ngx.log(ngx.DEBUG, "timer debug log")
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.log(ngx.DEBUG, "content debug log")
+        }
+    }
+--- request
+GET /test
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:4: timer debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):2: content debug log/,
+]
+
+=== TEST 20: with explicit error_log file per context, setting log level on init_worker does not affect other later phases
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    error_log logs/error.log notice;
+
+    init_worker_by_lua_block {
+        local log = require("resty.kong.log")
+        log.set_log_level(ngx.DEBUG)
+        ngx.log(ngx.DEBUG, "timer debug log")
+    }
+
+--- config
+    location = /test {
+        error_log logs/error.log notice;
+
+        content_by_lua_block {
+            ngx.log(ngx.DEBUG, "content debug log")
+        }
+    }
+--- request
+GET /test
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:4: timer debug log/,
+]
+--- no_error_log
+content debug log
+
+=== TEST 21: setting log level on content phase does not affect log level of timers running in init_worker phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.NOTICE, "timer notice log")
+            ngx.log(ngx.DEBUG, "timer debug log")
+        end)
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG)
+            ngx.log(ngx.DEBUG, "content debug log")
+        }
+    }
+--- request
+GET /test
+--- error_code: 200
+--- wait: 0.2
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):4: content debug log/,
+qr/\[notice\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer notice log/,
+]
+--- no_error_log
+timer debug log
+
+=== TEST 22: changes log level of all timers of init_worker phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer1 debug log")
+        end)
+
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer2 debug log")
+        end)
+
+        local log = require("resty.kong.log")
+        log.set_log_level(ngx.DEBUG)
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.log(ngx.DEBUG, "content debug log")
+        }
+    }
+--- request
+GET /test
+--- wait: 0.20
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer1 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:7: timer2 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):2: content debug log/,
+]
+
+=== TEST 23: inside a timer, we can change log level of all other timers of init_worker phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer1 debug log")
+        end)
+
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer2 debug log")
+        end)
+
+        ngx.timer.at(0, function()
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG)
+        end)
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.log(ngx.DEBUG, "content debug log")
+        }
+    }
+--- request
+GET /test
+--- wait: 0.20
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer1 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:7: timer2 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):2: content debug log/,
+]
+
+=== TEST 24: inside a timer, we can change log level of all other timers, including those of other phases
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer1 debug log")
+        end)
+
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer2 debug log")
+        end)
+
+        ngx.timer.every(0.01, function()
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG)
+        end)
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.timer.at(0, function()
+                ngx.log(ngx.DEBUG, "content debug log")
+            end)
+        }
+    }
+--- request
+GET /test
+--- wait: 0.11
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer1 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:7: timer2 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):3: content debug log/,
+]
+
+=== TEST 25: inside a timer, we can change log level of old timers
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    init_worker_by_lua_block {
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer1 debug log")
+        end)
+
+        ngx.timer.every(0.05, function()
+            ngx.log(ngx.DEBUG, "timer2 debug log")
+        end)
+
+        ngx.timer.every(0.2, function()
+            ngx.log(ngx.NOTICE, "timer3 notice")
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG)
+        end)
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.timer.at(0.25, function()
+                ngx.log(ngx.DEBUG, "content debug log")
+            end)
+        }
+    }
+--- request
+GET /test
+--- wait: 0.3
+--- error_code: 200
+--- error_log eval
+[
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:3: timer1 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] init_worker_by_lua:7: timer2 debug log/,
+qr/\[debug\] \S+: \S+ \[lua\] content_by_lua\(nginx\.conf:\d+\):3: content debug log/,
+]
