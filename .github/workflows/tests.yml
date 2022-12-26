@@ -11,12 +11,6 @@ jobs:
       matrix:
         include:
         # TODO: arm64
-        - openresty: "1.19.3.2"
-          luarocks: "3.7.0"
-          openssl: "1.1.1k"
-        - openresty: "1.19.9.1"
-          luarocks: "3.8.0"
-          openssl: "1.1.1m"
         - openresty: "1.21.4.1"
           luarocks: "3.9.1"
           openssl: "1.1.1q"

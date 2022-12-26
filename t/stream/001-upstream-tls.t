@@ -111,7 +111,8 @@ client sent no required SSL certificate
 [error]
 
 
-=== TEST 5: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in access phase
+
+=== TEST 5: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in preread phase
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -170,6 +171,7 @@ it works!
 
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
+
 
 
 === TEST 6: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in balancer phase
@@ -238,6 +240,8 @@ it works!
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
+
+
 === TEST 7: repeatedly calling resty.kong.tls.set_upstream_cert_and_key does not leaks memory
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
@@ -302,6 +306,7 @@ it works!
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
 
+
 === TEST 8: setting proxy_ssl_verify with invalid verify chain, verify failed
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
@@ -340,7 +345,7 @@ upstream SSL certificate verify error: (2:unable to get issuer certificate)
 
 
 
-=== TEST 9: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify
+=== TEST 9: setting proxy_ssl_verify with invalid verify chain, turn off with tls.set_upstream_ssl_verify
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
