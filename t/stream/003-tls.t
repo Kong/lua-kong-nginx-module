@@ -199,6 +199,7 @@ SSL reused session
 [crit]
 
 
+
 === TEST 4: disable_session_reuse can suppress usage of session cache
 --- stream_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
