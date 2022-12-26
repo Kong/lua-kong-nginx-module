@@ -587,7 +587,7 @@ X509_check_host(): match
 
 
 
-=== TEST 14: sending client certificate using resty.kong.tls.set_upstream_cert_and_key in access phase
+=== TEST 14: setting incorrect trusted store with tls.set_upstream_ssl_trusted_store, verify failed
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
