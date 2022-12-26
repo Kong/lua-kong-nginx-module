@@ -109,6 +109,8 @@ client sent no required SSL certificate
 
 --- no_error_log
 [error]
+--- skip_nginx
+2: < 1.21.4
 
 
 
@@ -171,6 +173,8 @@ it works!
 
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
+--- skip_nginx
+2: < 1.21.4
 
 
 
@@ -240,6 +244,8 @@ it works!
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
+--- skip_nginx
+2: < 1.21.4
 
 
 === TEST 7: repeatedly calling resty.kong.tls.set_upstream_cert_and_key does not leaks memory
@@ -305,6 +311,9 @@ it works!
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
+--- skip_nginx
+2: < 1.21.4
+
 
 
 === TEST 8: setting proxy_ssl_verify with invalid verify chain, verify failed
@@ -342,6 +351,9 @@ receive stream response error: connection reset by peer
 
 --- error_log
 upstream SSL certificate verify error: (2:unable to get issuer certificate)
+
+--- skip_nginx
+2: < 1.21.4
 
 
 
@@ -435,6 +447,9 @@ receive stream response error: connection reset by peer
 --- error_log
 upstream SSL certificate verify error: (20:unable to get local issuer certificate)
 
+--- skip_nginx
+2: < 1.21.4
+
 
 
 === TEST 11: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify in balancer phase
@@ -488,6 +503,9 @@ receive stream response error: connection reset by peer
 --- error_log
 upstream SSL certificate verify error: (20:unable to get local issuer certificate)
 
+--- skip_nginx
+2: < 1.21.4
+
 
 
 === TEST 12: setting insufficient verify depth with tls.set_upstream_ssl_verify_depth, verify failed
@@ -537,6 +555,9 @@ receive stream response error: connection reset by peer
 --- error_log
 upstream SSL certificate verify error: (22:certificate chain too long)
 
+--- skip_nginx
+2: < 1.21.4
+
 
 
 === TEST 13: setting deeper verify depth with tls.set_upstream_ssl_verify_depth, verify pass
@@ -584,6 +605,9 @@ it works!
 
 --- error_log
 X509_check_host(): match
+
+--- skip_nginx
+2: < 1.21.4
 
 
 
@@ -644,6 +668,9 @@ receive stream response error: connection reset by peer
 --- error_log
 upstream SSL certificate verify error: (2:unable to get issuer certificate)
 
+--- skip_nginx
+2: < 1.21.4
+
 
 
 === TEST 15: setting trusted store with tls.set_upstream_ssl_trusted_store, verify passed
@@ -702,6 +729,9 @@ it works!
 
 --- error_log
 X509_check_host(): match
+
+--- skip_nginx
+2: < 1.21.4
 
 
 
@@ -764,3 +794,6 @@ it works!
 
 --- error_log
 X509_check_host(): match
+
+--- skip_nginx
+2: < 1.21.4
