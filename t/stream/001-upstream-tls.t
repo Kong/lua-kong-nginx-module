@@ -10,7 +10,7 @@ $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 4) - 30;
+plan tests => repeat_each() * (blocks() * 3 + 1);
 
 #no_diff();
 #no_long_string();
@@ -110,7 +110,7 @@ client sent no required SSL certificate
 --- no_error_log
 [error]
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 
@@ -174,7 +174,7 @@ it works!
 --- error_log
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 
@@ -245,7 +245,7 @@ it works!
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 === TEST 7: repeatedly calling resty.kong.tls.set_upstream_cert_and_key does not leaks memory
@@ -312,7 +312,7 @@ it works!
 verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
 
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 
@@ -353,7 +353,7 @@ receive stream response error: connection reset by peer
 upstream SSL certificate verify error: (2:unable to get issuer certificate)
 
 --- skip_nginx
-2: < 1.21.4
+4: < 1.21.4
 
 
 
@@ -402,6 +402,8 @@ it works!
 --- no_error_log
 skip overriding upstream SSL configuration
 
+--- skip_nginx
+4: < 1.21.4
 
 
 === TEST 10: proxy_ssl_verify not set, turn on with tls.set_upstream_ssl_verify
@@ -448,7 +450,7 @@ receive stream response error: connection reset by peer
 upstream SSL certificate verify error: (20:unable to get local issuer certificate)
 
 --- skip_nginx
-2: < 1.21.4
+4: < 1.21.4
 
 
 
@@ -504,7 +506,7 @@ receive stream response error: connection reset by peer
 upstream SSL certificate verify error: (20:unable to get local issuer certificate)
 
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 
@@ -556,7 +558,7 @@ receive stream response error: connection reset by peer
 upstream SSL certificate verify error: (22:certificate chain too long)
 
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 
@@ -607,7 +609,7 @@ it works!
 X509_check_host(): match
 
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 
@@ -669,7 +671,7 @@ receive stream response error: connection reset by peer
 upstream SSL certificate verify error: (2:unable to get issuer certificate)
 
 --- skip_nginx
-2: < 1.21.4
+3: < 1.21.4
 
 
 

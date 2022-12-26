@@ -6,7 +6,7 @@ use Cwd qw(cwd);
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 7) - 2;
+plan tests => repeat_each() * (blocks() * 7 - 1);
 
 my $pwd = cwd();
 
@@ -76,7 +76,7 @@ SSL reused session
 [warn]
 [crit]
 --- skip_nginx
-2: < 1.21.4
+7: < 1.21.4
 
 
 
@@ -137,7 +137,7 @@ SSL reused session
 [warn]
 [crit]
 --- skip_nginx
-2: < 1.21.4
+7: < 1.21.4
 
 
 
@@ -202,7 +202,7 @@ SSL reused session
 [warn]
 [crit]
 --- skip_nginx
-2: < 1.21.4
+7: < 1.21.4
 
 
 
@@ -266,7 +266,7 @@ SSL reused session
 [warn]
 [crit]
 --- skip_nginx
-2: < 1.21.4
+7: < 1.21.4
 
 
 
@@ -375,7 +375,7 @@ uibeZgK1Yk7YQKXdvbZvXwrgTcAjCdbppw2L6e0Uy+OGgNjnIps8K460SdaIiA==
 [warn]
 [crit]
 --- skip_nginx
-2: < 1.21.4
+7: < 1.21.4
 
 
 
@@ -399,4 +399,4 @@ nil, connection is not TLS or TLS support for Nginx not enabled
 [warn]
 [crit]
 --- skip_nginx
-2: < 1.21.4
+6: < 1.21.4
