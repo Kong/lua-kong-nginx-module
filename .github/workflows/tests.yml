@@ -33,7 +33,7 @@ jobs:
       LUAROCKS_INSTALL: /home/runner/work/install-root/luarocks
 
       BUILD_TOOLS_DOWNLOAD: /home/runner/work/download-root/kong-build-tools
-      BUILD_TOOLS_BRANCH: stream-upstream-tls
+      BUILD_TOOLS_BRANCH: master
 
       OPENRESTY: ${{ matrix.openresty }}
       LUAROCKS: ${{ matrix.luarocks }}
