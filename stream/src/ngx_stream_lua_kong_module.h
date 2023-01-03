@@ -9,7 +9,7 @@
 #include "../../src/ssl/ngx_lua_kong_ssl.h"
 
 typedef struct {
-    ngx_lua_kong_ssl_ctx_t  *ssl_ctx;
+    ngx_lua_kong_ssl_ctx_t   ssl_ctx;
     ngx_uint_t               proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
 } ngx_stream_lua_kong_ctx_t;
 

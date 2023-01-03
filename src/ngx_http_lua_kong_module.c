@@ -85,7 +85,7 @@ ngx_http_lua_kong_cleanup(void *data)
 {
     ngx_http_lua_kong_ctx_t     *ctx = data;
 
-    ngx_lua_kong_ssl_cleanup(ctx->ssl_ctx);
+    ngx_lua_kong_ssl_cleanup(&ctx->ssl_ctx);
 }
 
 
@@ -100,11 +100,6 @@ ngx_http_lua_kong_get_module_ctx(ngx_http_request_t *r)
     if (ctx == NULL) {
         ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_lua_kong_ctx_t));
         if (ctx == NULL) {
-            return NULL;
-        }
-
-        ctx->ssl_ctx = ngx_pcalloc(r->pool, sizeof(ngx_lua_kong_ssl_ctx_t));
-        if (ctx->ssl_ctx == NULL) {
             return NULL;
         }
 

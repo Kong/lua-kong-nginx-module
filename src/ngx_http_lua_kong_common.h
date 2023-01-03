@@ -25,7 +25,7 @@
 #include "ssl/ngx_lua_kong_ssl.h"
 
 typedef struct {
-    ngx_lua_kong_ssl_ctx_t  *ssl_ctx;
+    ngx_lua_kong_ssl_ctx_t   ssl_ctx;
     ngx_str_t                grpc_authority;
 } ngx_http_lua_kong_ctx_t;
 

@@ -75,7 +75,7 @@ ngx_stream_lua_kong_cleanup(void *data)
 {
     ngx_stream_lua_kong_ctx_t     *ctx = data;
 
-    ngx_lua_kong_ssl_cleanup(ctx->ssl_ctx);
+    ngx_lua_kong_ssl_cleanup(&ctx->ssl_ctx);
 }
 
 
@@ -90,11 +90,6 @@ ngx_stream_lua_kong_get_module_ctx(ngx_stream_lua_request_t *r)
     if (ctx == NULL) {
         ctx = ngx_pcalloc(r->pool, sizeof(ngx_stream_lua_kong_ctx_t));
         if (ctx == NULL) {
-            return NULL;
-        }
-
-        ctx->ssl_ctx = ngx_pcalloc(r->pool, sizeof(ngx_lua_kong_ssl_ctx_t));
-        if (ctx->ssl_ctx == NULL) {
             return NULL;
         }
 
@@ -179,7 +174,7 @@ ngx_stream_lua_kong_ffi_set_upstream_ssl_verify(ngx_stream_lua_request_t *r,
         return NGX_ERROR;
     }
 
-    return ngx_lua_kong_ssl_set_upstream_ssl_verify(ctx->ssl_ctx, verify);
+    return ngx_lua_kong_ssl_set_upstream_ssl_verify(&ctx->ssl_ctx, verify);
 }
 
 
@@ -194,7 +189,7 @@ ngx_stream_lua_kong_ffi_set_upstream_ssl_verify_depth(ngx_stream_lua_request_t *
         return NGX_ERROR;
     }
 
-    return ngx_lua_kong_ssl_set_upstream_ssl_verify_depth(ctx->ssl_ctx, depth);
+    return ngx_lua_kong_ssl_set_upstream_ssl_verify_depth(&ctx->ssl_ctx, depth);
 }
 
 
@@ -248,7 +243,7 @@ ngx_stream_lua_kong_set_upstream_ssl(ngx_stream_session_t *s, ngx_connection_t *
         return;
     }
 
-    return ngx_lua_kong_ssl_set_upstream_ssl(ctx->ssl_ctx, c);
+    return ngx_lua_kong_ssl_set_upstream_ssl(&ctx->ssl_ctx, c);
 }
 
 
@@ -264,7 +259,7 @@ ngx_stream_lua_kong_ffi_set_upstream_client_cert_and_key(ngx_stream_lua_request_
         return NGX_ERROR;
     }
 
-    return ngx_lua_kong_ssl_set_upstream_client_cert_and_key(ctx->ssl_ctx, _chain, _key);
+    return ngx_lua_kong_ssl_set_upstream_client_cert_and_key(&ctx->ssl_ctx, _chain, _key);
 }
 
 
@@ -284,7 +279,7 @@ ngx_stream_lua_kong_ffi_set_upstream_ssl_trusted_store(ngx_stream_lua_request_t 
         return NGX_ERROR;
     }
 
-    return ngx_lua_kong_ssl_set_upstream_ssl_trusted_store(ctx->ssl_ctx,_store);
+    return ngx_lua_kong_ssl_set_upstream_ssl_trusted_store(&ctx->ssl_ctx,_store);
 }
 
 
@@ -299,7 +294,7 @@ ngx_stream_lua_kong_get_upstream_ssl_verify(ngx_stream_session_t *s,
         return proxy_ssl_verify;
     }
 
-    return ngx_lua_kong_ssl_get_upstream_ssl_verify(ctx->ssl_ctx, proxy_ssl_verify);
+    return ngx_lua_kong_ssl_get_upstream_ssl_verify(&ctx->ssl_ctx, proxy_ssl_verify);
 }
 #endif
 
