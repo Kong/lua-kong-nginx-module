@@ -22,17 +22,11 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
-
+#include "ssl/ngx_lua_kong_ssl.h"
 
 typedef struct {
-    STACK_OF(X509)     *upstream_client_certificate_chain;
-    EVP_PKEY           *upstream_client_private_key;
-    X509_STORE         *upstream_trusted_store;
-    ngx_uint_t          upstream_ssl_verify_depth;
-    ngx_str_t           grpc_authority;
-    unsigned            upstream_ssl_verify:1;
-    unsigned            upstream_ssl_verify_set:1;
-    unsigned            upstream_ssl_verify_depth_set:1;
+    ngx_lua_kong_ssl_ctx_t   ssl_ctx;
+    ngx_str_t                grpc_authority;
 } ngx_http_lua_kong_ctx_t;
 
 

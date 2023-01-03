@@ -16,7 +16,6 @@
 
 
 #include "ngx_http_lua_kong_directive.h"
-#include "ngx_http_lua_kong_ssl.h"
 
 
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
@@ -77,7 +76,7 @@ ngx_module_t ngx_http_lua_kong_module = {
 static ngx_int_t
 ngx_http_lua_kong_init(ngx_conf_t *cf)
 {
-    return ngx_http_lua_kong_ssl_init(cf);
+    return ngx_lua_kong_ssl_init(cf);
 }
 
 
@@ -86,9 +85,7 @@ ngx_http_lua_kong_cleanup(void *data)
 {
     ngx_http_lua_kong_ctx_t     *ctx = data;
 
-    ngx_http_lua_kong_cleanup_cert_and_key(ctx);
-
-    ngx_http_lua_kong_cleanup_trusted_store(ctx);
+    ngx_lua_kong_ssl_cleanup(&ctx->ssl_ctx);
 }
 
 
