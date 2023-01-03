@@ -210,7 +210,7 @@ ngx_stream_lua_kong_ffi_proxy_ssl_disable(ngx_stream_lua_request_t *r)
 }
 
 
-ngx_uint_t
+ngx_flag_t
 ngx_stream_lua_kong_get_proxy_ssl_disable(ngx_stream_session_t *s)
 {
     ngx_stream_lua_kong_ctx_t       *ctx;

@@ -10,7 +10,7 @@
 
 typedef struct {
     ngx_lua_kong_ssl_ctx_t   ssl_ctx;
-    ngx_uint_t               proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
+    ngx_flag_t               proxy_ssl_disable; /* unsigned proxy_ssl_disable:1; */
 } ngx_stream_lua_kong_ctx_t;
 
 
@@ -21,7 +21,7 @@ typedef struct {
 
 #if (NGX_STREAM_SSL)
 
-ngx_uint_t
+ngx_flag_t
 ngx_stream_lua_kong_get_proxy_ssl_disable(ngx_stream_session_t *s);
 
 
