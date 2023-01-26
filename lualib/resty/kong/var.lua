@@ -6,6 +6,7 @@ local C = ffi.C
 local ffi_new = ffi.new
 local ffi_str = ffi.string
 local var = ngx.var
+local req = ngx.req
 local type = type
 local error = error
 local assert = assert
@@ -150,6 +151,16 @@ local function var_set_by_index(index, value)
 end
 
 
+local function patch_functions()
+  local orig_set_uri_args = req.set_uri_args
+
+  req.set_uri_args = function(...)
+    variable_index.args = nil
+    return orig_set_uri_args(...)
+  end
+end
+
+
 local function patch_metatable()
     if get_phase() ~= "init" then
         error("patch_metatable can only be called in init phase")
@@ -184,6 +195,8 @@ local function patch_metatable()
 
         return orig_set(self, name, value)
     end
+
+    patch_functions()
 end
 
 
