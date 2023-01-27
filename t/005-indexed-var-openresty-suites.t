@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 2 + 9 + 4);
+plan tests => repeat_each() * (blocks() * 2 + 9 + 4 + 3);
 
 #no_diff();
 #no_long_string();
@@ -359,3 +359,36 @@ variable not changeable
 ["GET /balancer?port=8091", "GET /balancer?port=8092"]
 --- response_body eval
 ["this is backend peer 8091", "this is backend peer 8092"]
+
+=== TEST 13: patch metatable does not invalidate function req.set_uri_args
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    # this is not required, but set explictly in tests
+    lua_kong_load_var_index $args;
+
+    init_by_lua_block {
+        local var = require "resty.kong.var"
+        var.patch_metatable()
+    }
+
+--- config
+    set $args 'foo=bar';
+
+    location /t {
+        content_by_lua_block {
+            local a = ngx.var.args
+            ngx.req.set_uri_args(a .. "&added=yes")
+            ngx.say(ngx.var.args)
+        }
+    }
+
+--- request
+GET /t
+--- response_body_like
+foo=bar&added=yes
+
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
