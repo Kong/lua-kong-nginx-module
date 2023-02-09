@@ -50,17 +50,62 @@ jobs:
       id: cache-deps
       with:
         path: |
-          ${{ env.INSTALL_ROOT }}
-        key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-${{ hashFiles('**/*.c', '**/*.h') }}-openresty-${{ matrix.openresty }}-luarocks-${{ matrix.luarocks }}-openssl-${{ matrix.openssl }}
+          ${{ env.BUILD_ROOT }}
+        key: ${{ hashFiles('src/**', 'lualib/**', '.github/workflows/tests.yml') }}
+
+    - name: Install packages
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        sudo apt update
+        sudo apt install libyaml-dev valgrind libprotobuf-dev cpanminus net-tools libpcre3-dev build-essential
+
+    - name: Build Kong
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        cd kong
+        branch=${GITHUB_HEAD_REF}
+        branch=$(echo "$branch" | sed 's/\//\\\//g')
+        sed -i "s/KONG_NGINX_MODULE_BRANCH=.\+/KONG_NGINX_MODULE_BRANCH=${branch}/" .requirements
+        cat .requirements
+        make build-kong
+        make build-venv
+        BUILD_PREFIX=$BUILD_ROOT/kong-dev
+        export PATH="$BUILD_PREFIX/bin:$BUILD_PREFIX/openresty/nginx/sbin:$BUILD_PREFIX/openresty/bin:$PATH"
+        chmod +rw -R $BUILD_PREFIX
+        nginx -V
+        ldd $(which nginx)
+        luarocks
+
+  test:
+    name: Test
+    runs-on: ubuntu-22.04
+    needs: build
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+
+    - name: Load build cache
+      id: cache-deps
+      uses: actions/cache@v3
+      with:
+        path: |
+          ${{ env.BUILD_ROOT }}
+        key: ${{ hashFiles('src/**', 'lualib/**', '.github/workflows/tests.yml') }}
 
     - name: Install packages
       run: |
         sudo apt update
         sudo apt-get install -qq -y cpanminus net-tools libpcre3-dev build-essential valgrind
 
-    - name: Setup tools
+    - name: Install Test::Nginx
       run: |
-        source .github/workflows/setup_env.sh
+        if [ ! -e perl ]; then
+          sudo cpanm --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1)
+          cp -r /usr/local/share/perl/ .
+        else
+          sudo cp -r perl /usr/local/share
+        fi
 
     - name: Run Test
       run: |

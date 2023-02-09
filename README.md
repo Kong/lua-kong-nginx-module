@@ -23,6 +23,7 @@ Table of Contents
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
     * [resty.kong.tag.get](#restykongtagget)
+    * [resty.kong.log.set_log_level](#restykonglogset_log_level)
 * [License](#license)
 
 Description
@@ -391,7 +392,7 @@ resty.kong.tag.get
 ----------------------------------
 **syntax:** *resty.kong.tag.get()*
 
-**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42, header_filter_by_lua&#42;, body_filter_by_lua&#42;*
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;*
 
 **subsystems:** *http* *stream*
 
@@ -399,6 +400,43 @@ Return the tag value which is set by [`lua_kong_set_static_tag`](#lua_kong_set_s
 
 If there is no tag in `location`(http subsystems) or `server`(stream subsystems) block,
 it will return `nil`.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.log.set\_log\_level
+----------------------------------
+**syntax:** *resty.kong.log.set_log_level(level, timeout)*
+
+**context:** *any*
+
+**subsystems:** *http*
+
+Dynamically configures the [level](http://nginx.org/en/docs/ngx_core_module.html#error_log)
+with a timeout for the current worker, and **must** be one
+of the [Nginx log level constants](https://github.com/openresty/lua-nginx-module#nginx-log-level-constants).
+
+The `timeout` specifies a number of seconds after which the log level will be
+reset to the previous value. If `timeout` is `0`, the log level will be reset to the
+default `log_level` setting from Nginx configuration immediately.
+
+If this method is called again before the timeout, the log level and timeout will be overwritten.
+
+If we don’t pass timeout to set_log_level(), it will raise a Lua error.
+[Back to TOC](#table-of-contents)
+
+resty.kong.log.get\_log\_level
+----------------------------------
+**syntax:** *resty.kong.log.get_log_level(level)*
+
+**context:** *any*
+
+**subsystems:** *http*
+
+If the dynamic log level is set, it will return the dynamic log level,
+otherwise it will return `level`.
+
+Please see [Nginx log level constants](https://github.com/openresty/lua-nginx-module#nginx-log-level-constants)
+for the possible value of `level`.
 
 [Back to TOC](#table-of-contents)
 
