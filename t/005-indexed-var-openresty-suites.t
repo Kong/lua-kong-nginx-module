@@ -346,17 +346,12 @@ variable not changeable
         }
     }
 --- config
-    location =/balancer {
-        set $port '';
-        set_by_lua_block $port {
-            local args, _ = ngx.req.get_uri_args()
-            local port = args['port']
-            return port
-        }
+    location ~ /balancer/(?<target_port>\d+) {
+        set $port $target_port;
         proxy_pass http://balancer;
     }
 --- pipelined_requests eval
-["GET /balancer?port=8091", "GET /balancer?port=8092"]
+["GET /balancer/8091", "GET /balancer/8092"]
 --- response_body eval
 ["this is backend peer 8091", "this is backend peer 8092"]
 

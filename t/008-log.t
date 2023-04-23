@@ -74,7 +74,6 @@ ok
             log.set_log_level(ngx.DEBUG, 2)
             assert(log.get_log_level(ngx.WARN) == ngx.DEBUG)
 
-            ngx.update_time()
             ngx.sleep(3)
             assert(log.get_log_level(ngx.WARN) == ngx.WARN)
 
