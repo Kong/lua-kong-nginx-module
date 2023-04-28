@@ -23,7 +23,8 @@ Table of Contents
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
     * [resty.kong.tag.get](#restykongtagget)
-    * [resty.kong.log.set_log_level](#restykonglogset_log_level)
+    * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
+    * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
 * [License](#license)
 
 Description
