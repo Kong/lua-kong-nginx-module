@@ -53,6 +53,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       offsetof(ngx_http_lua_kong_loc_conf_t, tag),
       NULL },
 
+    { ngx_string("lua_kong_error_log_append_vars"),
+      NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_http_lua_kong_error_log_append_vars,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
     ngx_null_command
 };
 
@@ -76,6 +83,7 @@ ngx_module_t ngx_http_lua_kong_module = {
 static ngx_int_t
 ngx_http_lua_kong_init(ngx_conf_t *cf)
 {
+    ngx_http_lua_kong_configure_error_log(cf);
     return ngx_lua_kong_ssl_init(cf);
 }
 
