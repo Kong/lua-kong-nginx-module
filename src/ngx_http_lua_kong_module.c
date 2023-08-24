@@ -54,11 +54,11 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       offsetof(ngx_http_lua_kong_loc_conf_t, tag),
       NULL },
 
-    { ngx_string("lua_kong_error_log_append_vars"),
+    { ngx_string("lua_kong_error_log_append"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
-      ngx_http_lua_kong_error_log_append_vars,
+      ngx_http_set_complex_value_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_lua_kong_loc_conf_t, var_idxs),
+      offsetof(ngx_http_lua_kong_loc_conf_t, error_log_append),
       NULL },
 
     ngx_null_command
@@ -137,7 +137,7 @@ ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf)
         return NULL;
     }
 
-    conf->var_idxs = NGX_CONF_UNSET_PTR;
+    conf->error_log_append = NGX_CONF_UNSET_PTR;
 
     return conf;
 }
@@ -150,7 +150,7 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_lua_kong_loc_conf_t *conf = child;
 
     ngx_conf_merge_str_value(conf->tag, prev->tag, "");
-    ngx_conf_merge_ptr_value(conf->var_idxs, prev->var_idxs, NGX_CONF_UNSET_PTR);
+    ngx_conf_merge_ptr_value(conf->error_log_append, prev->error_log_append, NGX_CONF_UNSET_PTR);
 
     return NGX_CONF_OK;
 }

@@ -32,8 +32,8 @@ typedef struct {
 
 
 typedef struct {
-    ngx_str_t           tag;
-    ngx_array_t        *var_idxs;
+    ngx_str_t                  tag;
+    ngx_http_complex_value_t  *error_log_append;
 } ngx_http_lua_kong_loc_conf_t;
 
 

@@ -23,12 +23,12 @@ typedef struct {
 } var_elt_t;
 
 
-ngx_array_t *
-ngx_http_lua_kong_get_var_idxs(ngx_http_request_t *r)
+ngx_http_complex_value_t *
+ngx_http_lua_kong_get_error_log_append(ngx_http_request_t *r)
 {
     ngx_http_lua_kong_loc_conf_t *lcf;
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
-    return lcf->var_idxs;
+    return lcf->error_log_append;
 }
 
 
@@ -104,34 +104,21 @@ ngx_http_lua_kong_log_error_handler(ngx_http_request_t *r, ngx_http_request_t *s
     }
 
     /* [START] custom error_log handler [START] */
-    ngx_array_t *var_idxs = ngx_http_lua_kong_get_var_idxs(r);
+    ngx_http_complex_value_t *cpx_ela;
+    ngx_str_t                 ela;
 
-    if (var_idxs == NULL || var_idxs == NGX_CONF_UNSET_PTR || var_idxs->nelts == 0) {
-        return buf;
+    cpx_ela = ngx_http_lua_kong_get_error_log_append(r);
+
+    if (cpx_ela != NULL && cpx_ela != NGX_CONF_UNSET_PTR
+        && ngx_http_complex_value(r, cpx_ela, &ela) == NGX_OK
+        && ela.len > 0) {
+
+       p = ngx_snprintf(buf, len, ", %s", ela.data);
+       len -= p - buf;
+       buf = p;
+
     }
 
-    /*
-     * loop through var_idxs and append each variable
-     * and their values to the error log
-     */
-    var_elt_t  *elts  = var_idxs->elts;
-    ngx_uint_t  nelts = var_idxs->nelts;
-    for (ngx_uint_t i = 0; i < nelts; i++) {
-        var_elt_t                 *v     = &elts[i];
-        ngx_uint_t                 index = v->index;
-        ngx_http_variable_value_t *value =
-                ngx_http_get_indexed_variable(r, index);
-
-        if (value == NULL || value->not_found || !value->valid) {
-            continue;
-        }
-
-        u_char *name = v->name.data;
-        p = ngx_snprintf(buf, len, ", %s: \"%v\"", name, value);
-
-        len -= p - buf;
-        buf = p;
-    }
     /* [END] custom error_log handler [END] */
 
     return buf;
@@ -165,42 +152,3 @@ ngx_http_lua_kong_configure_error_log(ngx_conf_t *cf)
 }
 
 
-char *
-ngx_http_lua_kong_error_log_append_vars(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
-{
-    char         *p        = conf;
-    ngx_str_t    *values   = cf->args->elts;
-    ngx_uint_t    num_elts = cf->args->nelts - 1;
-    ngx_array_t **var_idxs = (ngx_array_t **) (p + cmd->offset);
-
-    if (*var_idxs == NGX_CONF_UNSET_PTR) {
-        *var_idxs = ngx_array_create(cf->pool, 4, sizeof(var_elt_t));
-
-        if (*var_idxs == NULL) {
-            return NGX_CONF_ERROR;
-        }
-    }
-
-    /* values passed to the directive start at values[1] */
-    for (ngx_uint_t i = 1; i <= num_elts; i++) {
-        var_elt_t *v;
-
-        ngx_str_t  name  = values[i];
-        ngx_int_t  index = ngx_http_get_variable_index(cf, &name);
-
-        if (index == NGX_ERROR) {
-            return NGX_CONF_ERROR;
-        }
-
-        v = ngx_array_push(*var_idxs);
-
-        if (v == NULL) {
-            return NGX_CONF_ERROR;
-        }
-
-        v->name = name;
-        v->index = index;
-    }
-
-    return NGX_CONF_OK;
-}
