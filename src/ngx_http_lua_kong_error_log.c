@@ -1,5 +1,5 @@
 /**
- * Copyright 2019-2022 Kong Inc.
+ * Copyright 2019-2023 Kong Inc.
 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,13 @@ ngx_array_t *
 ngx_http_lua_kong_get_var_idxs(ngx_http_request_t *r)
 {
     ngx_http_lua_kong_loc_conf_t *lcf;
-
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
-
     return lcf->var_idxs;
 }
 
 
 static u_char *
-ngx_http_log_error_handler(ngx_http_request_t *r, ngx_http_request_t *sr,
+ngx_http_lua_kong_log_error_handler(ngx_http_request_t *r, ngx_http_request_t *sr,
     u_char *buf, size_t len)
 {
     char                      *uri_separator;
@@ -105,16 +103,19 @@ ngx_http_log_error_handler(ngx_http_request_t *r, ngx_http_request_t *sr,
         buf = p;
     }
 
+    /* [START] custom error_log handler [START] */
+    ngx_array_t *var_idxs = ngx_http_lua_kong_get_var_idxs(r);
 
-    // loop through error_log_append_var_indexes and append
-    // each variable and their values to the error log
-    ngx_array_t  *var_idxs = ngx_http_lua_kong_get_var_idxs(r);
     if (var_idxs == NULL || var_idxs == NGX_CONF_UNSET_PTR || var_idxs->nelts == 0) {
         return buf;
     }
 
-    var_elt_t    *elts     = var_idxs->elts;
-    ngx_uint_t    nelts    = var_idxs->nelts;
+    /*
+     * loop through var_idxs and append each variable
+     * and their values to the error log
+     */
+    var_elt_t  *elts  = var_idxs->elts;
+    ngx_uint_t  nelts = var_idxs->nelts;
     for (ngx_uint_t i = 0; i < nelts; i++) {
         var_elt_t                 *v     = &elts[i];
         ngx_uint_t                 index = v->index;
@@ -131,6 +132,7 @@ ngx_http_log_error_handler(ngx_http_request_t *r, ngx_http_request_t *sr,
         len -= p - buf;
         buf = p;
     }
+    /* [END] custom error_log handler [END] */
 
     return buf;
 }
@@ -139,7 +141,7 @@ ngx_http_log_error_handler(ngx_http_request_t *r, ngx_http_request_t *sr,
 static ngx_int_t
 set_error_log_handler(ngx_http_request_t *r)
 {
-    r->log_handler = ngx_http_log_error_handler;
+    r->log_handler = ngx_http_lua_kong_log_error_handler;
     return NGX_OK;
 }
 
@@ -152,9 +154,11 @@ ngx_http_lua_kong_configure_error_log(ngx_conf_t *cf)
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_PREACCESS_PHASE].handlers);
+
     if (h == NULL) {
         return NGX_CONF_ERROR;
     }
+
     *h = set_error_log_handler;
 
     return NGX_CONF_OK;
@@ -164,13 +168,10 @@ ngx_http_lua_kong_configure_error_log(ngx_conf_t *cf)
 char *
 ngx_http_lua_kong_error_log_append_vars(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_array_t         **var_idxs;
-    
-    char  *p            = conf;
-    ngx_str_t *values   = cf->args->elts;
-    ngx_uint_t num_elts = cf->args->nelts - 1;
-
-    var_idxs = (ngx_array_t **) (p + cmd->offset);
+    char         *p        = conf;
+    ngx_str_t    *values   = cf->args->elts;
+    ngx_uint_t    num_elts = cf->args->nelts - 1;
+    ngx_array_t **var_idxs = (ngx_array_t **) (p + cmd->offset);
 
     if (*var_idxs == NGX_CONF_UNSET_PTR) {
         *var_idxs = ngx_array_create(cf->pool, 4, sizeof(var_elt_t));
@@ -180,16 +181,19 @@ ngx_http_lua_kong_error_log_append_vars(ngx_conf_t *cf, ngx_command_t *cmd, void
         }
     }
 
-    // values passed to the directive start at values[1]
+    /* values passed to the directive start at values[1] */
     for (ngx_uint_t i = 1; i <= num_elts; i++) {
-        ngx_str_t name = values[i];
-        ngx_int_t index = ngx_http_get_variable_index(cf, &name);
+        var_elt_t *v;
+
+        ngx_str_t  name  = values[i];
+        ngx_int_t  index = ngx_http_get_variable_index(cf, &name);
 
         if (index == NGX_ERROR) {
             return NGX_CONF_ERROR;
         }
 
-        var_elt_t *v = ngx_array_push(*var_idxs);
+        v = ngx_array_push(*var_idxs);
+
         if (v == NULL) {
             return NGX_CONF_ERROR;
         }
