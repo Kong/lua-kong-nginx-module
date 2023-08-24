@@ -36,5 +36,8 @@ ngx_flag_t
 ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
     ngx_flag_t proxy_ssl_verify);
 
+void
+ngx_http_lua_kong_error_handler(ngx_http_request_t *r,
+    u_char **buf, size_t *len);
 
 #endif /* _NGX_HTTP_LUA_KONG_MODULE_H_INCLUDED_ */

@@ -23,7 +23,6 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include "ssl/ngx_lua_kong_ssl.h"
-#include "ngx_http_lua_kong_error_log.h"
 
 typedef struct {
     ngx_lua_kong_ssl_ctx_t   ssl_ctx;

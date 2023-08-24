@@ -8,7 +8,7 @@ ngx_module_srcs=" \
                 $ngx_addon_dir/src/ngx_http_lua_kong_tag.c \
                 $ngx_addon_dir/src/ngx_http_lua_kong_module.c \
                 $ngx_addon_dir/src/ngx_http_lua_kong_log.c \
-                $ngx_addon_dir/src/ngx_http_lua_kong_error_log.c \
+                $ngx_addon_dir/src/ngx_http_lua_kong_log_handler.c \
                 $ngx_addon_dir/src/ssl/ngx_lua_kong_ssl.c \
                 "
 
