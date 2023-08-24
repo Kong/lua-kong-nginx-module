@@ -12,6 +12,7 @@ Table of Contents
 * [Directives](#directives)
     * [lua\_kong\_load\_var\_index](#lua_kong_load_var_index)
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
+    * [lua\_kong\_error\_log\_append](#lua_kong_error_log_append)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -137,6 +138,26 @@ Notice: the value of tag is bound with the `location`(http subsystem) or `server
 where it is defined.
 So if you defined multi tags in different `location`(http subsystem) or `server`(stream subsystem) block,
 you will always get the value where your Lua code runs in but not others.
+
+[Back to TOC](#table-of-contents)
+
+lua\_kong\_error\_log\_append
+-------------------------------------------
+**syntax:** *lua_kong_error_log_append expression;*
+
+**context:** *http* *server* *location*
+
+Append information to the standard error log format.
+Expression can contain text, variables and their combination.
+
+For example, with this configuration:
+```
+lua_kong_error_log_append "request_id: $request_id,  nginx_version: $nginx_version";
+```
+An error log may look similar to the following:
+```
+hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", request_id: cd7706e903db672ac5fac333bc8db5ed, nginx_version: "1.21.4"
+```
 
 [Back to TOC](#table-of-contents)
 
