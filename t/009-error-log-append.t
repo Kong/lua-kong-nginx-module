@@ -6,7 +6,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 5) -2;
+plan tests => repeat_each() * (blocks() * 5) - 2;
 
 #no_diff();
 no_long_string();

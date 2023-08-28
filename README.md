@@ -143,12 +143,12 @@ you will always get the value where your Lua code runs in but not others.
 
 lua\_kong\_error\_log\_append
 -------------------------------------------
-**syntax:** *lua_kong_error_log_append expression;*
+**syntax:** *lua_kong_error_log_append value;*
 
 **context:** *http* *server* *location*
 
 Append information to the standard error log format.
-Expression can contain text, variables and their combination.
+Value can contain text, variables and their combination.
 
 For example, with this configuration:
 ```

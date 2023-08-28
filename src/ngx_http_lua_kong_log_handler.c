@@ -22,17 +22,23 @@ ngx_http_lua_kong_error_handler(ngx_http_request_t *r, u_char **buf, size_t *len
 {
     u_char                       *p;
     ngx_http_lua_kong_loc_conf_t *lcf;
-    ngx_http_complex_value_t     *cpx_ela;
-    ngx_str_t                     ela;
+    ngx_http_complex_value_t     *log_append;
+    ngx_str_t                     log_append_str;
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
-    cpx_ela = lcf->error_log_append;
+    log_append = lcf->error_log_append;
 
-    if (cpx_ela != NULL && cpx_ela != NGX_CONF_UNSET_PTR
-        && ngx_http_complex_value(r, cpx_ela, &ela) == NGX_OK
-        && ela.len > 0) {
+    if (log_append == NULL || log_append == NGX_CONF_UNSET_PTR) {
+        return;
+    }
 
-       p = ngx_snprintf(*buf, len, ", %v", &ela);
+    if (ngx_http_complex_value(r, log_append, &log_append_str) != NGX_OK) {
+        return;
+    }
+
+    if (log_append_str.len) {
+
+       p = ngx_snprintf(*buf, len, ", %V", &log_append_str);
        len -= p - *buf;
        *buf = p;
 

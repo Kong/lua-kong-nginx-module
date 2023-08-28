@@ -148,7 +148,6 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_lua_kong_loc_conf_t *prev = parent;
     ngx_http_lua_kong_loc_conf_t *conf = child;
 
-    ngx_conf_merge_str_value(conf->tag, prev->tag, "");
     ngx_conf_merge_ptr_value(conf->error_log_append, prev->error_log_append, NGX_CONF_UNSET_PTR);
 
     return NGX_CONF_OK;
