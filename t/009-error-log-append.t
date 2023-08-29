@@ -17,26 +17,8 @@ run_tests();
 
 __DATA__
 
-=== TEST 0: Dummy: remove this test and the SKIP section from all tests below
-once nginx is patched in kong and the feature can be tested
---- http_config
-    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
---- config
-    location = /test {
-        content_by_lua_block {
-            ngx.exit(200)
-        }
-    }
---- request
-GET /test
---- no_error_log
-[error]
-[crit]
-[alert]
-
 
 === TEST 1: value is appended correctly to error logs, plain text
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -59,7 +41,6 @@ qr/log_msg.*appended text$/
 
 
 === TEST 2: value is appended correctly to error logs, with variables
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -82,7 +63,6 @@ qr/log_msg.*start, my_var=yay!, method=GET, end$/
 
 
 === TEST 3: value is appended correctly to error logs when a runtime error occurs
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -103,7 +83,6 @@ qr/.*req_id=123456.*$/
 
 === TEST 4: scoping: value is appended correctly to error logs
 based on the location where the directive is defined
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -138,7 +117,6 @@ based on the location where the directive is defined
 
 === TEST 5: scoping: value is NOT appended to error logs
 for the location where the directive is NOT defined
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -166,7 +144,6 @@ qr/log_msg.*appended/
 
 === TEST 6: scoping: value is appended correctly to error logs
 when the directive is in the main configuration
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_error_log_append "log_suffix";
@@ -190,7 +167,6 @@ qr/log_msg.*log_suffix$/
 
 === TEST 7: scoping: value is appended correctly to error logs
 and the local directive overrides the global one
---- SKIP
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_error_log_append "global_suffix";

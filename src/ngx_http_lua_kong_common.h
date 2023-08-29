@@ -27,6 +27,7 @@
 typedef struct {
     ngx_lua_kong_ssl_ctx_t   ssl_ctx;
     ngx_str_t                grpc_authority;
+    ngx_http_log_handler_pt  orig_log_handler;
 } ngx_http_lua_kong_ctx_t;
 
 
@@ -47,5 +48,8 @@ extern ngx_module_t ngx_http_lua_kong_module;
 
 ngx_http_lua_kong_ctx_t *ngx_http_lua_kong_get_module_ctx(
     ngx_http_request_t *r);
+
+char *ngx_http_lua_kong_set_post_read_handler(
+    ngx_conf_t *cf);
 
 #endif /* _NGX_HTTP_LUA_KONG_COMMON_H_INCLUDED_ */
