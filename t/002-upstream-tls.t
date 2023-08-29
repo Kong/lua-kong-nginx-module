@@ -543,7 +543,7 @@ GET /t
 .+502 Bad Gateway.+
 
 --- error_log
-upstream SSL certificate verify error: (22:certificate chain too long)
+upstream SSL certificate verify error: (20:unable to get local issuer certificate)
 
 --- error_code: 502
 --- no_error_log
