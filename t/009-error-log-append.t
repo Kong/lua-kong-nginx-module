@@ -18,13 +18,13 @@ run_tests();
 __DATA__
 
 
-=== TEST 1: value is appended correctly to error logs, plain text
+=== TEST 1: value is appended correctly to error logs
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
     location = /test {
         set $my_var "yay!";
-        lua_kong_error_log_append "appended text";
+        lua_kong_error_log_request_id $my_var;
         content_by_lua_block {
             ngx.log(ngx.INFO, "log_msg")
             ngx.exit(200)
@@ -33,42 +33,20 @@ __DATA__
 --- request
 GET /test
 --- error_log eval
-qr/log_msg.*appended text$/
+qr/log_msg.*kong_request_id: yay!$/
 --- no_error_log
 [error]
 [crit]
 [alert]
 
 
-=== TEST 2: value is appended correctly to error logs, with variables
---- http_config
-    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
---- config
-    location = /test {
-        set $my_var "yay!";
-        lua_kong_error_log_append "start, my_var=$my_var, method=$request_method, end";
-        content_by_lua_block {
-            ngx.log(ngx.INFO, "log_msg")
-            ngx.exit(200)
-        }
-    }
---- request
-GET /test
---- error_log eval
-qr/log_msg.*start, my_var=yay!, method=GET, end$/
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-=== TEST 3: value is appended correctly to error logs when a runtime error occurs
+=== TEST 2: value is appended correctly to error logs when a runtime error occurs
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
     location = /test {
         set $req_id 123456;
-        lua_kong_error_log_append "req_id=$req_id";
+        lua_kong_error_log_request_id "$req_id";
 
         content_by_lua_block {
             error("error_message")
@@ -78,17 +56,17 @@ qr/log_msg.*start, my_var=yay!, method=GET, end$/
 GET /test
 --- error_code: 500
 --- error_log eval
-qr/.*req_id=123456.*$/
+qr/.*kong_request_id: 123456.*$/
 
 
-=== TEST 4: scoping: value is appended correctly to error logs
+=== TEST 3: scoping: value is appended correctly to error logs
 based on the location where the directive is defined
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
     location = /append_req_id {
-        set $req_id 123456;
-        lua_kong_error_log_append "req_id=$req_id";
+        set $req_id_a 123456;
+        lua_kong_error_log_request_id $req_id_a;
 
         content_by_lua_block {
             ngx.log(ngx.INFO, "log_msg")
@@ -96,7 +74,8 @@ based on the location where the directive is defined
         }
     }
     location = /append_method {
-        lua_kong_error_log_append "method=$request_method";
+        set $req_id_b 654321;
+        lua_kong_error_log_request_id $req_id_b;
 
         content_by_lua_block {
             ngx.log(ngx.INFO, "log_msg")
@@ -108,20 +87,21 @@ based on the location where the directive is defined
 --- error_code eval
 [200, 200, 200]
 --- error_log eval
-[ "req_id=123456", "method=GET" ]
+[ "kong_request_id: 123456", "kong_request_id: 654321" ]
 --- no_error_log
 [error]
 [crit]
 [alert]
 
 
-=== TEST 5: scoping: value is NOT appended to error logs
+=== TEST 4: scoping: value is NOT appended to error logs
 for the location where the directive is NOT defined
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
     location = /append {
-        lua_kong_error_log_append "appended";
+        set $req_id 123456;
+        lua_kong_error_log_request_id $req_id;
 
         content_by_lua_block {
             ngx.log(ngx.ERR, "log_msg")
@@ -139,15 +119,16 @@ for the location where the directive is NOT defined
 GET /no_append
 --- error_code: 200
 --- no_error_log eval
-qr/log_msg.*appended/
+qr/log_msg.*kong_request_id/
 
 
-=== TEST 6: scoping: value is appended correctly to error logs
+=== TEST 5: scoping: value is appended correctly to error logs
 when the directive is in the main configuration
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_error_log_append "log_suffix";
+    lua_kong_error_log_request_id $req_id;
 --- config
+    set $req_id 123456;
     location = /test {
         content_by_lua_block {
             ngx.log(ngx.INFO, "log_msg")
@@ -158,21 +139,24 @@ when the directive is in the main configuration
 GET /test
 --- error_code: 200
 --- error_log eval
-qr/log_msg.*log_suffix$/
+qr/log_msg.*kong_request_id: 123456$/
 --- no_error_log
 [error]
 [crit]
 [alert]
 
 
-=== TEST 7: scoping: value is appended correctly to error logs
+=== TEST 6: scoping: value is appended correctly to error logs
 and the local directive overrides the global one
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
-    lua_kong_error_log_append "global_suffix";
+    lua_kong_error_log_request_id $req_id_global;
 --- config
+    set $req_id_global global;
+    set $req_id_local local;
+
     location = /test {
-        lua_kong_error_log_append "local_suffix";
+        lua_kong_error_log_request_id $req_id_local;
         content_by_lua_block {
             ngx.log(ngx.INFO, "log_msg")
             ngx.exit(200)
@@ -182,6 +166,6 @@ and the local directive overrides the global one
 GET /test
 --- error_code: 200
 --- error_log eval
-qr/log_msg.*local_suffix$/
+qr/log_msg.*kong_request_id: local$/
 --- no_error_log eval
-qr/log_msg.*global_suffix$/
+qr/log_msg.*kong_request_id: global$/

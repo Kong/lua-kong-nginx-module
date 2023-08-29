@@ -12,7 +12,7 @@ Table of Contents
 * [Directives](#directives)
     * [lua\_kong\_load\_var\_index](#lua_kong_load_var_index)
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
-    * [lua\_kong\_error\_log\_append](#lua_kong_error_log_append)
+    * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -141,22 +141,21 @@ you will always get the value where your Lua code runs in but not others.
 
 [Back to TOC](#table-of-contents)
 
-lua\_kong\_error\_log\_append
+lua\_kong\_error\_log\_request\_id
 -------------------------------------------
-**syntax:** *lua_kong_error_log_append value;*
+**syntax:** *lua_kong_error_log_request_id $variable;*
 
 **context:** *http* *server* *location*
 
-Append information to the standard error log format.
-Value can contain text, variables and their combination.
+Append a Request ID to the standard error log format, load the ID value from `$variable`.
 
 For example, with this configuration:
 ```
-lua_kong_error_log_append "request_id: $request_id,  nginx_version: $nginx_version";
+lua_kong_error_log_request_id $request_id;
 ```
 An error log may look similar to the following:
 ```
-hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", request_id: cd7706e903db672ac5fac333bc8db5ed, nginx_version: "1.21.4"
+hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", kong_request_id: cd7706e903db672ac5fac333bc8db5ed"
 ```
 
 [Back to TOC](#table-of-contents)
