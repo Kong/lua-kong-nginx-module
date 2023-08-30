@@ -6,7 +6,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 5) - 2;
+plan tests => repeat_each() * (blocks() * 5) + 10;
 
 #no_diff();
 no_long_string();
@@ -18,7 +18,31 @@ run_tests();
 __DATA__
 
 
-=== TEST 1: value is appended correctly to error logs
+=== TEST 1: sanity: without directive there is no appended request ID
+and the original error log is preserved
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.log(ngx.INFO, "log_msg")
+            ngx.exit(200)
+        }
+    }
+--- request
+GET /test
+--- error_log eval
+qr/log_msg.*client:.*server:.*request:.*host:.*$/
+--- no_error_log eval
+[
+    qr/log_msg.*kong_request_id/,
+    "[error]",
+    "[crit]",
+    "[alert]",
+]
+
+
+=== TEST 2: value is appended correctly to error logs
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -40,7 +64,7 @@ qr/log_msg.*kong_request_id: yay!$/
 [alert]
 
 
-=== TEST 2: value is appended correctly to error logs when a runtime error occurs
+=== TEST 3: value is appended correctly to error logs when a runtime error occurs
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -59,7 +83,7 @@ GET /test
 qr/.*kong_request_id: 123456.*$/
 
 
-=== TEST 3: scoping: value is appended correctly to error logs
+=== TEST 4: scoping: value is appended correctly to error logs
 based on the location where the directive is defined
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
@@ -94,7 +118,7 @@ based on the location where the directive is defined
 [alert]
 
 
-=== TEST 4: scoping: value is NOT appended to error logs
+=== TEST 5: scoping: value is NOT appended to error logs
 for the location where the directive is NOT defined
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
@@ -122,7 +146,7 @@ GET /no_append
 qr/log_msg.*kong_request_id/
 
 
-=== TEST 5: scoping: value is appended correctly to error logs
+=== TEST 6: scoping: value is appended correctly to error logs
 when the directive is in the main configuration
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
@@ -146,7 +170,7 @@ qr/log_msg.*kong_request_id: 123456$/
 [alert]
 
 
-=== TEST 6: scoping: value is appended correctly to error logs
+=== TEST 7: scoping: value is appended correctly to error logs
 and the local directive overrides the global one
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
@@ -169,3 +193,43 @@ GET /test
 qr/log_msg.*kong_request_id: local$/
 --- no_error_log eval
 qr/log_msg.*kong_request_id: global$/
+
+
+=== TEST 8: Request ID variable changes are applied to the error log output
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        set $my_var "";
+        lua_kong_error_log_request_id $my_var;
+        rewrite_by_lua_block {
+            ngx.log(ngx.INFO, "rewrite_0")
+            ngx.var.my_var = "changed_in_rewrite"
+            ngx.log(ngx.INFO, "rewrite_1")
+            ngx.var.my_var = "changed_in_rewrite_2"
+            ngx.log(ngx.INFO, "rewrite_2")
+        }
+        access_by_lua_block {
+            ngx.log(ngx.INFO, "access_0")
+            ngx.var.my_var = "changed_in_access"
+            ngx.log(ngx.INFO, "access_1")
+            ngx.var.my_var = "changed_in_access_2"
+            ngx.log(ngx.INFO, "access_2")
+            ngx.exit(200)
+        }
+    }
+--- request
+GET /test
+--- error_log eval
+[
+    qr/rewrite_0.*kong_request_id: $/,
+    qr/rewrite_1.*kong_request_id: changed_in_rewrite$/,
+    qr/rewrite_2.*kong_request_id: changed_in_rewrite_2$/,
+    qr/access_0.*kong_request_id: changed_in_rewrite_2$/,
+    qr/access_1.*kong_request_id: changed_in_access$/,
+    qr/access_2.*kong_request_id: changed_in_access_2$/,
+]
+--- no_error_log
+[error]
+[crit]
+[alert]

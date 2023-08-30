@@ -84,7 +84,9 @@ ngx_module_t ngx_http_lua_kong_module = {
 static ngx_int_t
 ngx_http_lua_kong_init(ngx_conf_t *cf)
 {
-    ngx_http_lua_kong_set_post_read_handler(cf);
+    if (ngx_http_lua_kong_error_log_init(cf) != NGX_CONF_OK) {
+        return NGX_ERROR;
+    }
     return ngx_lua_kong_ssl_init(cf);
 }
 
@@ -150,7 +152,7 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_lua_kong_loc_conf_t *conf = child;
 
     /* conf->tag is NGX_HTTP_LOC_CONF only */
-    ngx_conf_merge_uint_value(conf->req_id_var_index, prev->req_id_var_index, NGX_CONF_UNSET);
+    ngx_conf_merge_value(conf->req_id_var_index, prev->req_id_var_index, NGX_CONF_UNSET);
 
     return NGX_CONF_OK;
 }
