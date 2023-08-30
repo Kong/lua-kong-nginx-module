@@ -555,7 +555,7 @@ upstream SSL certificate verify error: (20:unable to get local issuer certificat
 receive stream response error: connection reset by peer
 
 --- error_log
-upstream SSL certificate verify error: (22:certificate chain too long)
+upstream SSL certificate verify error: (20:unable to get local issuer certificate)
 
 --- skip_nginx
 3: < 1.21.4

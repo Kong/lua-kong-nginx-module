@@ -59,6 +59,8 @@ jobs:
 
     - name: Build Kong
       if: steps.cache-deps.outputs.cache-hit != 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         cd kong
         make build-kong
