@@ -28,7 +28,7 @@ jobs:
         ref: ${{ env.KONG_VERSION }}
         path: kong
 
-    - name: Set the KONG_NGINX_MODULE_BRANCH in kong/.requirements
+    - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
         cd kong
         branch=""
@@ -40,7 +40,7 @@ jobs:
         fi
 
         branch=$(echo "$branch" | sed 's/\//\\\//g')
-        sed -i "s/KONG_NGINX_MODULE_BRANCH=.\+/KONG_NGINX_MODULE_BRANCH=${branch}/" .requirements
+        sed -i "s/LUA_KONG_NGINX_MODULE=.\+/LUA_KONG_NGINX_MODULE=${branch}/" .requirements
         cat .requirements
 
     - name: Lookup build cache
@@ -88,7 +88,7 @@ jobs:
         ref: ${{ env.KONG_VERSION }}
         path: kong
 
-    - name: Set the KONG_NGINX_MODULE_BRANCH in kong/.requirements
+    - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
         cd kong
         branch=""
@@ -100,7 +100,7 @@ jobs:
         fi
 
         branch=$(echo "$branch" | sed 's/\//\\\//g')
-        sed -i "s/KONG_NGINX_MODULE_BRANCH=.\+/KONG_NGINX_MODULE_BRANCH=${branch}/" .requirements
+        sed -i "s/LUA_KONG_NGINX_MODULE=.\+/LUA_KONG_NGINX_MODULE=${branch}/" .requirements
         cat .requirements
 
     - name: Load build cache
