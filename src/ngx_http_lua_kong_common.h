@@ -33,7 +33,7 @@ typedef struct {
 
 typedef struct {
     ngx_str_t                tag;
-    ngx_int_t                req_id_var_index;
+    ngx_int_t                request_id_var_index;
 } ngx_http_lua_kong_loc_conf_t;
 
 

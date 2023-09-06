@@ -147,15 +147,15 @@ lua\_kong\_error\_log\_request\_id
 
 **context:** *http* *server* *location*
 
-Append a Request ID to the standard error log format, load the ID value from `$variable`.
+Append a Request ID to the standard error log format, load the ID value from `$variable`. `$variable` must be already defined with [`set`](https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#set).
 
 For example, with this configuration:
 ```
 lua_kong_error_log_request_id $request_id;
 ```
-An error log may look similar to the following:
+An error log line may look similar to the following:
 ```
-hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", kong_request_id: cd7706e903db672ac5fac333bc8db5ed"
+2023/09/06 11:33:36 [error] 94085#0: *6 [lua] content_by_lua(nginx.conf:27):7: hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", request_id: "cd7706e903db672ac5fac333bc8db5ed"
 ```
 
 [Back to TOC](#table-of-contents)

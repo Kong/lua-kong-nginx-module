@@ -35,7 +35,7 @@ GET /test
 qr/log_msg.*client:.*server:.*request:.*host:.*$/
 --- no_error_log eval
 [
-    qr/log_msg.*kong_request_id/,
+    qr/log_msg.*request_id/,
     "[error]",
     "[crit]",
     "[alert]",
@@ -57,7 +57,7 @@ qr/log_msg.*client:.*server:.*request:.*host:.*$/
 --- request
 GET /test
 --- error_log eval
-qr/log_msg.*kong_request_id: yay!$/
+qr/log_msg.*request_id: "yay!"$/
 --- no_error_log
 [error]
 [crit]
@@ -80,7 +80,7 @@ qr/log_msg.*kong_request_id: yay!$/
 GET /test
 --- error_code: 500
 --- error_log eval
-qr/.*kong_request_id: 123456.*$/
+qr/.*request_id: "123456".*$/
 
 
 === TEST 4: scoping: value is appended correctly to error logs
@@ -111,7 +111,7 @@ based on the location where the directive is defined
 --- error_code eval
 [200, 200, 200]
 --- error_log eval
-[ "kong_request_id: 123456", "kong_request_id: 654321" ]
+[ 'request_id: "123456"', 'request_id: "654321"' ]
 --- no_error_log
 [error]
 [crit]
@@ -143,7 +143,7 @@ for the location where the directive is NOT defined
 GET /no_append
 --- error_code: 200
 --- no_error_log eval
-qr/log_msg.*kong_request_id/
+qr/log_msg.*request_id/
 
 
 === TEST 6: scoping: value is appended correctly to error logs
@@ -163,7 +163,7 @@ when the directive is in the main configuration
 GET /test
 --- error_code: 200
 --- error_log eval
-qr/log_msg.*kong_request_id: 123456$/
+qr/log_msg.*request_id: "123456"$/
 --- no_error_log
 [error]
 [crit]
@@ -190,9 +190,9 @@ and the local directive overrides the global one
 GET /test
 --- error_code: 200
 --- error_log eval
-qr/log_msg.*kong_request_id: local$/
+qr/log_msg.*request_id: "local"$/
 --- no_error_log eval
-qr/log_msg.*kong_request_id: global$/
+qr/log_msg.*request_id: "global"$/
 
 
 === TEST 8: Request ID variable changes are applied to the error log output
@@ -222,12 +222,12 @@ qr/log_msg.*kong_request_id: global$/
 GET /test
 --- error_log eval
 [
-    qr/rewrite_0.*kong_request_id: $/,
-    qr/rewrite_1.*kong_request_id: changed_in_rewrite$/,
-    qr/rewrite_2.*kong_request_id: changed_in_rewrite_2$/,
-    qr/access_0.*kong_request_id: changed_in_rewrite_2$/,
-    qr/access_1.*kong_request_id: changed_in_access$/,
-    qr/access_2.*kong_request_id: changed_in_access_2$/,
+    qr/rewrite_0.*request_id: ""$/,
+    qr/rewrite_1.*request_id: "changed_in_rewrite"$/,
+    qr/rewrite_2.*request_id: "changed_in_rewrite_2"$/,
+    qr/access_0.*request_id: "changed_in_rewrite_2"$/,
+    qr/access_1.*request_id: "changed_in_access"$/,
+    qr/access_2.*request_id: "changed_in_access_2"$/,
 ]
 --- no_error_log
 [error]
