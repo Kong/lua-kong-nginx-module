@@ -20,6 +20,7 @@
 
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
 static void* ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf);
+static char* ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
 
 static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
@@ -33,7 +34,7 @@ static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
     NULL,                                    /* merge server configuration */
 
     ngx_http_lua_kong_create_loc_conf,       /* create location configuration */
-    NULL                                     /* merge location configuration */
+    ngx_http_lua_kong_merge_loc_conf         /* merge location configuration */
 };
 
 
@@ -51,6 +52,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_lua_kong_loc_conf_t, tag),
+      NULL },
+
+    { ngx_string("lua_kong_error_log_request_id"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_http_lua_kong_error_log_request_id,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_lua_kong_loc_conf_t, request_id_var_index),
       NULL },
 
     ngx_null_command
@@ -76,6 +84,10 @@ ngx_module_t ngx_http_lua_kong_module = {
 static ngx_int_t
 ngx_http_lua_kong_init(ngx_conf_t *cf)
 {
+    if (ngx_http_lua_kong_error_log_init(cf) != NGX_CONF_OK) {
+        return NGX_ERROR;
+    }
+
     return ngx_lua_kong_ssl_init(cf);
 }
 
@@ -128,7 +140,22 @@ ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf)
         return NULL;
     }
 
+    conf->request_id_var_index = NGX_CONF_UNSET;
+
     return conf;
+}
+
+
+static char*
+ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+{
+    ngx_http_lua_kong_loc_conf_t *prev = parent;
+    ngx_http_lua_kong_loc_conf_t *conf = child;
+
+    /* conf->tag is NGX_HTTP_LOC_CONF only */
+    ngx_conf_merge_value(conf->request_id_var_index, prev->request_id_var_index, NGX_CONF_UNSET);
+
+    return NGX_CONF_OK;
 }
 
 
