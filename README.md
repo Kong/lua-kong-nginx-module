@@ -147,7 +147,7 @@ lua\_kong\_error\_log\_request\_id
 
 **context:** *http* *server* *location*
 
-Append a Request ID to the standard error log format, load the ID value from `$variable`. `$variable` must be already defined with [`set`](https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#set).
+Append a Request ID to the standard error log format, load the ID value from `$variable`. `$variable` must be previously defined.
 
 For example, with this configuration:
 ```
@@ -466,7 +466,7 @@ License
 =======
 
 ```
-Copyright 2020 Kong Inc.
+Copyright 2020-2023 Kong Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
