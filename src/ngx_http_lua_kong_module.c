@@ -87,6 +87,7 @@ ngx_http_lua_kong_init(ngx_conf_t *cf)
     if (ngx_http_lua_kong_error_log_init(cf) != NGX_CONF_OK) {
         return NGX_ERROR;
     }
+
     return ngx_lua_kong_ssl_init(cf);
 }
 
