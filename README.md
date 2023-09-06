@@ -11,6 +11,7 @@ Table of Contents
 * [Install](#install)
 * [Directives](#directives)
     * [lua_kong_load_var_index](#lua_kong_load_var_index)
+    * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
@@ -118,6 +119,25 @@ index *commonly used variables* as follows:
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
+
+[Back to TOC](#table-of-contents)
+
+lua\_kong\_error\_log\_request\_id
+-------------------------------------------
+**syntax:** *lua_kong_error_log_request_id $variable;*
+
+**context:** *http* *server* *location*
+
+Append a Request ID to the standard error log format, load the ID value from `$variable`. `$variable` must be previously defined.
+
+For example, with this configuration:
+```
+lua_kong_error_log_request_id $request_id;
+```
+An error log line may look similar to the following:
+```
+2023/09/06 11:33:36 [error] 94085#0: *6 [lua] content_by_lua(nginx.conf:27):7: hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", request_id: "cd7706e903db672ac5fac333bc8db5ed"
+```
 
 [Back to TOC](#table-of-contents)
 
@@ -398,7 +418,7 @@ License
 =======
 
 ```
-Copyright 2020 Kong Inc.
+Copyright 2020-2023 Kong Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
