@@ -60,6 +60,7 @@ jobs:
     - name: Build Kong
       if: steps.cache-deps.outputs.cache-hit != 'true'
       run: |
+        pwd
         cd kong
         make build-kong
         make build-venv
