@@ -415,8 +415,8 @@ qpvBFOY29Mlww88oWNGTA8QeW84Y1EJbRkHavzSsMFB73sxidQW0cHNC5t9RCKAQ
 uibeZgK1Yk7YQKXdvbZvXwrgTcAjCdbppw2L6e0Uy+OGgNjnIps8K460SdaIiA==
 -----END CERTIFICATE-----
 
---- error_log
-[lua] ssl_certificate_by_lua:2: ssl cert by lua is running!
+--- error_log eval
+qr/ssl_certificate_by_lua.*ssl cert by lua is running!/
 
 --- no_error_log
 [error]
