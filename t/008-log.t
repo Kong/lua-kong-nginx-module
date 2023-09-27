@@ -938,3 +938,28 @@ GET /test
 ]
 --- no_log eval
 "you can't see me init_worker"
+
+
+=== TEST 25: debug log level for nginx error.log
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test_nginx_debug_log {
+
+        error_log logs/error.log crit;
+
+        content_by_lua_block {
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG, 10)
+            assert(log.get_log_level(ngx.WARN) == ngx.DEBUG)
+            ngx.exit(200)
+        }
+    }
+--- request
+GET /test_nginx_debug_log
+--- wait: 2
+--- error_code: 200
+--- error_log eval
+[
+    "http finalize request: 200, "/test_nginx_debug_log?" a:1, c:1",
+]
