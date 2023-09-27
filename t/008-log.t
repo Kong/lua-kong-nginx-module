@@ -961,5 +961,5 @@ GET /test_nginx_debug_log
 --- error_code: 200
 --- error_log eval
 [
-    "http finalize request: 200, "/test_nginx_debug_log?" a:1, c:1",
+   qr/[debug] .*: .* http finalize request: 200, "/test_nginx_debug_log?" a:1, c:1/,
 ]
