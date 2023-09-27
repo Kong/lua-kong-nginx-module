@@ -952,14 +952,14 @@ GET /test
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 10)
             assert(log.get_log_level(ngx.WARN) == ngx.DEBUG)
-            ngx.exit(200)
+            ngx.exit(403)
         }
     }
 --- request
 GET /test_nginx_debug_log
 --- wait: 2
---- error_code: 200
+--- error_code: 403
 --- error_log eval
 [
-   qr/\[debug\] .*: .* http finalize request: 200, "\/test_nginx_debug_log\?" a:1, c:1/,
+   qr/\[debug\] .*: .* http finalize request: 403, "\/test_nginx_debug_log\?" a:1, c:1/,
 ]
