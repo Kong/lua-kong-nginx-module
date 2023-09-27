@@ -81,6 +81,10 @@ ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
         return current_log_level;
     }
 
+    if (g_dynamic_log_level == NGX_LOG_DEBUG) {
+        return NGX_LOG_DEBUG_ALL;
+    }
+
     return g_dynamic_log_level;
 }
 
