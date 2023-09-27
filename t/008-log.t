@@ -7,7 +7,7 @@ use Test::Nginx::Socket::Lua;
 #master_process_enabled(1);
 log_level('warn');
 
-plan tests => repeat_each() * (blocks() * 4) + 8;
+plan tests => repeat_each() * (blocks() * 4) + 6;
 
 #no_diff();
 #no_long_string();
@@ -957,7 +957,6 @@ GET /test
     }
 --- request
 GET /test_nginx_debug_log
---- wait: 2
 --- error_code: 403
 --- error_log eval
 [
