@@ -18,17 +18,19 @@
 #include "ngx_http_lua_kong_common.h"
 
 
-#define KONG_REQUEST_ID_MAX_LEN     16
-#define KONG_REQUEST_ID_FORMAT      "%08xD%08xD"
+#define UINT32_HEX_LEN              8
+#define KONG_REQUEST_ID_NUM         2
 
 
 static ngx_int_t
 ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-    u_char  *id;
+    u_char     *id;
+    u_char      buf[8];
+    uint32_t    i, rnd;
 
-    id = ngx_pnalloc(r->pool, KONG_REQUEST_ID_MAX_LEN);
+    id = ngx_pnalloc(r->pool, KONG_REQUEST_ID_NUM * UINT32_HEX_LEN);
     if (id == NULL) {
         return NGX_ERROR;
     }
@@ -37,11 +39,14 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     v->no_cacheable = 0;
     v->not_found = 0;
 
-    v->len = KONG_REQUEST_ID_MAX_LEN;
+    v->len = KONG_REQUEST_ID_NUM * UINT32_HEX_LEN;
     v->data = id;
 
-    ngx_sprintf(id, KONG_REQUEST_ID_FORMAT,
-                (uint32_t) ngx_random(), (uint32_t) ngx_random());
+    for (i = 0; i < KONG_REQUEST_ID_NUM; i++) {
+        rnd = (uint32_t) ngx_random();
+        ngx_memcpy(buf, rand, sizeof(rnd));
+        ngx_hex_dump(id + i * UINT32_HEX_LEN, buf, UINT32_HEX_LEN);
+    }
 
     return NGX_OK;
 }
