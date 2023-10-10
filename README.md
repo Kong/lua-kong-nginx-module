@@ -14,7 +14,7 @@ Table of Contents
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
 * [Variables](#variables)
-    * [$kong\_request\_id](#$kong_reques_id)
+    * [$kong\_request\_id](#kong_reques_id)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -167,7 +167,7 @@ Variables
 
 $kong\_reques\_id
 -----------------
-unique request identifier generated from 8 random bytes, in hexadecimal
+Unique request identifier generated from 8 random bytes, in hexadecimal
 
 [Back to TOC](#table-of-contents)
 
