@@ -18,8 +18,8 @@
 #include "ngx_http_lua_kong_common.h"
 
 
-#define UINT32_HEX_LEN              8
-#define KONG_REQUEST_ID_NUM         2
+#define UINT32_HEX_LEN       8
+#define RANDOM_COUNT         2
 
 
 static ngx_int_t
@@ -29,7 +29,7 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     u_char     *id;
     uint32_t    i, rnd;
 
-    id = ngx_pnalloc(r->pool, KONG_REQUEST_ID_NUM * UINT32_HEX_LEN);
+    id = ngx_pnalloc(r->pool, RANDOM_COUNT * UINT32_HEX_LEN);
     if (id == NULL) {
         return NGX_ERROR;
     }
@@ -38,10 +38,10 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     v->no_cacheable = 0;
     v->not_found = 0;
 
-    v->len = KONG_REQUEST_ID_NUM * UINT32_HEX_LEN;
+    v->len = RANDOM_COUNT * UINT32_HEX_LEN;
     v->data = id;
 
-    for (i = 0; i < KONG_REQUEST_ID_NUM; i++) {
+    for (i = 0; i < RANDOM_COUNT; i++) {
         rnd = (uint32_t) ngx_random();
         ngx_hex_dump(id + i * UINT32_HEX_LEN, (u_char *) &rnd, sizeof(uint32_t));
     }
