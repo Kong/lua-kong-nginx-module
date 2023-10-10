@@ -27,7 +27,6 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
     u_char     *id;
-    u_char      buf[8];
     uint32_t    i, rnd;
 
     id = ngx_pnalloc(r->pool, KONG_REQUEST_ID_NUM * UINT32_HEX_LEN);
@@ -44,8 +43,7 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
 
     for (i = 0; i < KONG_REQUEST_ID_NUM; i++) {
         rnd = (uint32_t) ngx_random();
-        ngx_memcpy(buf, rand, sizeof(rnd));
-        ngx_hex_dump(id + i * UINT32_HEX_LEN, buf, UINT32_HEX_LEN);
+        ngx_hex_dump(id + i * UINT32_HEX_LEN, (u_char *) &rnd, sizeof(uint32_t));
     }
 
     return NGX_OK;
