@@ -18,8 +18,8 @@
 #include "ngx_http_lua_kong_common.h"
 
 
-#define UINT32_HEX_LEN       8
 #define RANDOM_COUNT         2
+#define UINT32_HEX_LEN       sizeof(uint32_t) * 2
 
 
 static ngx_int_t
