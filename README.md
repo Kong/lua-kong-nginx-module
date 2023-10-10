@@ -165,7 +165,7 @@ An error log line may look similar to the following:
 Variables
 =========
 
-$kong\_reques\_id
+$kong\_request\_id
 -----------------
 Unique request identifier generated from 8 random bytes, in hexadecimal.
 This variable has already been indexed.
