@@ -86,7 +86,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("upstream_http_upgrade"),
     ngx_string("upstream_status"),
 
-    /* lua-kong-module vars*/
+    /* lua-kong-module vars */
     ngx_string("kong_request_id"),
 
     ngx_null_string

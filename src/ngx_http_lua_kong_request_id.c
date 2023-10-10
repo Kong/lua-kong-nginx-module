@@ -24,21 +24,6 @@
 
 static ngx_int_t
 ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
-    ngx_http_variable_value_t *v, uintptr_t data);
-
-
-static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
-
-    { ngx_string("kong_request_id"), NULL,
-      ngx_http_lua_kong_variable_request_id,
-      0, 0, 0 },
-
-      ngx_http_null_variable
-};
-
-
-static ngx_int_t
-ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
     u_char  *id;
@@ -61,6 +46,16 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
 
     return NGX_OK;
 }
+
+
+static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
+
+    { ngx_string("kong_request_id"), NULL,
+      ngx_http_lua_kong_variable_request_id,
+      0, 0, 0 },
+
+      ngx_http_null_variable
+};
 
 
 ngx_int_t
