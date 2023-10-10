@@ -52,4 +52,7 @@ ngx_http_lua_kong_ctx_t *ngx_http_lua_kong_get_module_ctx(
 char *ngx_http_lua_kong_error_log_init(
     ngx_conf_t *cf);
 
+ngx_int_t
+ngx_http_lua_kong_add_vars(ngx_conf_t *cf);
+
 #endif /* _NGX_HTTP_LUA_KONG_COMMON_H_INCLUDED_ */
