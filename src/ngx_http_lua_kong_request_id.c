@@ -19,7 +19,7 @@
 
 
 #define KONG_REQUEST_ID_MAX_LEN     32
-#define KONG_REQUEST_ID_FORMAT      "%08xD%08xD%08xD%08xD"
+#define KONG_REQUEST_ID_FORMAT      "%08x%08x%08x%08x"
 
 
 static ngx_int_t
