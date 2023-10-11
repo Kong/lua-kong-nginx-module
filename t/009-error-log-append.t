@@ -250,7 +250,7 @@ GET /test
 GET /test
 --- error_code: 200
 --- error_log eval
-qr/log_msg.*request_id: "[0-9a-f]{16}"$/
+qr/log_msg.*request_id: "[0-9a-f]{32}"$/
 --- no_error_log
 [error]
 [crit]

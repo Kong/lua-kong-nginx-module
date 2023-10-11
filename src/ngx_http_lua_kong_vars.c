@@ -18,7 +18,7 @@
 #include "ngx_http_lua_kong_common.h"
 
 
-#define NGX_HTTP_LUA_KONG_RANDOM_COUNT         2
+#define NGX_HTTP_LUA_KONG_RANDOM_COUNT         4
 #define NGX_HTTP_LUA_KONG_UINT32_HEX_LEN       sizeof(uint32_t) * 2
 
 

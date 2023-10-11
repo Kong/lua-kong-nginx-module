@@ -23,7 +23,7 @@ __DATA__
     location /t {
         content_by_lua_block {
             local rid = ngx.var.kong_request_id
-            assert(ngx.re.match(rid, "[0-9a-f]{16}"))
+            assert(ngx.re.match(rid, "[0-9a-f]{32}"))
             ngx.say("ok")
         }
     }
