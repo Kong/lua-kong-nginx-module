@@ -12,7 +12,6 @@ my $pwd = cwd();
 $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
 
 no_long_string();
-#no_diff();
 
 run_tests();
 

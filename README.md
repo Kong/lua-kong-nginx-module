@@ -167,8 +167,8 @@ Variables
 
 $kong\_request\_id
 ------------------
-Unique request identifier generated from 16 random bytes, in hexadecimal.
-This variable has already been indexed.
+Unique request identifier generated from 16 pseudo-random bytes, in hexadecimal.
+This variable is indexed.
 
 [Back to TOC](#table-of-contents)
 
