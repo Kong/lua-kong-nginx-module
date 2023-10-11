@@ -43,7 +43,7 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
 
     for (i = 0; i < RANDOM_COUNT; i++) {
         rnd = (uint32_t) ngx_random();
-        ngx_hex_dump(id + i * UINT32_HEX_LEN, (u_char *) &rnd, sizeof(uint32_t));
+        id = ngx_hex_dump(id, (u_char *) &rnd, sizeof(uint32_t));
     }
 
     return NGX_OK;
