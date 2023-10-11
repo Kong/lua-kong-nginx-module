@@ -166,7 +166,7 @@ Variables
 =========
 
 $kong\_request\_id
------------------
+------------------
 Unique request identifier generated from 8 random bytes, in hexadecimal.
 This variable has already been indexed.
 

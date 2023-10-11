@@ -3,6 +3,8 @@
 use Test::Nginx::Socket::Lua;
 use Cwd qw(cwd);
 
+repeat_each(2);
+
 plan tests => repeat_each() * (blocks() * 5);
 
 my $pwd = cwd();
