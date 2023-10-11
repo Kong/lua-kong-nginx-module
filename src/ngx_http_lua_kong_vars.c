@@ -30,7 +30,8 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     uint32_t    i, rnd;
 
     id = ngx_pnalloc(r->pool,
-                     NGX_HTTP_LUA_KONG_RANDOM_COUNT * NGX_HTTP_LUA_KONG_UINT32_HEX_LEN);
+                     NGX_HTTP_LUA_KONG_RANDOM_COUNT *
+                     NGX_HTTP_LUA_KONG_UINT32_HEX_LEN);
     if (id == NULL) {
         return NGX_ERROR;
     }
@@ -39,7 +40,8 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     v->no_cacheable = 0;
     v->not_found = 0;
 
-    v->len = NGX_HTTP_LUA_KONG_RANDOM_COUNT * NGX_HTTP_LUA_KONG_UINT32_HEX_LEN;
+    v->len = NGX_HTTP_LUA_KONG_RANDOM_COUNT *
+             NGX_HTTP_LUA_KONG_UINT32_HEX_LEN;
     v->data = id;
 
     for (i = 0; i < NGX_HTTP_LUA_KONG_RANDOM_COUNT; i++) {
