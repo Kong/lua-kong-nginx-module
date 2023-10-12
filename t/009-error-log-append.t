@@ -233,3 +233,27 @@ GET /test
 [error]
 [crit]
 [alert]
+
+
+=== TEST 9: $kong_request_id is appended correctly to error logs
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_error_log_request_id $kong_request_id;
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.log(ngx.INFO, "log_msg")
+            ngx.exit(200)
+        }
+    }
+--- request
+GET /test
+--- error_code: 200
+--- error_log eval
+qr/log_msg.*request_id: "[0-9a-f]{32}"$/
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
