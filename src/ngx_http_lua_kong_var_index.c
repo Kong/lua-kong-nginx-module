@@ -72,7 +72,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("server_addr"),
     ngx_string("server_port"),
 
-/* --with-http_ssl_module */
+    /* --with-http_ssl_module */
 #if (NGX_SSL)
     ngx_string("ssl_cipher"),
     ngx_string("ssl_client_raw_cert"),
@@ -85,6 +85,9 @@ static ngx_str_t default_vars[] = {
     ngx_string("upstream_http_trailer"),
     ngx_string("upstream_http_upgrade"),
     ngx_string("upstream_status"),
+
+    /* lua-kong-module vars */
+    ngx_string("kong_request_id"),
 
     ngx_null_string
 };

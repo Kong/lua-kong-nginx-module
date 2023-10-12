@@ -14,6 +14,8 @@ Table of Contents
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
 * [Methods](#methods)
     * [resty.kong.tls.request\_client\_certificate](#restykongtlsrequest_client_certificate)
+* [Variables](#variables)
+    * [$kong\_request\_id](#kong_request_id)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
     * [resty.kong.tls.set\_upstream\_cert\_and\_key](#restykongtlsset_upstream_cert_and_key)
@@ -164,6 +166,16 @@ in later phases.
 
 This function returns `true` when the call is successful. Otherwise it returns
 `nil` and a string describing the error.
+
+[Back to TOC](#table-of-contents)
+
+Variables
+=========
+
+$kong\_request\_id
+------------------
+Unique request identifier generated from 16 pseudo-random bytes, in hexadecimal.
+This variable is indexed.
 
 [Back to TOC](#table-of-contents)
 

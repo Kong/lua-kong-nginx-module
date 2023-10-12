@@ -25,7 +25,7 @@ static char* ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void
 
 
 static ngx_http_module_t ngx_http_lua_kong_module_ctx = {
-    NULL,                                    /* preconfiguration */
+    ngx_http_lua_kong_add_vars,              /* preconfiguration */
     ngx_http_lua_kong_init,                  /* postconfiguration */
 
     NULL,                                    /* create main configuration */
