@@ -79,5 +79,3 @@ ngx_http_lua_kong_add_vars(ngx_conf_t *cf)
 
     return NGX_OK;
 }
-
-
