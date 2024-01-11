@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  KONG_VERSION: master
+  KONG_VERSION: chore/bump_openresty_1_25_3_1
   BUILD_ROOT: ${{ github.workspace }}/kong/bazel-bin/build
 
 concurrency:
