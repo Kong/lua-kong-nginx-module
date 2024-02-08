@@ -21,6 +21,7 @@ __DATA__
 === TEST 1: session reuse by session tickets without disable_session_reuse
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
         server_name   example.com;
@@ -91,7 +92,9 @@ SSL reused session
 
 === TEST 2: session reuse by session cache without disable_session_reuse
 --- http_config
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
         server_name   example.com;
@@ -162,7 +165,9 @@ SSL reused session
 
 === TEST 3: disable_session_reuse can suppress usage of session tickets
 --- http_config
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
         server_name   example.com;
@@ -235,7 +240,9 @@ SSL reused session
 
 === TEST 4: disable_session_reuse can suppress usage of session cache
 --- http_config
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
         server_name   example.com;
