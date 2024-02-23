@@ -21,7 +21,8 @@ __DATA__
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     server {
-        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock http2;
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        http2 on;
         server_name   example.com;
 
         server_tokens off;
@@ -57,7 +58,8 @@ GET /t
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     server {
-        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock http2;
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        http2 on;
         server_name   example.com;
 
         server_tokens off;
@@ -99,7 +101,8 @@ GET /t
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     server {
-        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock http2;
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        http2 on;
         server_name   example.com;
 
         server_tokens off;
@@ -142,7 +145,8 @@ GET /t
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     server {
-        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock http2;
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        http2 on;
         server_name   example.com;
 
         server_tokens off;
@@ -185,7 +189,8 @@ GET /t
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     server {
-        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock http2;
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        http2 on;
         server_name   example.com;
 
         server_tokens off;
@@ -231,7 +236,8 @@ falseincorrect argument, expects a string, got number
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
     server {
-        listen 127.0.0.1:12346 http2;
+        listen 127.0.0.1:12346;
+        http2 on;
         server_name   example.com;
 
         server_tokens off;
