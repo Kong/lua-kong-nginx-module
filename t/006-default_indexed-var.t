@@ -432,8 +432,8 @@ get variable value '0' by index
 GET /test
 --- more_headers
 x-kong-request-debug: true
-x-kong-request-debug_token: 12345
-x_kong_request_debug_log: false
+x-kong-request-debug-token: 12345
+x-kong-request-debug-log: false
 --- response_body
 true 12345 false
 --- error_log
