@@ -411,3 +411,36 @@ get variable value '0' by index
 [error]
 [crit]
 [alert]
+
+=== TEST 13: variable $http_x_kong_request_debug, $http_x_kong_request_debug_token, $http_x_kong_request_debug_log
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index default;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.say(ngx.var.http_x_kong_request_debug, " ",
+                    ngx.var.http_x_kong_request_debug_token, " ",
+                    ngx.var.http_x_kong_request_debug_log)
+        }
+    }
+--- request
+GET /test
+--- more_headers
+x-kong-request-debug: true
+x-kong-request-debug_token: 12345
+x_kong_request_debug_log: false
+--- response_body
+true 12345 false
+--- error_log
+get variable value 'true' by index
+get variable value '12345' by index
+get variable value 'false' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
