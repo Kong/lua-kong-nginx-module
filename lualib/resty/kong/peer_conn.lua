@@ -28,7 +28,7 @@ end
 
 local function get_last_peer_connection_cached()
     if get_phase() ~= "balancer" then
-        error("get_last_peer_connection_cached can only be called in balancer phase")
+        error("get_last_peer_connection_cached() can only be called in balancer phase")
     end
 
     local r = get_request()

@@ -15,7 +15,7 @@
  */
 
 
-#include "ngx_http_lua_common.h"
+#include "ngx_http_lua_kong_common.h"
 
 int
 ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r, 
