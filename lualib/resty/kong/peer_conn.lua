@@ -1,11 +1,15 @@
 local ffi              = require "ffi"
-local C                = ffi.C
 local base             = require "resty.core.base"
-local ffi_str          = ffi.string
+
 local orig_get_request = base.get_request
+local errmsg           = base.get_errmsg_ptr()
+local C                = ffi.C
+local ffi_str          = ffi.string
 local get_phase        = ngx.get_phase
-local error            = error
 local NGX_ERROR        = ngx.ERROR
+
+local error            = error
+
 
 ffi.cdef[[
 int
@@ -13,7 +17,6 @@ ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
     char **err);
 ]]
 
-local errmsg = base.get_errmsg_ptr()
 
 local function get_request()
     local r = orig_get_request()

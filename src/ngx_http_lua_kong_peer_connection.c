@@ -17,6 +17,7 @@
 
 #include "ngx_http_lua_kong_common.h"
 
+
 int
 ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r, 
     char **err)
@@ -26,5 +27,7 @@ ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
         return NGX_ERROR;
     }
 
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0, 
+                   "last_peer_connection_cached %d", r->upstream->peer.cached);
     return r->upstream->peer.cached;
 }

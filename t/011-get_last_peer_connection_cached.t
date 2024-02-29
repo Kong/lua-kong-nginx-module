@@ -3,7 +3,7 @@
 use Test::Nginx::Socket::Lua;
 use Cwd qw(cwd);
 
-log_level('info');
+log_level('debug');
 repeat_each(1);
 
 plan tests => repeat_each() * (blocks() * 2);
@@ -26,7 +26,6 @@ __DATA__
         balancer_by_lua_block {
             local peer_conn = require("resty.kong.peer_conn")
             local last_peer_connection_cached = peer_conn.get_last_peer_connection_cached()
-            ngx.log(ngx.INFO, "last_peer_connection_cached ", tostring(last_peer_connection_cached))
 
             local balancer = require "ngx.balancer"
             local host = "127.0.0.1"
