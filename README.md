@@ -28,6 +28,7 @@ Table of Contents
     * [resty.kong.tag.get](#restykongtagget)
     * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
     * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
+    * [resty.kong.peer_conn.get\_last\_peer\_connection\_cached](#restykongpeer_connget_last_peer_connection_cached)
 * [License](#license)
 
 Description
@@ -476,6 +477,22 @@ for the possible value of `level`.
 
 [Back to TOC](#table-of-contents)
 
+resty.kong.peer_conn.get\_last\_peer\_connection\_cached
+----------------------------------
+**syntax:** *resty.kong.peer_conn.get_last_peer_connection_cached()*
+
+**context:** *balancer_by_lua*
+
+**subsystems:** *http*
+
+Retrieves whether the connection used in the previous attempt came from the upstream connection pool when the next_upstream retrying mechanism is in action.
+
+Possible result are as follows:
+
+- `0`: The connection was not reused from the upstream connection pool, it means that a new connection was created with the upstream in the previous attempt.
+- `1`: The connection was reused from the upstream connection pool, it means that no new connection was created with the upstream in the previous attempt.
+
+[Back to TOC](#table-of-contents)
 
 License
 =======
