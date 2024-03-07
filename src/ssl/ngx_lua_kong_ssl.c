@@ -303,7 +303,7 @@ failed:
 
 
 static X509 *
-ngx_lua_kong_ssl_x509_copy(X509 *in)
+ngx_lua_kong_ssl_x509_copy(const X509 *in)
 {
     return X509_up_ref(in) == 0 ? NULL : in;
 }
