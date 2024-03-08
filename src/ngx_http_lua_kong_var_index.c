@@ -44,6 +44,11 @@ static ngx_str_t default_vars[] = {
     ngx_string("http_x_forwarded_prefix"),
     ngx_string("http_x_forwarded_proto"),
 
+    /* for request-debugging */
+    ngx_string("http_x_kong_request_debug"),
+    ngx_string("http_x_kong_request_debug_token"),
+    ngx_string("http_x_kong_request_debug_log"),
+
     /* --with-http_ssl_module */
 #if (NGX_HTTP_SSL)
     ngx_string("https"),

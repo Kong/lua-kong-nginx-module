@@ -100,6 +100,9 @@ index *commonly used variables* as follows:
 - `$http_x_forwarded_port`
 - `$http_x_forwarded_prefix`
 - `$http_x_forwarded_proto`
+- `$http_x_kong_request_debug`
+- `$http_x_kong_request_debug_token`
+- `$http_x_kong_request_debug_log`
 - `$https`
 - `$http2`
 - `$realip_remote_addr`
