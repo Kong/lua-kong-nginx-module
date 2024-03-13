@@ -485,12 +485,48 @@ resty.kong.peer_conn.get\_last\_peer\_connection\_cached
 
 **subsystems:** *http*
 
-Retrieves whether the connection used in the previous attempt came from the upstream connection pool when the next_upstream retrying mechanism is in action.
+This function retrieves information about whether the connection used in the previous attempt came from the upstream connection pool when the next_upstream retrying mechanism is in action.
 
-Possible result are as follows:
+The possible results are as follows:
+- `false`: Indicates the connection was not reused from the upstream connection pool, meaning a new connection was created with the upstream in the previous attempt.
+- `true`: Indicates the connection was reused from the upstream connection pool, meaning no new connection was created with the upstream in the previous attempt.
 
-- `0`: The connection was not reused from the upstream connection pool, it means that a new connection was created with the upstream in the previous attempt.
-- `1`: The connection was reused from the upstream connection pool, it means that no new connection was created with the upstream in the previous attempt.
+After applying the [dynamic upstream keepalive patch](https://github.com/Kong/kong/blob/3.6.0/build/openresty/patches/ngx_lua-0.10.26_01-dyn_upstream_keepalive.patch),
+Nginx's upstream module attempts to retrieve connections from the upstream connection pool for each retry.
+If the obtained connection is deemed unusable, Nginx considers that retry invalid and performs a compensatory retry.
+
+Since each retry triggers the `balancer_by_lua` phase, the number of retries logged in Lua land during this phase may exceed the maximum limit set by `set_more_tries`.
+
+Using this function in the `balancer_by_lua` phase allows for determining if the connection used in the previous retry was taken from the connection pool.
+If the return value is `true`, it indicates that the connection from the pool used in the previous retry was unusable, rendering that retry void.
+
+The value returned by this function helps in accurately assessing the actual number of new connections established with the upstream server during the retry process during the `balancer_by_lua phase`.
+
+Example:
+```lua
+local peer_conn = require("resty.kong.peer_conn")
+
+balancer_by_lua_block {
+    local ctx = ngx.ctx
+
+    ctx.tries = ctx.tries or {}
+    local tries = ctx.tries
+
+    -- update the number of tries
+    local try_count = #tries + 1
+
+    -- fetch the last peer connection cached
+    local last_peer_connection_cached = peer_conn.get_last_peer_connection_cached()
+    if try_count > 1 then
+        local previous_try = tries[try_count - 1]
+        last_peer_connection_cached = previous_try.connection_reused
+    else
+        last_peer_connection_cached = false
+    end
+    
+    ...
+}
+```
 
 [Back to TOC](#table-of-contents)
 

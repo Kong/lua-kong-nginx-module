@@ -42,7 +42,7 @@ local function get_last_peer_connection_cached()
         error(ffi_str(errmsg[0]), 2)
     end
 
-    return rc
+    return rc == 1
 end
 
 return {
