@@ -504,8 +504,6 @@ The value returned by this function helps in accurately assessing the actual num
 
 Example:
 ```lua
-local peer_conn = require("resty.kong.peer_conn")
-
 balancer_by_lua_block {
     local ctx = ngx.ctx
 
@@ -516,12 +514,13 @@ balancer_by_lua_block {
     local try_count = #tries + 1
 
     -- fetch the last peer connection cached
+    local peer_conn = require("resty.kong.peer_conn")
     local last_peer_connection_cached = peer_conn.get_last_peer_connection_cached()
     if try_count > 1 then
         local previous_try = tries[try_count - 1]
-        last_peer_connection_cached = previous_try.connection_reused
+        previous_try.cached = peer_conn.get_last_peer_connection_cached()
     else
-        last_peer_connection_cached = false
+        tries[try_count].cached = false
     end
     
     ...
