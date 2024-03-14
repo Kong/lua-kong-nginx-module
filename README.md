@@ -479,7 +479,7 @@ for the possible value of `level`.
 
 resty.kong.peer_conn.get\_last\_peer\_connection\_cached
 ----------------------------------
-**syntax:** *resty.kong.peer_conn.get_last_peer_connection_cached()*
+**syntax:** *res = resty.kong.peer_conn.get_last_peer_connection_cached()*
 
 **context:** *balancer_by_lua*
 
