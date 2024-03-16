@@ -1,7 +1,7 @@
 local ffi              = require "ffi"
 local base             = require "resty.core.base"
 
-local orig_get_request = base.get_request
+local get_request      = base.get_request
 local errmsg           = base.get_errmsg_ptr()
 local C                = ffi.C
 local ffi_str          = ffi.string
@@ -16,17 +16,6 @@ int
 ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
     char **err);
 ]]
-
-
-local function get_request()
-    local r = orig_get_request()
-
-    if not r then
-        error("no request found")
-    end
-
-    return r
-end
 
 
 local function get_last_peer_connection_cached()
