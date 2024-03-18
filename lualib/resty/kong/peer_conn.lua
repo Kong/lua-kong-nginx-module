@@ -24,6 +24,9 @@ local function get_last_peer_connection_cached()
     end
 
     local r = get_request()
+    if not r then
+        error("no request found")
+    end
 
     local rc = C.ngx_http_lua_kong_ffi_get_last_peer_connection_cached(r, errmsg)
 
