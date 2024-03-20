@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   build:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Build dependencies
     runs-on: ubuntu-22.04
 
@@ -73,6 +74,7 @@ jobs:
         luarocks
 
   test:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Test
     runs-on: ubuntu-22.04
     needs: build
