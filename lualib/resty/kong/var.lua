@@ -108,7 +108,8 @@ local function var_get_by_index(index)
                                                         value_len, errmsg)
 
     if rc == NGX_OK then
-        return ffi_str(value_ptr[0], value_len[0])
+        local value = ffi_str(value_ptr[0], value_len[0])
+        return value
     end
 
     if rc == NGX_DECLINED then
