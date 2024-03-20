@@ -7,7 +7,7 @@ use Test::Nginx::Socket::Lua;
 #master_process_enabled(1);
 log_level('warn');
 
-plan tests => repeat_each() * (blocks() * 4) + 8;
+plan tests => repeat_each() * (blocks() * 4) + 6;
 
 #no_diff();
 #no_long_string();
@@ -938,3 +938,27 @@ GET /test
 ]
 --- no_log eval
 "you can't see me init_worker"
+
+
+=== TEST 25: debug log level for nginx error.log
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test_nginx_debug_log {
+
+        error_log logs/error.log crit;
+
+        content_by_lua_block {
+            local log = require("resty.kong.log")
+            log.set_log_level(ngx.DEBUG, 10)
+            assert(log.get_log_level(ngx.WARN) == ngx.DEBUG)
+            ngx.exit(403)
+        }
+    }
+--- request
+GET /test_nginx_debug_log
+--- error_code: 403
+--- error_log eval
+[
+   qr/\[debug\] .*: .* http finalize request: 403, "\/test_nginx_debug_log\?" a:1, c:1/,
+]

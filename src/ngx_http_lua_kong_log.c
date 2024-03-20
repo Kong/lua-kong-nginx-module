@@ -63,6 +63,11 @@ ngx_http_lua_kong_ffi_set_dynamic_log_level(int log_level, int timeout)
         return NGX_ERROR;
     }
 
+    /* adhere to nginx conventions */
+    if (log_level == NGX_LOG_DEBUG) {
+        log_level = NGX_LOG_DEBUG_ALL;
+    }
+
     g_dynamic_log_level = log_level;
     g_dynamic_log_level_timeout_at = (time_t)ngx_time() + (time_t)timeout;
 
@@ -87,5 +92,11 @@ ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
 int
 ngx_http_lua_kong_ffi_get_dynamic_log_level(int current_log_level)
 {
-    return ngx_http_lua_kong_get_dynamic_log_level(current_log_level);
+    int log_level = ngx_http_lua_kong_get_dynamic_log_level(current_log_level);
+
+    if (log_level == NGX_LOG_DEBUG_ALL) {
+        log_level = NGX_LOG_DEBUG;
+    }
+
+    return log_level;
 }
