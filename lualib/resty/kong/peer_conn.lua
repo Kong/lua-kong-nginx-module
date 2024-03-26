@@ -6,16 +6,17 @@ local errmsg           = base.get_errmsg_ptr()
 local C                = ffi.C
 local ffi_str          = ffi.string
 local get_phase        = ngx.get_phase
+local subsystem        = ngx.config.subsystem
 local NGX_ERROR        = ngx.ERROR
 
 local error            = error
 
-
-ffi.cdef[[
-int
-ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
-    char **err);
-]]
+if subsystem == "http" then
+    ffi.cdef[[
+    int ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
+        char **err);
+    ]]
+end
 
 
 local function get_last_peer_connection_cached()
