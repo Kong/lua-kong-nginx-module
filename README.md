@@ -22,6 +22,7 @@ Table of Contents
     * [resty.kong.tls.set\_upstream\_ssl\_trusted\_store](#restykongtlsset_upstream_ssl_trusted_store)
     * [resty.kong.tls.set\_upstream\_ssl\_verify](#restykongtlsset_upstream_ssl_verify)
     * [resty.kong.tls.set\_upstream\_ssl\_verify\_depth](#restykongtlsset_upstream_ssl_verify_depth)
+    * [resty.kong.tls.get\_ssl\_pointer](#restykongtlsget_ssl_pointer)
     * [resty.kong.grpc.set\_authority](#restykonggrpcset_authority)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
@@ -348,6 +349,21 @@ describing the error will be returned.
 
 This function can be called multiple times in the same request. Later calls override
 previous ones.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.get\_ssl\_pointer
+----------------------------------------------------
+**syntax:** *ssl_ptr, err = resty.kong.tls.get\_ssl\_pointer(sock)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*, *preread_by_lua&#42;*
+
+**subsystems:** *http* *stream*
+
+Retrieves the OpenSSL `SSL*` object for the current tcpsock `sock`.
+
+On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
+describing the error will be returned.
 
 [Back to TOC](#table-of-contents)
 

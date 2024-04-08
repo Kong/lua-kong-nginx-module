@@ -24,6 +24,8 @@ local type = type
 local error = error
 local tostring = tostring
 local C = ffi.C
+local ffi_cast = ffi.cast
+local SOCKET_CTX_INDEX = 1
 local ffi_string = ffi.string
 local get_string_buf = base.get_string_buf
 local size_ptr = base.get_size_ptr()
@@ -37,9 +39,13 @@ local kong_lua_kong_ffi_set_upstream_client_cert_and_key
 local kong_lua_kong_ffi_set_upstream_ssl_trusted_store
 local kong_lua_kong_ffi_set_upstream_ssl_verify
 local kong_lua_kong_ffi_set_upstream_ssl_verify_depth
+local kong_lua_kong_ffi_get_socket_ssl
 
 if subsystem == "http" then
     ffi.cdef([[
+    typedef struct ssl_st SSL;
+    typedef struct ngx_http_lua_socket_tcp_upstream_s ngx_http_lua_socket_tcp_upstream_t;
+
     int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
         ngx_http_request_t *r, char *buf, size_t *buf_len);
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
@@ -51,6 +57,8 @@ if subsystem == "http" then
         int verify);
     int ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth(ngx_http_request_t *r,
         int depth);
+    int ngx_http_lua_kong_ffi_get_socket_ssl(ngx_http_lua_socket_tcp_upstream_t *u,
+        void **ssl_conn);
     ]])
 
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain
@@ -59,9 +67,13 @@ if subsystem == "http" then
     kong_lua_kong_ffi_set_upstream_ssl_trusted_store = C.ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store
     kong_lua_kong_ffi_set_upstream_ssl_verify = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth
+    kong_lua_kong_ffi_get_socket_ssl = C.ngx_http_lua_kong_ffi_get_socket_ssl
 
 elseif subsystem == 'stream' then
     ffi.cdef([[
+    typedef struct ssl_st SSL;
+    typedef struct ngx_stream_lua_socket_tcp_upstream_s ngx_stream_lua_socket_tcp_upstream_t;
+
     int ngx_stream_lua_kong_ffi_proxy_ssl_disable(ngx_stream_lua_request_t *r);
     int ngx_stream_lua_kong_ffi_get_full_client_certificate_chain(ngx_stream_lua_request_t *r,
         char *buf, size_t *buf_len);
@@ -74,6 +86,8 @@ elseif subsystem == 'stream' then
         int verify);
     int ngx_stream_lua_kong_ffi_set_upstream_ssl_verify_depth(ngx_stream_lua_request_t *r,
         int depth);
+    int ngx_stream_lua_kong_get_socket_ssl(ngx_stream_lua_socket_tcp_upstream_t *u,
+        void **ssl_conn);
     ]])
 
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_stream_lua_kong_ffi_get_full_client_certificate_chain
@@ -82,6 +96,7 @@ elseif subsystem == 'stream' then
     kong_lua_kong_ffi_set_upstream_ssl_trusted_store = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_trusted_store
     kong_lua_kong_ffi_set_upstream_ssl_verify = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_verify
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_verify_depth
+    kong_lua_kong_ffi_get_socket_ssl = C.ngx_stream_lua_kong_get_socket_ssl
 else
     error("unknown subsystem: " .. subsystem)
 end
@@ -118,6 +133,21 @@ function _M.disable_session_reuse()
     end
 
     return nil, ffi_string(errmsg)
+end
+
+
+local ssl_type = ffi.typeof("SSL*")
+local void_pp = ffi.new("void *[1]")
+
+function _M.get_ssl_pointer(sock)
+    local u = sock[SOCKET_CTX_INDEX]
+
+    local ret = kong_lua_kong_ffi_get_socket_ssl(u, void_pp)
+    if ret ~= NGX_OK then
+        return nil, "no ssl object"
+    end
+
+    return ffi_cast(ssl_type, void_pp[0])
 end
 
 
