@@ -16,6 +16,7 @@
 
 
 #include "ngx_http_lua_kong_common.h"
+#include "ngx_http_lua_socket_tcp.h"
 
 
 /*
@@ -40,6 +41,29 @@ ngx_http_lua_kong_ffi_get_full_client_certificate_chain(ngx_http_request_t *r,
 {
 #if (NGX_SSL)
     return ngx_lua_kong_ssl_get_full_client_certificate_chain(r->connection, buf, buf_len);
+#else
+    return NGX_ABORT;
+#endif
+}
+
+
+int
+ngx_http_lua_kong_ffi_get_socket_ssl(ngx_http_lua_socket_tcp_upstream_t *u, void **ssl_conn)
+{
+#if (NGX_SSL)
+    ngx_connection_t    *uc = u->peer.connection;
+
+    if (ssl_conn == NULL) {
+        return NGX_ABORT;
+    }
+
+    if (uc && (uc->ssl) && (uc->ssl->connection)) {
+        *ssl_conn = uc->ssl->connection;
+        return NGX_OK;
+    }
+
+    return NGX_ERROR;
+
 #else
     return NGX_ABORT;
 #endif
