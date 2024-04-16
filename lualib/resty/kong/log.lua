@@ -26,8 +26,8 @@ int
 ngx_http_lua_kong_ffi_set_dynamic_log_level(int log_level, int timeout);
 
 int
-ngx_http_lua_kong_ffi_get_dynamic_log_level(int* current_log_level,
-    int* timeout, int* original_log_level);
+ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
+    int* current_log_level, int* timeout, int* original_log_level);
 ]])
 
 
@@ -60,13 +60,15 @@ end
 
 do
     local tonumber = tonumber
+    local get_request = base.get_request
 
     local current_log_level = ffi.new("int[1]")
     local original_log_level = ffi.new("int[1]")
     local timeout = ffi.new("int[1]")
 
     function _M.get_log_level()
-        local rc = C.ngx_http_lua_kong_ffi_get_dynamic_log_level(current_log_level,
+        local rc = C.ngx_http_lua_kong_ffi_get_dynamic_log_level(get_request(),
+                                                                 current_log_level,
                                                                  timeout,
                                                                  original_log_level)
         if rc ~= NGX_OK then

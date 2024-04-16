@@ -87,12 +87,16 @@ ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
 
 
 int
-ngx_http_lua_kong_ffi_get_dynamic_log_level(int* current_log_level,
-    int* timeout, int* original_log_level)
+ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
+    int* current_log_level, int* timeout, int* original_log_level)
 {
     if (current_log_level == NULL || timeout == NULL || original_log_level == NULL) {
         return NGX_ERROR;
     }
+
+    *original_log_level = r == NULL ?
+                          ngx_cycle->log->log_level:
+                          r->connection->log->log_level;
 
     /* timeout, disable the dynamic log level */
     if (g_dynamic_log_level_timeout_at < ngx_time()) {
@@ -100,7 +104,7 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(int* current_log_level,
     }
 
     if (g_dynamic_log_level == NGX_CONF_UNSET_UINT) {
-        *current_log_level = ngx_cycle->log->log_level;
+        *current_log_level = *original_log_level;
         *timeout = 0;
 
     } else {
@@ -109,8 +113,6 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(int* current_log_level,
 
         ngx_http_lua_kong_assert(*timeout >= 0);
     }
-
-    *original_log_level = ngx_cycle->log->log_level;
 
     return NGX_OK;
 }
