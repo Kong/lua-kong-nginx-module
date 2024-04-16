@@ -1,13 +1,13 @@
 # vim:set ft= ts=4 sw=4 et fdm=marker:
 # modified from https://github.com/openresty/lua-nginx-module/blob/master/t/045-ngx-var.t
 # with index always turned on
-use Test::Nginx::Socket::Lua;
+use Test::Nginx::Socket::Lua 'no_plan';
 
 #worker_connections(1014);
 #master_process_enabled(1);
 log_level('warn');
 
-plan tests => repeat_each() * (blocks() * 4) + 8;
+#plan tests => repeat_each() * (blocks() * 4) + 8;
 
 #no_diff();
 #no_long_string();
@@ -72,10 +72,18 @@ ok
             local log = require("resty.kong.log")
 
             log.set_log_level(ngx.DEBUG, 2)
-            assert(log.get_log_level(ngx.WARN) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 2)
+            assert(orig_log == ngx.WARN)
 
             ngx.sleep(3)
-            assert(log.get_log_level(ngx.WARN) == ngx.WARN)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.WARN)
+            assert(timeout == 0)
+            assert(orig_log == ngx.WARN)
 
             ngx.say("ok")
         }
@@ -101,12 +109,21 @@ ok
             local log = require("resty.kong.log")
 
             log.set_log_level(ngx.DEBUG, 2)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 2)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me")
 
             ngx.sleep(3)
 
-            assert(log.get_log_level(ngx.WARN) == ngx.WARN)
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.WARN)
+            assert(timeout == 0)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can't see me")
             ngx.say("ok")
         }
@@ -120,6 +137,7 @@ you can see me
 
 
 === TEST 4: works for a single request
+--- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- log_level: alert
@@ -129,12 +147,22 @@ you can see me
             local log = require("resty.kong.log")
             ngx.log(ngx.ERR, "you can't see error")
             log.set_log_level(ngx.ERR, 30)
-            assert(log.get_log_level(ngx.ERR) == ngx.ERR)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.ERR)
+            assert(timeout == 30)
+            assert(orig_log == ngx.ALERT)
+
             ngx.log(ngx.ERR, "you can see error")
 
             ngx.log(ngx.DEBUG, "you can't see debug")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.ALERT)
+
             ngx.log(ngx.DEBUG, "you can see debug")
 
             ngx.say("ok")
