@@ -137,7 +137,6 @@ you can see me
 
 
 === TEST 4: works for a single request
---- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- log_level: alert
@@ -225,7 +224,6 @@ GET /test
 
 
 === TEST 6: persists across multiple pipelined requests
---- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -290,7 +288,12 @@ GET /test
             content_by_lua_block {
                 local log = require("resty.kong.log")
                 log.set_log_level(ngx.DEBUG, 30)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(timeout == 30)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "debug log on port 8091")
                 ngx.say("ok")
             }
@@ -302,7 +305,11 @@ GET /test
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "debug log on port 8092")
                 ngx.say("ok")
             }
@@ -337,7 +344,12 @@ GET /test
                 local log = require("resty.kong.log")
                 ngx.log(ngx.DEBUG, "you can't see me")
                 log.set_log_level(ngx.DEBUG, 30)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(timeout == 30)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me")
             end)
         }
@@ -353,6 +365,7 @@ you can see me
 
 
 === TEST 9: persists after being called on timer phase
+--- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -364,11 +377,19 @@ you can see me
 
             ngx.timer.at(0, function()
                 log.set_log_level(ngx.DEBUG, 30)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(timeout == 30)
+                assert(orig_log == ngx.WARN)
             end)
 
             ngx.sleep(0.1)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me t1")
         }
     }
@@ -376,7 +397,11 @@ you can see me
     location = /t2 {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me t2")
         }
     }
