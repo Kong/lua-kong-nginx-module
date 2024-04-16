@@ -1,13 +1,13 @@
 # vim:set ft= ts=4 sw=4 et fdm=marker:
 # modified from https://github.com/openresty/lua-nginx-module/blob/master/t/045-ngx-var.t
 # with index always turned on
-use Test::Nginx::Socket::Lua 'no_plan';
+use Test::Nginx::Socket::Lua;
 
 #worker_connections(1014);
 #master_process_enabled(1);
 log_level('warn');
 
-#plan tests => repeat_each() * (blocks() * 4) + 8;
+plan tests => repeat_each() * (blocks() * 4) + 8;
 
 #no_diff();
 #no_long_string();
@@ -519,14 +519,14 @@ you can't see me 8091
                     local cur_log, timeout, orig_log = log.get_log_level()
                     assert(cur_log == ngx.DEBUG)
                     assert(timeout == 30)
-                    assert(orig_log == ngx.WARN)
+                    assert(orig_log == ngx.NOTICE)
                 end)
 
                 ngx.sleep(0.1)
 
                 local cur_log, timeout, orig_log = log.get_log_level()
                 assert(cur_log == ngx.DEBUG)
-                assert(orig_log == ngx.WARN)
+                assert(orig_log == ngx.NOTICE)
 
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
@@ -543,7 +543,7 @@ you can't see me 8091
 
                 local cur_log, timeout, orig_log = log.get_log_level()
                 assert(cur_log == ngx.DEBUG)
-                assert(orig_log == ngx.WARN)
+                assert(orig_log == ngx.NOTICE)
 
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
