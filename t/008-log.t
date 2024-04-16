@@ -365,7 +365,6 @@ you can see me
 
 
 === TEST 9: persists after being called on timer phase
---- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -440,11 +439,19 @@ you can see me
 
                 ngx.timer.at(0, function()
                     log.set_log_level(ngx.DEBUG, 30)
-                    assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                    local cur_log, timeout, orig_log = log.get_log_level()
+                    assert(cur_log == ngx.DEBUG)
+                    assert(timeout == 30)
+                    assert(orig_log == ngx.WARN)
                 end)
 
                 ngx.sleep(0.1)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
         }
@@ -455,7 +462,11 @@ you can see me
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
         }
@@ -504,11 +515,19 @@ you can't see me 8091
 
                 ngx.timer.at(0, function()
                     log.set_log_level(ngx.DEBUG, 30)
-                    assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                    local cur_log, timeout, orig_log = log.get_log_level()
+                    assert(cur_log == ngx.DEBUG)
+                    assert(timeout == 30)
+                    assert(orig_log == ngx.WARN)
                 end)
-                
+
                 ngx.sleep(0.1)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
         }
@@ -521,7 +540,11 @@ you can't see me 8091
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
         }
@@ -553,7 +576,12 @@ you can't see me 8091
             local errlog = require("ngx.errlog")
             errlog.raw_log(ngx.DEBUG, "you can't see me")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             errlog.raw_log(ngx.DEBUG, "you can see me")
         }
     }
@@ -568,6 +596,7 @@ you can't see me
 
 
 === TEST 13: works with multiple listeners, different error_log per listener
+--- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     upstream balancer {
@@ -615,11 +644,19 @@ you can't see me
 
                 ngx.timer.at(0, function()
                     log.set_log_level(ngx.DEBUG, 30)
-                    assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                    local cur_log, timeout, orig_log = log.get_log_level()
+                    assert(cur_log == ngx.DEBUG)
+                    assert(timeout == 30)
+                    assert(orig_log == ngx.WARN)
                 end)
 
                 ngx.sleep(0.1)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
         }
@@ -632,7 +669,11 @@ you can't see me
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
         }
