@@ -187,7 +187,12 @@ GET /test
         content_by_lua_block {
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug t1")
             ngx.say("ok")
         }
@@ -196,7 +201,12 @@ GET /test
     location = /t2 {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug t2")
             ngx.say("ok")
         }
@@ -215,6 +225,7 @@ GET /test
 
 
 === TEST 6: persists across multiple pipelined requests
+--- ONLY
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -223,7 +234,12 @@ GET /test
         content_by_lua_block {
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug log in t1")
             ngx.say("ok")
         }
@@ -232,7 +248,12 @@ GET /test
     location = /t2 {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug log in t2")
             ngx.say("ok")
         }
