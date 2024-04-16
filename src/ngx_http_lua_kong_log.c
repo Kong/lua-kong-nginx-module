@@ -25,7 +25,7 @@
 **
 ** Excluding the technical view,
 ** the Kong Gateway does not supoort the Windows OS.
-** 
+**
 */
 #error "The dynamic log level feature is only supported on UNIX like system"
 #endif
@@ -36,7 +36,7 @@
 static ngx_uint_t g_dynamic_log_level = NGX_CONF_UNSET_UINT;
 
 /* after this time, the dynamic log level will restore to original value */
-static time_t     g_dynamic_log_level_timeout_at; 
+static time_t     g_dynamic_log_level_timeout_at;
 
 /* ------------------------------------------------------------------------- */
 
@@ -69,6 +69,7 @@ ngx_http_lua_kong_ffi_set_dynamic_log_level(int log_level, int timeout)
     return NGX_OK;
 }
 
+
 ngx_uint_t
 ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
 {
@@ -84,8 +85,32 @@ ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
     return g_dynamic_log_level;
 }
 
+
 int
-ngx_http_lua_kong_ffi_get_dynamic_log_level(int current_log_level)
+ngx_http_lua_kong_ffi_get_dynamic_log_level(int* current_log_level,
+    int* timeout, int* original_log_level)
 {
-    return ngx_http_lua_kong_get_dynamic_log_level(current_log_level);
+    if (current_log_level == NULL || timeout == NULL || original_log_level == NULL) {
+        return NGX_ERROR;
+    }
+
+    /* timeout, disable the dynamic log level */
+    if (g_dynamic_log_level_timeout_at < ngx_time()) {
+        g_dynamic_log_level = NGX_CONF_UNSET_UINT;
+    }
+
+    if (g_dynamic_log_level == NGX_CONF_UNSET_UINT) {
+        *current_log_level = ngx_cycle->log->log_level;
+        *timeout = 0;
+
+    } else {
+        *current_log_level = g_dynamic_log_level;
+        *timeout = g_dynamic_log_level_timeout_at - (time_t)ngx_time();
+
+        ngx_http_lua_kong_assert(*timeout >= 0);
+    }
+
+    *original_log_level = ngx_cycle->log->log_level;
+
+    return NGX_OK;
 }
