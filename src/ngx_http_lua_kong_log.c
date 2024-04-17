@@ -98,6 +98,13 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
                           ngx_cycle->log->log_level:
                           r->connection->log->log_level;
 
+    /* nginx's log_level may be 0x7ffffff0, 0x80000000
+     * see src/core/ngx_log.h
+     */
+    if (*original_log_level > NGX_LOG_DEBUG) {
+      *original_log_level = NGX_LOG_DEBUG;
+    }
+
     /* timeout, disable the dynamic log level */
     if (g_dynamic_log_level_timeout_at < ngx_time()) {
         g_dynamic_log_level = NGX_CONF_UNSET_UINT;
