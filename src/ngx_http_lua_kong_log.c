@@ -117,9 +117,9 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
     } else {
         *current_log_level = g_dynamic_log_level;
         *timeout = g_dynamic_log_level_timeout_at - (time_t) ngx_time();
-
-        ngx_http_lua_kong_assert(*timeout >= 0);
     }
+
+    ngx_http_lua_kong_assert(*timeout >= 0);
 
     return NGX_OK;
 }
