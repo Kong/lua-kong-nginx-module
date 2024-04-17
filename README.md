@@ -471,8 +471,7 @@ resty.kong.log.get\_log\_level
 
 Returns the current dynamic log level, remaining timeout and the original log level.
 
-If the dynamic log level is not set or not active,
-`timeout` will be `0`.
+`timeout` is in whole seconds, as an integer. If the dynamic log level is not set or not active, `timeout` will be `0`.
 
 Please see [Nginx log level constants](https://github.com/openresty/lua-nginx-module#nginx-log-level-constants)
 for the possible value of `level`.
