@@ -117,7 +117,14 @@ ok
 
             ngx.log(ngx.DEBUG, "you can see me")
 
-            ngx.sleep(3)
+            ngx.sleep(1)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 1)
+            assert(orig_log == ngx.WARN)
+
+            ngx.sleep(2)
 
             local cur_log, timeout, orig_log = log.get_log_level()
             assert(cur_log == ngx.WARN)

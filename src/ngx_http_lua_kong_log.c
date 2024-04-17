@@ -102,7 +102,7 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
      * see src/core/ngx_log.h
      */
     if (*original_log_level > NGX_LOG_DEBUG) {
-      *original_log_level = NGX_LOG_DEBUG;
+        *original_log_level = NGX_LOG_DEBUG;
     }
 
     /* timeout, disable the dynamic log level */
