@@ -72,10 +72,18 @@ ok
             local log = require("resty.kong.log")
 
             log.set_log_level(ngx.DEBUG, 2)
-            assert(log.get_log_level(ngx.WARN) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 2)
+            assert(orig_log == ngx.WARN)
 
             ngx.sleep(3)
-            assert(log.get_log_level(ngx.WARN) == ngx.WARN)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.WARN)
+            assert(timeout == 0)
+            assert(orig_log == ngx.WARN)
 
             ngx.say("ok")
         }
@@ -101,12 +109,28 @@ ok
             local log = require("resty.kong.log")
 
             log.set_log_level(ngx.DEBUG, 2)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 2)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me")
 
-            ngx.sleep(3)
+            ngx.sleep(1)
 
-            assert(log.get_log_level(ngx.WARN) == ngx.WARN)
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 1)
+            assert(orig_log == ngx.WARN)
+
+            ngx.sleep(2)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.WARN)
+            assert(timeout == 0)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can't see me")
             ngx.say("ok")
         }
@@ -129,12 +153,22 @@ you can see me
             local log = require("resty.kong.log")
             ngx.log(ngx.ERR, "you can't see error")
             log.set_log_level(ngx.ERR, 30)
-            assert(log.get_log_level(ngx.ERR) == ngx.ERR)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.ERR)
+            assert(timeout == 30)
+            assert(orig_log == ngx.ALERT)
+
             ngx.log(ngx.ERR, "you can see error")
 
             ngx.log(ngx.DEBUG, "you can't see debug")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.ALERT)
+
             ngx.log(ngx.DEBUG, "you can see debug")
 
             ngx.say("ok")
@@ -159,7 +193,12 @@ GET /test
         content_by_lua_block {
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug t1")
             ngx.say("ok")
         }
@@ -168,7 +207,12 @@ GET /test
     location = /t2 {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug t2")
             ngx.say("ok")
         }
@@ -195,7 +239,12 @@ GET /test
         content_by_lua_block {
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug log in t1")
             ngx.say("ok")
         }
@@ -204,7 +253,12 @@ GET /test
     location = /t2 {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "debug log in t2")
             ngx.say("ok")
         }
@@ -241,7 +295,12 @@ GET /test
             content_by_lua_block {
                 local log = require("resty.kong.log")
                 log.set_log_level(ngx.DEBUG, 30)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(timeout == 30)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "debug log on port 8091")
                 ngx.say("ok")
             }
@@ -253,7 +312,11 @@ GET /test
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "debug log on port 8092")
                 ngx.say("ok")
             }
@@ -288,7 +351,12 @@ GET /test
                 local log = require("resty.kong.log")
                 ngx.log(ngx.DEBUG, "you can't see me")
                 log.set_log_level(ngx.DEBUG, 30)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(timeout == 30)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me")
             end)
         }
@@ -315,11 +383,19 @@ you can see me
 
             ngx.timer.at(0, function()
                 log.set_log_level(ngx.DEBUG, 30)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(timeout == 30)
+                assert(orig_log == ngx.WARN)
             end)
 
             ngx.sleep(0.1)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me t1")
         }
     }
@@ -327,7 +403,11 @@ you can see me
     location = /t2 {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me t2")
         }
     }
@@ -366,11 +446,19 @@ you can see me
 
                 ngx.timer.at(0, function()
                     log.set_log_level(ngx.DEBUG, 30)
-                    assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                    local cur_log, timeout, orig_log = log.get_log_level()
+                    assert(cur_log == ngx.DEBUG)
+                    assert(timeout == 30)
+                    assert(orig_log == ngx.WARN)
                 end)
 
                 ngx.sleep(0.1)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
         }
@@ -381,7 +469,11 @@ you can see me
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
         }
@@ -430,11 +522,19 @@ you can't see me 8091
 
                 ngx.timer.at(0, function()
                     log.set_log_level(ngx.DEBUG, 30)
-                    assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                    local cur_log, timeout, orig_log = log.get_log_level()
+                    assert(cur_log == ngx.DEBUG)
+                    assert(timeout == 30)
+                    assert(orig_log == ngx.NOTICE)
                 end)
-                
+
                 ngx.sleep(0.1)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.NOTICE)
+
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
         }
@@ -447,7 +547,11 @@ you can't see me 8091
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.NOTICE)
+
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
         }
@@ -479,7 +583,12 @@ you can't see me 8091
             local errlog = require("ngx.errlog")
             errlog.raw_log(ngx.DEBUG, "you can't see me")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             errlog.raw_log(ngx.DEBUG, "you can see me")
         }
     }
@@ -541,11 +650,19 @@ you can't see me
 
                 ngx.timer.at(0, function()
                     log.set_log_level(ngx.DEBUG, 30)
-                    assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                    local cur_log, timeout, orig_log = log.get_log_level()
+                    assert(cur_log == ngx.DEBUG)
+                    assert(timeout == 30)
+                    assert(orig_log == ngx.WARN)
                 end)
 
                 ngx.sleep(0.1)
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8091")
             }
         }
@@ -558,7 +675,11 @@ you can't see me
         location / {
             content_by_lua_block {
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me 8092")
             }
         }
@@ -586,11 +707,19 @@ you can't see me
         content_by_lua_block {
             local log = require("resty.kong.log")
             ngx.timer.at(0, function()
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me")
             end)
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.sleep(0.1)
         }
     }
@@ -610,10 +739,15 @@ you can see me
     location = /test {
         rewrite_by_lua_block {
             local log = require("resty.kong.log")
-            
+
             ngx.log(ngx.DEBUG, "you can't see me")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me")
         }
 
@@ -640,7 +774,12 @@ you can't see me
             local log = require("resty.kong.log")
             ngx.log(ngx.DEBUG, "you can't see me timer init_worker")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me timer init_worker")
         end)
         ngx.log(ngx.DEBUG, "you can't see me init_worker")
@@ -650,7 +789,11 @@ you can't see me
     location = /test {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me content")
         }
     }
@@ -671,7 +814,12 @@ you can't see me init_worker
         ngx.log(ngx.DEBUG, "you can't see me")
         local log = require("resty.kong.log")
         log.set_log_level(ngx.DEBUG, 30)
-        assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+        local cur_log, timeout, orig_log = log.get_log_level()
+        assert(cur_log == ngx.DEBUG)
+        assert(timeout == 30)
+        assert(orig_log == ngx.WARN)
+
         ngx.log(ngx.DEBUG, "you can see me")
     }
 --- config
@@ -695,14 +843,23 @@ you can't see me
         ngx.log(ngx.DEBUG, "you can't see me init_worker")
         local log = require("resty.kong.log")
         log.set_log_level(ngx.DEBUG, 30)
-        assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+        local cur_log, timeout, orig_log = log.get_log_level()
+        assert(cur_log == ngx.DEBUG)
+        assert(timeout == 30)
+        assert(orig_log == ngx.WARN)
+
         ngx.log(ngx.DEBUG, "you can see me init_worker")
     }
 --- config
     location = /test {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me content")
         }
     }
@@ -724,7 +881,12 @@ you can't see me init_worker
         ngx.log(ngx.DEBUG, "you can't see me init_worker")
         local log = require("resty.kong.log")
         log.set_log_level(ngx.DEBUG, 30)
-        assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+        local cur_log, timeout, orig_log = log.get_log_level()
+        assert(cur_log == ngx.DEBUG)
+        assert(timeout == 30)
+        assert(orig_log == ngx.WARN)
+
         ngx.log(ngx.DEBUG, "you can see me init_worker")
     }
 --- config
@@ -732,7 +894,11 @@ you can't see me init_worker
         error_log logs/error.log warn;
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me content")
         }
     }
@@ -758,13 +924,21 @@ you can't see me init_worker
         end)
         local log = require("resty.kong.log")
         log.set_log_level(ngx.DEBUG, 30)
-        assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+        local cur_log, timeout, orig_log = log.get_log_level()
+        assert(cur_log == ngx.DEBUG)
+        assert(timeout == 30)
+        assert(orig_log == ngx.WARN)
     }
 --- config
     location = /test {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me content")
         }
     }
@@ -790,15 +964,24 @@ GET /test
         ngx.timer.at(0, function()
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 30)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me timer3")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
         end)
     }
 --- config
     location = /test {
         content_by_lua_block {
             local log = require("resty.kong.log")
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me content")
         }
     }
@@ -829,7 +1012,12 @@ GET /test
         ngx.timer.at(0, function()
             local log = require("resty.kong.log")
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me timer3")
         end)
     }
@@ -838,7 +1026,11 @@ GET /test
         content_by_lua_block {
             ngx.timer.at(0, function()
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me content timer")
             end)
         }
@@ -864,12 +1056,20 @@ GET /test
         local log = require("resty.kong.log")
 
         ngx.timer.at(0.2, function()
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me timer at")
         end)
         ngx.timer.every(0.1, function()
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me timer every")
         end)
     }
@@ -878,7 +1078,11 @@ GET /test
         content_by_lua_block {
             ngx.timer.at(0.25, function()
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me content timer at")
             end)
         }
@@ -907,13 +1111,21 @@ GET /test
             ngx.log(ngx.DEBUG, "you can't see me init_worker") -- should not be printed
             ngx.update_time()
             ngx.sleep(1) -- wait for the log level change
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(orig_log == ngx.WARN)
+
             ngx.log(ngx.DEBUG, "you can see me init_worker") -- should be printed
         end)
 
         ngx.timer.at(0.2, function()
             log.set_log_level(ngx.DEBUG, 30)
-            assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+            local cur_log, timeout, orig_log = log.get_log_level()
+            assert(cur_log == ngx.DEBUG)
+            assert(timeout == 30)
+            assert(orig_log == ngx.WARN)
         end)
     }
 
@@ -922,7 +1134,11 @@ GET /test
         content_by_lua_block {
             ngx.timer.at(0.25, function()
                 local log = require("resty.kong.log")
-                assert(log.get_log_level(ngx.ALERT) == ngx.DEBUG)
+
+                local cur_log, timeout, orig_log = log.get_log_level()
+                assert(cur_log == ngx.DEBUG)
+                assert(orig_log == ngx.WARN)
+
                 ngx.log(ngx.DEBUG, "you can see me content")
             end)
         }
