@@ -77,7 +77,7 @@ ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
         return current_log_level;
     }
 
-    if (g_dynamic_log_level_timeout_at < ngx_time()) {
+    if (g_dynamic_log_level_timeout_at <= ngx_time()) {
         g_dynamic_log_level = NGX_CONF_UNSET_UINT;
         return current_log_level;
     }
@@ -106,7 +106,7 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
     }
 
     /* timeout, disable the dynamic log level */
-    if (g_dynamic_log_level_timeout_at < ngx_time()) {
+    if (g_dynamic_log_level_timeout_at <= ngx_time()) {
         g_dynamic_log_level = NGX_CONF_UNSET_UINT;
     }
 
