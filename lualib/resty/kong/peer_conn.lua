@@ -11,31 +11,34 @@ local NGX_ERROR        = ngx.ERROR
 
 local error            = error
 
+
+local get_last_peer_connection_cached
+
+
 if subsystem == "http" then
     ffi.cdef[[
     int ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
         char **err);
     ]]
-end
-
-
-local function get_last_peer_connection_cached()
-    if get_phase() ~= "balancer" then
-        error("get_last_peer_connection_cached() can only be called in balancer phase")
+    
+    get_last_peer_connection_cached = function()
+        if get_phase() ~= "balancer" then
+            error("get_last_peer_connection_cached() can only be called in balancer phase")
+        end
+    
+        local r = get_request()
+        if not r then
+            error("no request found")
+        end
+    
+        local rc = C.ngx_http_lua_kong_ffi_get_last_peer_connection_cached(r, errmsg)
+    
+        if rc == NGX_ERROR then
+            error(ffi_str(errmsg[0]), 2)
+        end
+    
+        return rc == 1
     end
-
-    local r = get_request()
-    if not r then
-        error("no request found")
-    end
-
-    local rc = C.ngx_http_lua_kong_ffi_get_last_peer_connection_cached(r, errmsg)
-
-    if rc == NGX_ERROR then
-        error(ffi_str(errmsg[0]), 2)
-    end
-
-    return rc == 1
 end
 
 return {
