@@ -27,7 +27,7 @@ ngx_http_lua_kong_ffi_set_dynamic_log_level(int log_level, int timeout);
 
 int
 ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
-    int* current_log_level, int* timeout, int* original_log_level);
+    int *current_log_level, int *timeout, int *original_log_level);
 ]])
 
 

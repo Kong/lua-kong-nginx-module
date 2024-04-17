@@ -64,7 +64,7 @@ ngx_http_lua_kong_ffi_set_dynamic_log_level(int log_level, int timeout)
     }
 
     g_dynamic_log_level = log_level;
-    g_dynamic_log_level_timeout_at = (time_t)ngx_time() + (time_t)timeout;
+    g_dynamic_log_level_timeout_at = (time_t) ngx_time() + (time_t) timeout;
 
     return NGX_OK;
 }
@@ -88,7 +88,7 @@ ngx_http_lua_kong_get_dynamic_log_level(ngx_uint_t current_log_level)
 
 int
 ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
-    int* current_log_level, int* timeout, int* original_log_level)
+    int *current_log_level, int *timeout, int *original_log_level)
 {
     if (current_log_level == NULL || timeout == NULL || original_log_level == NULL) {
         return NGX_ERROR;
@@ -116,7 +116,7 @@ ngx_http_lua_kong_ffi_get_dynamic_log_level(ngx_http_request_t *r,
 
     } else {
         *current_log_level = g_dynamic_log_level;
-        *timeout = g_dynamic_log_level_timeout_at - (time_t)ngx_time();
+        *timeout = g_dynamic_log_level_timeout_at - (time_t) ngx_time();
 
         ngx_http_lua_kong_assert(*timeout >= 0);
     }
