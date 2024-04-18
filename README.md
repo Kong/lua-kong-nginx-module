@@ -463,14 +463,17 @@ If we don’t pass timeout to set_log_level(), it will raise a Lua error.
 
 resty.kong.log.get\_log\_level
 ----------------------------------
-**syntax:** *resty.kong.log.get_log_level(level)*
+**syntax:** *current_level, timeout, original_level = resty.kong.log.get_log_level()*
 
 **context:** *any*
 
 **subsystems:** *http*
 
-If the dynamic log level is set, it will return the dynamic log level,
-otherwise it will return `level`.
+Returns the current dynamic log level, remaining timeout (in seconds),
+and the original log level.
+
+If the dynamic log level is not set or not active,
+the `timeout` will be `0`.
 
 Please see [Nginx log level constants](https://github.com/openresty/lua-nginx-module#nginx-log-level-constants)
 for the possible value of `level`.
