@@ -38,7 +38,7 @@ jobs:
         branch=""
 
         if [ ${{ github.event_name }} == 'pull_request' ]; then
-          branch=${GITHUB_HEAD_REF}/merge
+          branch=${GITHUB_HEAD_REF}-merge
         else
           branch=${GITHUB_REF}
         fi
@@ -59,7 +59,7 @@ jobs:
       # Push the temporary commit to a branch so that we can reference in build kong
       if: github.event_name == 'pull_request' && steps.cache-deps.outputs.cache-hit != 'true'
       run: |
-        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git HEAD:refs/heads/${{ github.head_ref }}/merge
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git HEAD:refs/heads/${{ github.head_ref }}-merge
 
     - name: Install packages
       if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -85,7 +85,7 @@ jobs:
     - name: Delete temporary branch
       if: always() && github.event_name == 'pull_request' && steps.cache-deps.outputs.cache-hit != 'true'
       run: |
-        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git --delete refs/heads/${{ github.head_ref }}/merge
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git --delete refs/heads/${{ github.head_ref }}-merge
 
   test:
     name: Test
