@@ -35,13 +35,9 @@ jobs:
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
         cd kong
-        branch=""
-
-        if [ ${{ github.event_name }} == 'pull_request' ]; then
-          branch=${GITHUB_HEAD_REF}-merge
-        else
-          branch=${GITHUB_REF}
-        fi
+        # always use the commit ID, even if it's a PR merge; we will push the commit to temporary branch
+        # so that we can cache by commit ID instead of literal PR branch name
+        branch=${GITHUB_REF}
 
         branch=$(echo "$branch" | sed 's/\//\\\//g')
         sed -i "s/LUA_KONG_NGINX_MODULE=.\+/LUA_KONG_NGINX_MODULE=${branch}/" .requirements
