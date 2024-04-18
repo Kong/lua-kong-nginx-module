@@ -3,6 +3,8 @@ name: Tests
 on: 
   pull_request:
   push:
+    branches:
+    - master
 
 env:
   KONG_VERSION: master
@@ -16,6 +18,8 @@ jobs:
   build:
     name: Build dependencies
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write # required to create branch
 
     steps:
     - name: Checkout source code
@@ -34,7 +38,7 @@ jobs:
         branch=""
 
         if [ ${{ github.event_name }} == 'pull_request' ]; then
-          branch=${GITHUB_HEAD_REF}
+          branch=${GITHUB_HEAD_REF}/merge
         else
           branch=${GITHUB_REF}
         fi
@@ -50,6 +54,12 @@ jobs:
         path: |
           ${{ env.BUILD_ROOT }}
         key: ${{ hashFiles('src/**', 'lualib/**', '.github/workflows/tests.yml', 'kong/.requirements') }}
+
+    - name: Push PR merge to a temporary branch
+      # Push the temporary commit to a branch so that we can reference in build kong
+      if: github.event_name == 'pull_request' && steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git HEAD:refs/heads/${{ github.head_ref }}/merge
 
     - name: Install packages
       if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -71,6 +81,11 @@ jobs:
         nginx -V
         ldd $(which nginx)
         luarocks
+
+    - name: Delete temporary branch
+      if: always() && github.event_name == 'pull_request' && steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git --delete refs/heads/${{ github.head_ref }}/merge
 
   test:
     name: Test
