@@ -16,6 +16,7 @@
 
 
 #include "ngx_stream_lua_kong_module.h"
+#include "ngx_stream_lua_socket_tcp.h"
 
 
 static void* ngx_stream_lua_kong_create_srv_conf(ngx_conf_t* cf);
@@ -297,3 +298,28 @@ ngx_stream_lua_kong_get_upstream_ssl_verify(ngx_stream_session_t *s,
     return ngx_lua_kong_ssl_get_upstream_ssl_verify(&ctx->ssl_ctx, proxy_ssl_verify);
 }
 #endif
+
+
+int
+ngx_stream_lua_kong_get_socket_ssl(ngx_stream_lua_socket_tcp_upstream_t *u,
+void **ssl_conn)
+{
+#if (NGX_SSL)
+    ngx_connection_t    *uc = u->peer.connection;
+
+    if (ssl_conn == NULL) {
+        return NGX_ABORT;
+    }
+
+    if (uc && (uc->ssl) && (uc->ssl->connection)) {
+        *ssl_conn = uc->ssl->connection;
+        return NGX_OK;
+    }
+
+    return NGX_ERROR;
+
+#else
+    return NGX_ABORT;
+#endif
+}
+

@@ -13,7 +13,13 @@ ngx_module_srcs=" \
                 $ngx_addon_dir/src/ssl/ngx_lua_kong_ssl.c \
                 "
 
-ngx_module_incs="$ngx_addon_dir/src"
+if [ -z "$NGX_LUA_LOC" ]; then
+    ngx_lua_loc="../ngx_lua-*"
+else
+    ngx_lua_loc="$NGX_LUA_LOC"
+fi
+
+ngx_module_incs="$ngx_addon_dir/src $ngx_lua_loc/src"
 
 . auto/module
 
