@@ -16,13 +16,13 @@ local get_last_peer_connection_cached
 
 if subsystem == "http" then
     require "resty.core.phase"  -- for ngx.get_phase
+    local ngx_phase = ngx.get_phase
     ffi.cdef[[
     int ngx_http_lua_kong_ffi_get_last_peer_connection_cached(ngx_http_request_t *r,
         char **err);
     ]]
     
     get_last_peer_connection_cached = function()
-        local ngx_phase = ngx.get_phase
         if ngx_phase() ~= "balancer" then
             error("get_last_peer_connection_cached() can only be called in balancer phase")
         end
