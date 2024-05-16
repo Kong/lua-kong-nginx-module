@@ -36,15 +36,15 @@ static ngx_str_t response_headers[] = {
     ngx_string("ratelimit_remaining"),
     ngx_string("ratelimit_reset"),
     ngx_string("retry_after"),
-    ngx_string("x_ratelimit_limit_second"),
-    ngx_string("x_ratelimit_limit_minute"),
-    ngx_string("x_ratelimit_limit_hour"),
+    ngx_string("x-ratelimit-limit-second"),
+    ngx_string("x-ratelimit-limit-minute"),
+    ngx_string("x-ratelimit-limit-hour"),
     ngx_string("x_ratelimit_limit_day"),
     ngx_string("x_ratelimit_limit_month"),
     ngx_string("x_ratelimit_limit_year"),
-    ngx_string("x_ratelimit_remaining_second"),
-    ngx_string("x_ratelimit_remaining_minute"),
-    ngx_string("x_ratelimit_remaining_hour"),
+    ngx_string("x-ratelimit-remaining-second"),
+    ngx_string("x-ratelimit-remaining-minute"),
+    ngx_string("x-ratelimit-remaining-hour"),
     ngx_string("x_ratelimit_remaining_day"),
     ngx_string("x_ratelimit_remaining_month"),
     ngx_string("x_ratelimit_remaining_year"),
@@ -66,10 +66,7 @@ hash_header_key(u_char *data, size_t len) {
     u_char c = 0;
     for (size_t i = 0; i < len; i++) {
         c = data[i];
-        if (c == '-') {
-            c = '_';
-        }
-        key = ngx_hash(key, ngx_tolower(c));
+        key = ngx_hash(key, ngx_tolower(c == '_' ? '-' : c));
     }
 
     return key;
@@ -97,7 +94,7 @@ ngx_http_lua_ffi_header_bulk_carrier_init()
 
     for (ngx_uint_t i = 0; response_headers[i].len; i++) {
         // skip i == 0, as it represents the the key is not found
-        if (ngx_hash_add_key(&response_header_keys, &response_headers[i], i + 1, NGX_HASH_READONLY_KEY) != NGX_OK) {
+        if (ngx_hash_add_key(&response_header_keys, &response_headers[i], (i + 1) * 2, NGX_HASH_READONLY_KEY) != NGX_OK) {
             ngx_log_error(NGX_LOG_EMERG, ngx_cycle->log, 0, "failed to add response header key to hash keys array");
             return NGX_ERROR;
         }
@@ -125,7 +122,7 @@ ngx_http_lua_kong_ffi_get_response_headers(ngx_http_request_t *r,
     uint32_t buf_offset = 0;
 
     // init value_offsets to -1
-    for (i = 0; i < sizeof(response_headers) / sizeof(ngx_str_t) - 1; i++) {
+    for (i = 0; i < 64 * 2; i++) {
         value_offsets[i] = -1;
     }
 
@@ -154,6 +151,7 @@ ngx_http_lua_kong_ffi_get_response_headers(ngx_http_request_t *r,
         }
 
         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+        value_offsets[val - 1 - 1] = hdr_val->len;
         value_offsets[val - 1] = buf_offset;
         buf_offset += hdr_val->len;
     }

@@ -37,7 +37,7 @@ end
 
 function _M.get_response_headers()
     local r = get_request()
-    local value_offsets = ffi_new("int32_t[?]", 64)
+    local value_offsets = ffi_new("int32_t[?]", 64 * 2)
     local buf_size = DEFAULT_VALUE_BUF_SIZE
     local buf = get_string_buf(buf_size)
 
@@ -45,15 +45,14 @@ function _M.get_response_headers()
     assert(rc == NGX_OK, "failed to get response headers: " .. tonumber(rc))
 
     local values = {}
-    for i = 0, 62 do
-        local offset = value_offsets[i]
-        if offset == -1 then
+    for i = 0, 62, 2 do
+        local len = value_offsets[i]
+        local offset = value_offsets[i + 1]
+        if len == -1 then
             goto continue
         end
 
-        local next_offset = value_offsets[i + 1]
-
-        local value = ffi_string(buf + offset, next_offset - offset)
+        local value = ffi_string(buf + offset, len)
         table.insert(values, value)
 
         ::continue::
