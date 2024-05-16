@@ -42,7 +42,7 @@ function _M.get_response_headers()
     local buf = get_string_buf(buf_size)
 
     local rc = C.ngx_http_lua_kong_ffi_get_response_headers(r, value_offsets, buf, buf_size)
-    assert(rc == NGX_OK, "failed to get response headers: " .. rc)
+    assert(rc == NGX_OK, "failed to get response headers: " .. tonumber(rc))
 
     local values = {}
     for i = 0, 62 do
