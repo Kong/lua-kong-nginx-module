@@ -17,7 +17,7 @@
 
 #include "ngx_http_lua_kong_common.h"
 
-#define HTTP_HEADER_HASH_FUNC (ngx_hash_key_lc)
+#define HTTP_HEADER_HASH_FUNC (hash_header_key)
 
 
 static ngx_str_t request_headers[] = {
@@ -57,6 +57,23 @@ static ngx_hash_init_t request_headers_hash_init;
 static ngx_hash_init_t response_headers_hash_init;
 
 static ngx_hash_keys_arrays_t response_header_keys;
+
+
+static ngx_uint_t
+hash_header_key(u_char *data, size_t len) {
+    // incasesensitive, lowercase, and consider '-' and `_` as the same
+    ngx_uint_t key = 0;
+    u_char c = 0;
+    for (size_t i = 0; i < len; i++) {
+        c = data[i];
+        if (c == '-') {
+            c = '_';
+        }
+        key = ngx_hash(key, ngx_tolower(c));
+    }
+
+    return key;
+}
 
 
 int64_t
