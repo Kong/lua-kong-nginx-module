@@ -86,7 +86,7 @@ ngx_http_lua_ffi_header_bulk_carrier_init()
         }
     }
 
-    if (ngx_hash_init(&response_headers_hash, response_header_keys.keys.elts, response_header_keys.keys.nelts) != NGX_OK) {
+    if (ngx_hash_init(&response_headers_hash_init, response_header_keys.keys.elts, response_header_keys.keys.nelts) != NGX_OK) {
         ngx_log_error(NGX_LOG_EMERG, ngx_cycle->log, 0, "failed to initialize response headers hash");
         return NGX_ERROR;
     }
