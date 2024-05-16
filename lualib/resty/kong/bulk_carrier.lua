@@ -9,6 +9,7 @@ local ffi_string            = ffi.string
 local get_request           = base.get_request
 local get_string_buf        = base.get_string_buf
 local get_string_buf_size   = base.get_string_buf_size
+local new_tab               = require("table.new")
 
 local NGX_OK                    = ngx.OK
 local NGX_AGAIN                 = ngx.AGAIN
@@ -35,16 +36,16 @@ function _M.init()
     assert(rc == NGX_OK, "failed to init bulk carrier")
 end
 
+local value_offsets = ffi_new("int32_t[?]", 64 * 2)
 function _M.get_response_headers()
     local r = get_request()
-    local value_offsets = ffi_new("int32_t[?]", 64 * 2)
     local buf_size = DEFAULT_VALUE_BUF_SIZE
     local buf = get_string_buf(buf_size)
 
     local rc = C.ngx_http_lua_kong_ffi_get_response_headers(r, value_offsets, buf, buf_size)
-    assert(rc == NGX_OK, "failed to get response headers: " .. tonumber(rc))
+    assert(rc == NGX_OK, "failed to get response headers")
 
-    local values = {}
+    local values = new_tab(16, 0)
     for i = 0, 62, 2 do
         local len = value_offsets[i]
         local offset = value_offsets[i + 1]
