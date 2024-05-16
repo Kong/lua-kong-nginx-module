@@ -68,10 +68,10 @@ ngx_http_lua_ffi_header_bulk_carrier_init()
     response_headers_hash_init.bucket_size = ngx_align(64, ngx_cacheline_size);
     response_headers_hash_init.name = "lua_kong_response_headers_hash";
     response_headers_hash_init.pool = ngx_cycle->pool;
-    response_headers_hash_init.temp_pool = NULL;
+    response_headers_hash_init.temp_pool = ngx_cycle->pool;;
 
     response_header_keys.pool = ngx_cycle->pool;
-    response_header_keys.temp_pool = NULL;
+    response_header_keys.temp_pool = ngx_cycle->pool;;
 
     if (ngx_hash_keys_array_init(&response_header_keys, NGX_HASH_SMALL) != NGX_OK) {
         ngx_log_error(NGX_LOG_EMERG, ngx_cycle->log, 0, "failed to allocate memory for response headers hash keys");
