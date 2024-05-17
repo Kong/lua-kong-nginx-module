@@ -332,7 +332,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             continue;
         }
 
-        if (hash_val - 1 >= REQ_HDRS) {
+        if (hash_val - 1 < REQ_HDRS) {
             continue;
         }
 
