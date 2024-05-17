@@ -116,8 +116,13 @@ function _M.get_response_headers()
         ::continue::
     end
 
-    assert(remaining_req_hdrs == 0, "failed to parse all request headers")
-    assert(remaining_resp_hdrs == 0, "failed to parse all response headers")
+    if remaining_req_hdrs ~= 0 then
+        error("failed to parse all request headers: " .. remaining_req_hdrs)
+    end
+
+    if remaining_resp_hdrs ~= 0 then
+        error("failed to parse all response headers: " .. remaining_resp_hdrs)
+    end
 
     return bulk
 end
