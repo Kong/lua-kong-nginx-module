@@ -193,7 +193,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
-    if ((hash_val = ngx_hash_find(&req_hdr_bulk, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
+    if ((hash_val = ngx_hash_find(req_hdr_bulk, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
         hdr_val = &r->headers_in.user_agent->value;
 
         if (hdr_val->len == 0) {
@@ -213,7 +213,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_host.data, req_hdr_host.len);
-    if ((hash_val = ngx_hash_find(&req_hdr_bulk, hash_key, req_hdr_host.data, req_hdr_host.len))) {
+    if ((hash_val = ngx_hash_find(req_hdr_bulk, hash_key, req_hdr_host.data, req_hdr_host.len))) {
         hdr_val = &r->headers_in.host->value;
         if (buf_offset + hdr_val->len >= buf_len) {
             // buffer too small
@@ -246,7 +246,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
         hdr_val = &header[i].value;
 
         hash_key = HTTP_HEADER_HASH_FUNC(hdr_key->data, hdr_key->len);
-        if (!(hash_val = ngx_hash_find(&req_hdr_bulk, hash_key, hdr_key->data, hdr_key->len))) {
+        if (!(hash_val = ngx_hash_find(req_hdr_bulk, hash_key, hdr_key->data, hdr_key->len))) {
             continue;
         }
 
@@ -262,7 +262,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_type.data, resp_hdr_content_type.len);
-    if ((hash_val = ngx_hash_find(&resp_hdr_bulk, hash_key, resp_hdr_content_type.data, resp_hdr_content_type.len))) {
+    if ((hash_val = ngx_hash_find(resp_hdr_bulk, hash_key, resp_hdr_content_type.data, resp_hdr_content_type.len))) {
         hdr_val = &r->headers_out.content_type;
         if (buf_offset + hdr_val->len >= buf_len) {
             // buffer too small
@@ -277,7 +277,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_length.data, resp_hdr_content_length.len);
-    if ((hash_val = ngx_hash_find(&resp_hdr_bulk, hash_key, resp_hdr_content_length.data, resp_hdr_content_length.len))) {
+    if ((hash_val = ngx_hash_find(resp_hdr_bulk, hash_key, resp_hdr_content_length.data, resp_hdr_content_length.len))) {
         hdr_val = &r->headers_out.content_length;
 
         if (buf_offset + hdr_val->len >= buf_len) {
@@ -310,7 +310,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
         hdr_val = &header[i].value;
 
         hash_key = HTTP_HEADER_HASH_FUNC(hdr_key->data, hdr_key->len);
-        if (!(hash_val = ngx_hash_find(&resp_hdr_bulk, hash_key, hdr_key->data, hdr_key->len))) {
+        if (!(hash_val = ngx_hash_find(resp_hdr_bulk, hash_key, hdr_key->data, hdr_key->len))) {
             continue;
         }
 
