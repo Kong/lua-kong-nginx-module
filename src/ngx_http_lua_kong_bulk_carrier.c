@@ -192,6 +192,9 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
         value_offsets[i] = -1;
     }
 
+    *req_hdrs = 0;
+    *resp_hdrs = 0;
+
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
     if ((hash_val = ngx_hash_find(req_hdr_bulk, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
         hdr_val = &r->headers_in.user_agent->value;
