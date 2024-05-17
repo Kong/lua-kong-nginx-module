@@ -59,8 +59,7 @@ ngx_http_lua_kong_bulk_carrier(ngx_conf_t *cf,
     ngx_command_t *cmd,
     void *conf)
 {
-    ngx_http_lua_kong_main_conf_t *lkmcf =
-        ngx_http_cycle_get_module_main_conf(ngx_cycle, ngx_http_lua_kong_module);
+    ngx_http_lua_kong_main_conf_t *lkmcf = (ngx_http_lua_kong_main_conf_t *)conf;
     ngx_hash_init_t hash_init;
     ngx_hash_keys_arrays_t req_hdr_keys, resp_hdr_keys, var_keys;
 
