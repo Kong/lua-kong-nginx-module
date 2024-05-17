@@ -182,7 +182,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
     ngx_table_elt_t *header;
     ngx_str_t *hdr_key, *hdr_val;
     ngx_uint_t i, hash_key, hash_val;
-    uint32_t buf_offset = 0;
+    uint32_t buf_offset = 0, found_req_hdrs = 0, found_resp_hdrs = 0;
     ngx_str_t req_hdr_user_agent = ngx_string("user-agent");
     ngx_str_t req_hdr_host = ngx_string("host");
     ngx_str_t resp_hdr_content_type = ngx_string("content-type");
@@ -191,9 +191,6 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
     for (i = 0; i < VALUE_OFFSETS; i++) {
         value_offsets[i] = -1;
     }
-
-    *req_hdrs = 0;
-    *resp_hdrs = 0;
 
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
     if ((hash_val = ngx_hash_find(req_hdr_bulk, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
@@ -209,8 +206,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             value_offsets[hash_val - 1] = hdr_val->len;
             value_offsets[hash_val] = buf_offset;
             buf_offset += hdr_val->len;
-
-            *req_hdrs++;
+            found_req_hdrs++;
         }
 
     }
@@ -229,8 +225,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             value_offsets[hash_val - 1] = hdr_val->len;
             value_offsets[hash_val] = buf_offset;
             buf_offset += hdr_val->len;
-
-            *req_hdrs++;
+            found_req_hdrs++;
         }
     }
 
@@ -264,7 +259,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
         value_offsets[hash_val - 1] = hdr_val->len;
         value_offsets[hash_val] = buf_offset;
-        *req_hdrs++;
+        found_req_hdrs++;
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_type.data, resp_hdr_content_type.len);
@@ -281,7 +276,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             value_offsets[hash_val - 1] = hdr_val->len;
             value_offsets[hash_val] = buf_offset;
             buf_offset += hdr_val->len;
-            *resp_hdrs++;
+            found_resp_hdrs++;
         }
     }
 
@@ -299,7 +294,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             value_offsets[hash_val - 1] = hdr_val->len;
             value_offsets[hash_val] = buf_offset;
             buf_offset += hdr_val->len;
-            *resp_hdrs++;
+            found_resp_hdrs++;
         }
     }
 
@@ -334,8 +329,11 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
         value_offsets[hash_val - 1] = hdr_val->len;
         value_offsets[hash_val] = buf_offset;
         buf_offset += hdr_val->len;
-        *resp_hdrs++;
+        found_resp_hdrs++;
     }
+
+    *req_hdrs = found_req_hdrs;
+    *resp_hdrs = found_resp_hdrs;
 
     return NGX_OK;
 }
