@@ -95,8 +95,8 @@ function _M.get_response_headers()
     }
 
     for i = 0, value_offset_length - 1, 2 do
-        local offset = value_offsets[i]
-        if offset == -1 then
+        local length = value_offsets[i]
+        if length == -1 then
             goto continue
         end
 
@@ -111,7 +111,7 @@ function _M.get_response_headers()
             remaining_resp_hdrs = remaining_resp_hdrs - 1
         end
 
-        tab[hdr_name] = ffi_string(buf + offset, value_offsets[i + 1])
+        tab[hdr_name] = ffi_string(buf + value_offsets[i + 1], length)
 
         ::continue::
     end
