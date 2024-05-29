@@ -184,7 +184,7 @@ ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
     hash_init.hash = &bc->request_headers;
     hash_init.max_size = 64; // TODO: use a better size
 
-    if (ngx_hash_init(&hash_init, &bc->request_headers_keys.keys.elts, bc->request_headers_keys.keys.nelts) != NGX_OK) {
+    if (ngx_hash_init(&hash_init, bc->request_headers_keys.keys.elts, bc->request_headers_keys.keys.nelts) != NGX_OK) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t request_headers hash init failed");
         return NGX_ERROR;
     }
@@ -193,7 +193,7 @@ ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
     hash_init.hash = &bc->response_headers;
     hash_init.max_size = 64; // TODO: use a better size
 
-    if (ngx_hash_init(&hash_init, &bc->response_headers_keys.keys.elts, bc->response_headers_keys.keys.nelts) != NGX_OK) {
+    if (ngx_hash_init(&hash_init, bc->response_headers_keys.keys.elts, bc->response_headers_keys.keys.nelts) != NGX_OK) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t response_headers hash init failed");
         return NGX_ERROR;
     }
