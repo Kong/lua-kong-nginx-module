@@ -123,10 +123,6 @@ function _M:fetch()
         end
 
         local header_value_len = request_header_fetch_info[i + 1]
-        if header_idx == 0 then
-            break
-        end
-
         local header_name = request_header_idx2name[header_idx]
         local header_value = ffi_string(buf + buf_offset, header_value_len)
         buf_offset = buf_offset + header_value_len
@@ -141,9 +137,6 @@ function _M:fetch()
         end
 
         local header_value_len = response_header_fetch_info[i + 1]
-        if header_idx == 0 then
-            break
-        end
 
         local header_name = response_header_idx2name[header_idx]
         local header_value = ffi_string(buf + buf_offset, header_value_len)
