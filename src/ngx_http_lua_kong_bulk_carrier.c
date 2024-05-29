@@ -94,7 +94,7 @@ ngx_http_lua_kong_ffi_bulk_carrier_register_header(
 {
     unsigned char c;
     uint32_t index;
-    ngx_str_t key_dash, key_underscore;
+    ngx_str_t key;
     ngx_hash_keys_arrays_t *keys_array;
 
     // crash early for invalid arguments
@@ -102,48 +102,25 @@ ngx_http_lua_kong_ffi_bulk_carrier_register_header(
     ngx_http_lua_kong_assert(header_name != NULL);
     ngx_http_lua_kong_assert(header_name_len > 0);
 
-    key_dash.len = header_name_len;
-    key_dash.data = ngx_pcalloc(bc->mem_pool, header_name_len);
-    if (key_dash.data == NULL) {
+    key.data = ngx_pcalloc(bc->mem_pool, header_name_len);
+    if (key.data == NULL) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name allocation failed");
         return 0;
     }
 
-    key_underscore.len = header_name_len;
-    key_underscore.data = ngx_pcalloc(bc->mem_pool, header_name_len);
-    if (key_underscore.data == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name allocation failed");
-        return 0;
-    }
-
-    for (index = 0; index < header_name_len; index++) {
-        c = header_name[index];
-
-        if (c != '-' && c != '_') {
-            key_dash.data[index] = c;
-            key_underscore.data[index] = c;
-            continue;
-        }
-
-        key_dash.data[index] = '-';
-        key_underscore.data[index] = '_';
-    }
+    key.len = header_name_len;
+    ngx_memcpy(key.data, header_name, header_name_len);
 
     keys_array = is_request_header ? (&bc->request_headers_keys) : (&bc->response_headers_keys);
-    index = (keys_array->keys.nelts + 2) / 2;
+    index = keys_array->keys.nelts + 1;
 
     if (index >= UINT32_MAX) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name count overflow");
         return 0;
     }
 
-    if (ngx_hash_add_key(keys_array, &key_dash, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name_dash add failed");
-        return 0;
-    }
-
-    if (ngx_hash_add_key(keys_array, &key_underscore, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name_undersocre add failed");
+    if (ngx_hash_add_key(keys_array, &key, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name add failed");
         return 0;
     }
 
@@ -163,13 +140,13 @@ ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
     bc->request_headers_count = bc->request_headers_keys.keys.nelts;
     bc->response_headers_count = bc->response_headers_keys.keys.nelts;
 
-    bc->request_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->request_headers_count * 2 * sizeof(uint32_t));
+    bc->request_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->request_headers_count * sizeof(uint32_t));
     if (bc->request_header_fetch_info == NULL) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t request_header_fetch_info allocation failed");
         return NGX_ERROR;
     }
 
-    bc->response_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->response_headers_count * 2 * sizeof(uint32_t));
+    bc->response_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->response_headers_count * sizeof(uint32_t));
     if (bc->response_header_fetch_info == NULL) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t response_header_fetch_info allocation failed");
         return NGX_ERROR;

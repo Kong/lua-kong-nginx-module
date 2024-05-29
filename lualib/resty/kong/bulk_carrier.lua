@@ -14,9 +14,6 @@ local NGX_AGAIN                 = ngx.AGAIN
 local NGX_ERROR                 = ngx.ERROR
 local DEFAULT_VALUE_BUF_SIZE    = 16 * 1024 -- 16KB
 
-local REQ_HDR_IDX               = {}
-local RESP_HDR_IDX              = {}
-
 
 ffi.cdef[[
 void *
@@ -59,15 +56,20 @@ function _M.new(request_headers, response_headers)
     assert(self.bc ~= nil, "failed to create bulk carrier")
 
     for _k, v in ipairs(request_headers) do
+        v = v:gub("-", "_")
+
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v, #v, 1)
         if header_idx == 0 then
             return nil, "failed to register request header: " .. v
         end
+
         self.request_header_idx2name[header_idx] = v
     end
 
     for _k, v in ipairs(response_headers) do
+        v = v:gub("-", "_")
+
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v, #v, 0)
         if header_idx == 0 then
