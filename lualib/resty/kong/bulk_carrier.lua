@@ -47,8 +47,8 @@ local _M = {}
 function _M.new(request_headers, response_headers)
     local self = {
         bc = C.ngx_http_lua_kong_ffi_bulk_carrier_new(),
-        request_header_idx2name = new_tab(#request_headers + 1, 0),
-        response_header_idx2name = new_tab(#response_headers + 1, 0),
+        request_header_idx2name = new_tab(#request_headers * 2 + 1, 0),
+        response_header_idx2name = new_tab(#response_headers * 2 + 1, 0),
         request_header_count = #request_headers,
         response_header_count = #response_headers,
     }
@@ -56,7 +56,7 @@ function _M.new(request_headers, response_headers)
     assert(self.bc ~= nil, "failed to create bulk carrier")
 
     for _k, v in ipairs(request_headers) do
-        v = v:gsub("-", "_"):lower()
+        v = v:lower()
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v, #v, 1)
@@ -65,17 +65,48 @@ function _M.new(request_headers, response_headers)
         end
 
         self.request_header_idx2name[header_idx] = v
+
+        local v_underscore = v:gsub("-", "_")
+        if v_underscore == v then
+            goto continue
+        end
+
+        header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+            self.bc, v_underscore, #v_underscore, 1)
+        if header_idx == 0 then
+            return nil, "failed to register request header (underscored): " .. v_underscore
+        end
+
+        self.request_header_idx2name[header_idx] = v
+
+        ::continue::
     end
 
     for _k, v in ipairs(response_headers) do
-        v = v:gsub("-", "_"):lower()
+        v = v:lower()
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v, #v, 0)
         if header_idx == 0 then
             return nil, "failed to register response header: " .. v
         end
+
         self.response_header_idx2name[header_idx] = v
+
+        local v_underscore = v:gsub("-", "_")
+        if v_underscore == v then
+            goto continue
+        end
+
+        header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+            self.bc, v_underscore, #v_underscore, 0)
+        if header_idx == 0 then
+            return nil, "failed to register response header (underscored): " .. v_underscore
+        end
+
+        self.response_header_idx2name[header_idx] = v
+
+        ::continue::
     end
 
     local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(self.bc)
