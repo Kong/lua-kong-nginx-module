@@ -344,6 +344,8 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
             }
         }
 
+        ngx_strlow(hdr_key_lowercase_buf, hdr_key->data, hdr_key->len);
+
         hash_key = HTTP_HEADER_HASH_FUNC(hdr_key_lowercase_buf, hdr_key->len);
 
         if (!(hash_val = ngx_hash_find(response_headers, hash_key, hdr_key_lowercase_buf, hdr_key->len))) {
