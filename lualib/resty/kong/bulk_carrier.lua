@@ -59,23 +59,21 @@ function _M.new(request_headers, response_headers)
     assert(self.bc ~= nil, "failed to create bulk carrier")
 
     for _k, v in ipairs(request_headers) do
-        local header_name = v[1]
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, header_name, #header_name, 1)
-        if header_idx < 0 then
-            return nil, "failed to register request header: " .. header_name
+            self.bc, v, #v, 1)
+        if header_idx == 0 then
+            return nil, "failed to register request header: " .. v
         end
-        self.request_header_idx2name[header_idx] = header_name
+        self.request_header_idx2name[header_idx] = v
     end
 
     for _k, v in ipairs(response_headers) do
-        local header_name = v[1]
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, header_name, #header_name, 0)
-        if header_idx < 0 then
-            return nil, "failed to register response header: " .. header_name
+            self.bc, v, #v, 0)
+        if header_idx == 0 then
+            return nil, "failed to register response header: " .. v
         end
-        self.response_header_idx2name[header_idx] = header_name
+        self.response_header_idx2name[header_idx] = v
     end
 
     local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(self.bc)

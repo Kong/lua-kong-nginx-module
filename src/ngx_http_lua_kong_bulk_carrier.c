@@ -138,12 +138,12 @@ ngx_http_lua_kong_ffi_bulk_carrier_register_header(
     }
 
     if (ngx_hash_add_key(keys_array, &key_dash, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name add failed");
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name_dash add failed");
         return 0;
     }
 
     if (ngx_hash_add_key(keys_array, &key_underscore, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name add failed");
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name_undersocre add failed");
         return 0;
     }
 
