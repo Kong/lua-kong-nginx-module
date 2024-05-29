@@ -47,8 +47,8 @@ local _M = {}
 function _M.new(request_headers, response_headers)
     local self = {
         bc = C.ngx_http_lua_kong_ffi_bulk_carrier_new(),
-        request_header_idx2name = {},
-        response_header_idx2name = {},
+        request_header_idx2name = new_tab(#request_headers + 1, 0),
+        response_header_idx2name = new_tab(#response_headers + 1, 0),
         request_header_count = #request_headers,
         response_header_count = #response_headers,
     }
