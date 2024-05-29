@@ -79,6 +79,19 @@ function _M.new(request_headers, response_headers)
 
         self.request_header_idx2name[header_idx] = v
 
+        local v_dash = v:gsub("_", "-")
+        if v_dash == v then
+            goto continue
+        end
+
+        header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+            self.bc, v_dash, #v_dash, 1)
+        if header_idx == 0 then
+            return nil, "failed to register request header (dashed): " .. v_dash
+        end
+
+        self.request_header_idx2name[header_idx] = v
+
         ::continue::
     end
 
@@ -102,6 +115,19 @@ function _M.new(request_headers, response_headers)
             self.bc, v_underscore, #v_underscore, 0)
         if header_idx == 0 then
             return nil, "failed to register response header (underscored): " .. v_underscore
+        end
+
+        self.response_header_idx2name[header_idx] = v
+
+        local v_dash = v:gsub("_", "-")
+        if v_dash == v then
+            goto continue
+        end
+
+        header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+            self.bc, v_dash, #v_dash, 0)
+        if header_idx == 0 then
+            return nil, "failed to register response header (dashed): " .. v_dash
         end
 
         self.response_header_idx2name[header_idx] = v
