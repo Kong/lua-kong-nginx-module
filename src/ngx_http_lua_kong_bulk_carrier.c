@@ -199,10 +199,10 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
     ngx_str_t *hdr_key, *hdr_val;
     ngx_uint_t i, hash_key;
     uint32_t buf_offset = 0, found_req_hdrs = 0, found_resp_hdrs = 0, hash_val;
-    ngx_str_t req_hdr_user_agent = ngx_string("user-agent");
+    ngx_str_t req_hdr_user_agent = ngx_string("user_agent");
     ngx_str_t req_hdr_host = ngx_string("host");
-    ngx_str_t resp_hdr_content_type = ngx_string("content-type");
-    ngx_str_t resp_hdr_content_length = ngx_string("content-length");
+    ngx_str_t resp_hdr_content_type = ngx_string("content_type");
+    ngx_str_t resp_hdr_content_length = ngx_string("content_length");
 
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
     if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
