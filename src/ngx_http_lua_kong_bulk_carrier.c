@@ -18,216 +18,246 @@
 #include "ngx_http_lua_kong_common.h"
 
 #define HTTP_HEADER_HASH_FUNC (ngx_hash_key_lc)
-#define REQ_HDRS (sizeof(request_headers) / sizeof(ngx_str_t) - 1)
-#define RESP_HDRS (sizeof(response_headers) / sizeof(ngx_str_t) - 1)
-#define VALUE_OFFSETS ((REQ_HDRS + RESP_HDRS) * 2)
 
+typedef struct bulk_carrier_s {
+    ngx_pool_t *mem_pool;
+    ngx_pool_t *mem_temp_pool;
+    ngx_hash_t  request_headers;
+    ngx_hash_t  response_headers;
+    ngx_hash_keys_arrays_t request_headers_keys;
+    ngx_hash_keys_arrays_t response_headers_keys;
+    ngx_uint_t request_headers_count;
+    ngx_uint_t response_headers_count;
+    uint32_t   *request_header_fetch_info;
+    uint32_t   *response_header_fetch_info;
+} bulk_carrier_t;
 
-static ngx_str_t request_headers[] = {
-    ngx_string("user-agent"),
-    ngx_string("host"),
-    ngx_null_string
-};
-
-
-static ngx_str_t response_headers[] = {
-    ngx_string("upgrade"),
-    ngx_string("connection"),
-    ngx_string("content-type"),
-    ngx_string("content-length"),
-    ngx_string("ratelimit-limit"),
-    ngx_string("ratelimit-remaining"),
-    ngx_string("ratelimit-reset"),
-    ngx_string("retry-after"),
-    ngx_string("x-ratelimit-limit-second"),
-    ngx_string("x-ratelimit-limit-minute"),
-    ngx_string("x-ratelimit-limit-hour"),
-    ngx_string("x-ratelimit-limit-day"),
-    ngx_string("x-ratelimit-limit-month"),
-    ngx_string("x-ratelimit-limit-year"),
-    ngx_string("x-ratelimit-remaining-second"),
-    ngx_string("x-ratelimit-remaining-minute"),
-    ngx_string("x-ratelimit-remaining-hour"),
-    ngx_string("x-ratelimit-remaining-day"),
-    ngx_string("x-ratelimit-remaining-month"),
-    ngx_string("x-ratelimit-remaining-year"),
-    ngx_null_string
-};
-
-char *
-ngx_http_lua_kong_bulk_carrier(ngx_conf_t *cf,
-    ngx_command_t *cmd,
-    void *conf)
+bulk_carrier_t *
+ngx_http_lua_kong_ffi_bulk_carrier_new()
 {
-    ngx_http_lua_kong_main_conf_t *lkmcf = (ngx_http_lua_kong_main_conf_t *)conf;
-    ngx_hash_init_t hash_init;
-    ngx_hash_keys_arrays_t req_hdr_keys, resp_hdr_keys, var_keys;
-    uint64_t offset = 1;
-
-    req_hdr_keys.pool = cf->pool;
-    req_hdr_keys.temp_pool = cf->temp_pool;
-
-    resp_hdr_keys.pool = cf->pool;
-    resp_hdr_keys.temp_pool = cf->temp_pool;
-
-    var_keys.pool = cf->pool;
-    var_keys.temp_pool = cf->temp_pool;
-
-    if (ngx_hash_keys_array_init(&req_hdr_keys, NGX_HASH_SMALL) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to allocate memory for analytics req hdr bulk hash keys");
-        return NGX_CONF_ERROR;
+    bulk_carrier_t *bc = ngx_calloc(sizeof(bulk_carrier_t), ngx_cycle->log);
+    if (bc == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t allocation failed");
+        return NULL;
     }
 
-    if (ngx_hash_keys_array_init(&resp_hdr_keys, NGX_HASH_SMALL) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to allocate memory for analytics resp hdr bulk hash keys");
-        return NGX_CONF_ERROR;
+    bc->mem_pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, ngx_cycle->log);
+    if (bc->mem_pool == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t mem_pool allocation failed");
+        return NULL;
     }
 
-    // if (ngx_hash_keys_array_init(&var_keys, NGX_HASH_SMALL) != NGX_OK) {
-    //     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to allocate memory for analytics var bulk hash keys");
-    //     return NGX_CONF_ERROR;
-    // }
-
-    for (ngx_uint_t i = 0; request_headers[i].len; i++) {
-        if (ngx_hash_add_key(&req_hdr_keys, &request_headers[i], offset++, NGX_HASH_READONLY_KEY) != NGX_OK) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to add analytics req hdr bulk key to hash keys array");
-            return NGX_CONF_ERROR;
-        }
+    bc->mem_temp_pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, ngx_cycle->log);
+    if (bc->mem_temp_pool == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t mem_temp_pool allocation failed");
+        return NULL;
     }
 
-    for (ngx_uint_t i = 0; response_headers[i].len; i++) {
-        if (ngx_hash_add_key(&resp_hdr_keys, &response_headers[i], offset++, NGX_HASH_READONLY_KEY) != NGX_OK) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to add analytics resp hdr bulk key to hash keys array");
-            return NGX_CONF_ERROR;
-        }
+    bc->request_headers_keys.pool = bc->mem_pool;
+    bc->response_headers_keys.pool = bc->mem_pool;
+    bc->request_headers_keys.temp_pool = bc->mem_temp_pool;
+    bc->response_headers_keys.temp_pool = bc->mem_temp_pool;
+
+    if (ngx_hash_keys_array_init(&bc->request_headers_keys, NGX_HASH_LARGE) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t request_headers_keys init failed");
+        return NULL;
     }
 
-    hash_init.hash = &lkmcf->analytics_req_hdr_bulk;
-    hash_init.key = HTTP_HEADER_HASH_FUNC;
-    hash_init.max_size = 128;
-    hash_init.bucket_size = ngx_align(64, ngx_cacheline_size);
-    hash_init.name = "lua_kong_analytics_req_hdr_bulk_hash";
-    hash_init.pool = cf->pool;
-    hash_init.temp_pool = cf->temp_pool;
-
-    if (ngx_hash_init(&hash_init, req_hdr_keys.keys.elts, req_hdr_keys.keys.nelts) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to initialize analytics req hdr bulk hash");
-        return NGX_CONF_ERROR;
+    if (ngx_hash_keys_array_init(&bc->response_headers_keys, NGX_HASH_LARGE) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t response_headers_keys init failed");
+        return NULL;
     }
 
-    hash_init.hash = &lkmcf->analytics_resp_hdr_bulk;
-    hash_init.key = HTTP_HEADER_HASH_FUNC;
-    hash_init.max_size = 128;
-    hash_init.bucket_size = ngx_align(64, ngx_cacheline_size);
-    hash_init.name = "lua_kong_analytics_resp_hdr_bulk_hash";
-    hash_init.pool = cf->pool;
-    hash_init.temp_pool = cf->temp_pool;
-
-    if (ngx_hash_init(&hash_init, resp_hdr_keys.keys.elts, resp_hdr_keys.keys.nelts) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to initialize analytics resp hdr bulk hash");
-        return NGX_CONF_ERROR;
-    }
-
-    return NGX_CONF_OK;
+    return bc;
 }
+
 
 void
-ngx_http_lua_kong_ffi_get_req_bulk_name(uint32_t index,
-    uint8_t** buf,
-    uint32_t* len)
+ngx_http_lua_kong_ffi_bulk_carrier_free(bulk_carrier_t *bc)
 {
-    if (index >= REQ_HDRS) {
-        *len = 0;
-        return;
+    ngx_destroy_pool(bc->mem_pool);
+
+    if (bc->mem_temp_pool != NULL) {
+        ngx_destroy_pool(bc->mem_temp_pool);
     }
 
-    *buf = request_headers[index].data;
-    *len = request_headers[index].len;
+    ngx_free(bc);
 }
 
-void
-ngx_http_lua_kong_ffi_get_resp_bulk_name(uint32_t index,
-    uint8_t** buf,
-    uint32_t* len)
-{
-    if (index >= RESP_HDRS) {
-        *len = 0;
-        return;
-    }
-
-    *buf = response_headers[index].data;
-    *len = response_headers[index].len;
-}
 
 uint32_t
-ngx_http_lua_kong_ffi_get_value_offset_length()
+ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+    bulk_carrier_t *bc,
+    const unsigned char *header_name,
+    uint32_t header_name_len,
+    int32_t is_request_header)
 {
-    return VALUE_OFFSETS;
+    unsigned char c;
+    uint32_t index;
+    ngx_str_t key_dash, key_underscore;
+    ngx_hash_keys_arrays_t *keys_array;
+
+    // crash early for invalid arguments
+    ngx_http_lua_kong_assert(bc != NULL);
+    ngx_http_lua_kong_assert(header_name != NULL);
+    ngx_http_lua_kong_assert(header_name_len > 0);
+
+    key_dash.len = header_name_len;
+    key_dash.data = ngx_pcalloc(bc->mem_pool, header_name_len);
+    if (key_dash.data == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name allocation failed");
+        return 0;
+    }
+
+    key_underscore.len = header_name_len;
+    key_underscore.data = ngx_pcalloc(bc->mem_pool, header_name_len);
+    if (key_underscore.data == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name allocation failed");
+        return 0;
+    }
+
+    for (index = 0; index < header_name_len; index++) {
+        c = header_name[index];
+
+        if (c != '-' && c != '_') {
+            key_dash.data[index] = c;
+            key_underscore.data[index] = c;
+            continue;
+        }
+
+        key_dash.data[index] = '-';
+        key_underscore.data[index] = '_';
+    }
+
+    keys_array = is_request_header ? (&bc->request_headers_keys) : (&bc->response_headers_keys);
+    index = (keys_array->keys.nelts + 2) / 2;
+
+    if (index >= UINT32_MAX) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name count overflow");
+        return 0;
+    }
+
+    if (ngx_hash_add_key(keys_array, &key_dash, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name add failed");
+        return 0;
+    }
+
+    if (ngx_hash_add_key(keys_array, &key_underscore, (void*)index, NGX_HASH_READONLY_KEY) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t header_name add failed");
+        return 0;
+    }
+
+    return index;
 }
 
 
-int64_t
-ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
-    int32_t* value_offsets,
-    uint8_t* buf,
-    uint32_t buf_len,
-    uint32_t* req_hdrs,
-    uint32_t* resp_hdrs)
+int32_t
+ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
+    bulk_carrier_t *bc)
 {
-    ngx_http_lua_kong_main_conf_t *lkmcf = ngx_http_get_module_main_conf(r, ngx_http_lua_kong_module);
-    ngx_hash_t *req_hdr_bulk = &lkmcf->analytics_req_hdr_bulk;
-    ngx_hash_t *resp_hdr_bulk = &lkmcf->analytics_resp_hdr_bulk;
+    ngx_hash_init_t hash_init;
+
+    // crash early for invalid arguments
+    ngx_http_lua_kong_assert(bc != NULL);
+
+    bc->request_headers_count = bc->request_headers_keys.keys.nelts;
+    bc->response_headers_count = bc->response_headers_keys.keys.nelts;
+
+    bc->request_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->request_headers_count * 2 * sizeof(uint32_t));
+    if (bc->request_header_fetch_info == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t request_header_fetch_info allocation failed");
+        return NGX_ERROR;
+    }
+
+    bc->response_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->response_headers_count * 2 * sizeof(uint32_t));
+    if (bc->response_header_fetch_info == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t response_header_fetch_info allocation failed");
+        return NGX_ERROR;
+    }
+
+    hash_init.name = "lua_kong_analytics_req_hdr_bulk_hash"; // TODO: use a better name
+    hash_init.pool = bc->mem_pool;
+    hash_init.temp_pool = bc->mem_temp_pool;
+    hash_init.key = HTTP_HEADER_HASH_FUNC;
+    hash_init.bucket_size = ngx_align(64, ngx_cacheline_size);
+
+    hash_init.hash = &bc->request_headers;
+    hash_init.max_size = 512; // TODO: use a better size
+
+    if (ngx_hash_init(&hash_init, &bc->request_headers_keys.keys.elts, bc->request_headers_keys.keys.nelts) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t request_headers hash init failed");
+        return NGX_ERROR;
+    }
+
+    hash_init.name = "lua_kong_analytics_resp_hdr_bulk_hash"; // TODO: use a better name
+    hash_init.hash = &bc->response_headers;
+    hash_init.max_size = 512; // TODO: use a better size
+
+    if (ngx_hash_init(&hash_init, &bc->response_headers_keys.keys.elts, bc->response_headers_keys.keys.nelts) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t response_headers hash init failed");
+        return NGX_ERROR;
+    }
+
+    ngx_destroy_pool(bc->mem_temp_pool);
+    bc->mem_temp_pool = NULL;
+
+    return NGX_OK;
+}
+
+
+int32_t
+ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
+    bulk_carrier_t *bc,
+    unsigned char *buf,
+    uint32_t buf_len,
+    uint32_t **request_header_fetch_info,
+    uint32_t **response_header_fetch_info)
+{
+    ngx_hash_t *request_headers = &bc->request_headers;
+    ngx_hash_t *response_headers = &bc->response_headers;
+    uint32_t *request_header_info = bc->request_header_fetch_info;
+    uint32_t *response_header_info = bc->response_header_fetch_info;
     ngx_list_part_t *part;
     ngx_table_elt_t *header;
     ngx_str_t *hdr_key, *hdr_val;
-    ngx_uint_t i, hash_key, hash_val;
-    uint32_t buf_offset = 0, found_req_hdrs = 0, found_resp_hdrs = 0;
+    ngx_uint_t i, hash_key;
+    uint32_t buf_offset = 0, found_req_hdrs = 0, found_resp_hdrs = 0, hash_val;
     ngx_str_t req_hdr_user_agent = ngx_string("user-agent");
     ngx_str_t req_hdr_host = ngx_string("host");
     ngx_str_t resp_hdr_content_type = ngx_string("content-type");
     ngx_str_t resp_hdr_content_length = ngx_string("content-length");
 
-    for (i = 0; i < VALUE_OFFSETS; i++) {
-        value_offsets[i] = -1;
-    }
-
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
-    if ((hash_val = ngx_hash_find(req_hdr_bulk, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
-        if (hash_val - 1 < REQ_HDRS) {
-            hdr_val = &r->headers_in.user_agent->value;
+    if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
+        hdr_val = &r->headers_in.user_agent->value;
 
-            if (hdr_val->len != 0) {
-                if (buf_offset + hdr_val->len >= buf_len) {
-                    // buffer too small
-                    return NGX_AGAIN;
-                }
-
-                ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-                value_offsets[hash_val - 1] = hdr_val->len;
-                value_offsets[hash_val] = buf_offset;
-                buf_offset += hdr_val->len;
-                found_req_hdrs++;
+        if (hdr_val->len != 0) {
+            if (buf_offset + hdr_val->len >= buf_len) {
+                // buffer too small
+                return NGX_AGAIN;
             }
+
+            request_header_info[found_req_hdrs++] = hash_val;
+            request_header_info[found_req_hdrs++] = hdr_val->len;
+            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+            buf_offset += hdr_val->len;
         }
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_host.data, req_hdr_host.len);
-    if ((hash_val = ngx_hash_find(req_hdr_bulk, hash_key, req_hdr_host.data, req_hdr_host.len))) {
-        if (hash_val - 1 < REQ_HDRS) {
-            hdr_val = &r->headers_in.host->value;
+    if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_host.data, req_hdr_host.len))) {
+        hdr_val = &r->headers_in.host->value;
 
-            if (hdr_val->len != 0) {
-                if (buf_offset + hdr_val->len >= buf_len) {
-                    // buffer too small
-                    return NGX_AGAIN;
-                }
-
-                ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-                value_offsets[hash_val - 1] = hdr_val->len;
-                value_offsets[hash_val] = buf_offset;
-                buf_offset += hdr_val->len;
-                found_req_hdrs++;
+        if (hdr_val->len != 0) {
+            if (buf_offset + hdr_val->len >= buf_len) {
+                // buffer too small
+                return NGX_AGAIN;
             }
+
+            request_header_info[found_req_hdrs++] = hash_val;
+            request_header_info[found_req_hdrs++] = hdr_val->len;
+            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+            buf_offset += hdr_val->len;
         }
     }
 
@@ -250,11 +280,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
 
         hash_key = HTTP_HEADER_HASH_FUNC(hdr_key->data, hdr_key->len);
 
-        if (!(hash_val = ngx_hash_find(req_hdr_bulk, hash_key, hdr_key->data, hdr_key->len))) {
-            continue;
-        }
-
-        if (hash_val - 1 >= REQ_HDRS) {
+        if (!(hash_val = ngx_hash_find(request_headers, hash_key, hdr_key->data, hdr_key->len))) {
             continue;
         }
 
@@ -263,49 +289,42 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             return NGX_AGAIN;
         }
 
+        request_header_info[found_req_hdrs++] = hash_val;
+        request_header_info[found_req_hdrs++] = hdr_val->len;
         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-        value_offsets[hash_val - 1] = hdr_val->len;
-        value_offsets[hash_val] = buf_offset;
-        found_req_hdrs++;
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_type.data, resp_hdr_content_type.len);
-    if ((hash_val = ngx_hash_find(resp_hdr_bulk, hash_key, resp_hdr_content_type.data, resp_hdr_content_type.len))) {
-        if (hash_val - 1 >= REQ_HDRS) {
-            hdr_val = &r->headers_out.content_type;
+    if ((hash_val = ngx_hash_find(response_headers, hash_key, resp_hdr_content_type.data, resp_hdr_content_type.len))) {
+        hdr_val = &r->headers_out.content_type;
 
-            if (hdr_val->len != 0) {
-                if (buf_offset + hdr_val->len >= buf_len) {
-                    // buffer too small
-                    return NGX_AGAIN;
-                }
-
-                ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-                value_offsets[hash_val - 1] = hdr_val->len;
-                value_offsets[hash_val] = buf_offset;
-                buf_offset += hdr_val->len;
-                found_resp_hdrs++;
+        if (hdr_val->len != 0) {
+            if (buf_offset + hdr_val->len >= buf_len) {
+                // buffer too small
+                return NGX_AGAIN;
             }
+
+            response_header_info[found_resp_hdrs++] = hash_val;
+            response_header_info[found_resp_hdrs++] = hdr_val->len;
+            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+            buf_offset += hdr_val->len;
         }
     }
 
     hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_length.data, resp_hdr_content_length.len);
-    if ((hash_val = ngx_hash_find(resp_hdr_bulk, hash_key, resp_hdr_content_length.data, resp_hdr_content_length.len))) {
-        if (hash_val - 1 >= REQ_HDRS) {
-            hdr_val = &r->headers_out.content_length;
+    if ((hash_val = ngx_hash_find(response_headers, hash_key, resp_hdr_content_length.data, resp_hdr_content_length.len))) {
+        hdr_val = &r->headers_out.content_length;
 
-            if (hdr_val->len != 0) {
-                if (buf_offset + hdr_val->len >= buf_len) {
-                    // buffer too small
-                    return NGX_AGAIN;
-                }
-
-                ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-                value_offsets[hash_val - 1] = hdr_val->len;
-                value_offsets[hash_val] = buf_offset;
-                buf_offset += hdr_val->len;
-                found_resp_hdrs++;
+        if (hdr_val->len != 0) {
+            if (buf_offset + hdr_val->len >= buf_len) {
+                // buffer too small
+                return NGX_AGAIN;
             }
+
+            response_header_info[found_resp_hdrs++] = hash_val;
+            response_header_info[found_resp_hdrs++] = hdr_val->len;
+            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+            buf_offset += hdr_val->len;
         }
     }
 
@@ -328,11 +347,7 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
 
         hash_key = HTTP_HEADER_HASH_FUNC(hdr_key->data, hdr_key->len);
 
-        if (!(hash_val = ngx_hash_find(resp_hdr_bulk, hash_key, hdr_key->data, hdr_key->len))) {
-            continue;
-        }
-
-        if (hash_val - 1 < REQ_HDRS) {
+        if (!(hash_val = ngx_hash_find(response_headers, hash_key, hdr_key->data, hdr_key->len))) {
             continue;
         }
 
@@ -341,15 +356,17 @@ ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
             return NGX_AGAIN;
         }
 
+        response_header_info[found_resp_hdrs++] = hash_val;
+        response_header_info[found_resp_hdrs++] = hdr_val->len;
         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-        value_offsets[hash_val - 1] = hdr_val->len;
-        value_offsets[hash_val] = buf_offset;
         buf_offset += hdr_val->len;
-        found_resp_hdrs++;
     }
 
-    *req_hdrs = found_req_hdrs;
-    *resp_hdrs = found_resp_hdrs;
+    request_header_info[found_req_hdrs] = 0;
+    response_header_info[found_resp_hdrs] = 0;
+
+    *request_header_fetch_info = request_header_info;
+    *response_header_fetch_info = response_header_info;
 
     return NGX_OK;
 }

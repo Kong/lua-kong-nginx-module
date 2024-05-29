@@ -2,9 +2,7 @@ local ffi                   = require "ffi"
 local base                  = require "resty.core.base"
 
 local C                     = ffi.C
-local error                 = error
 local assert                = assert
-local ffi_new               = ffi.new
 local ffi_string            = ffi.string
 local get_request           = base.get_request
 local get_string_buf        = base.get_string_buf
@@ -21,111 +19,142 @@ local RESP_HDR_IDX              = {}
 
 
 ffi.cdef[[
-void
-ngx_http_lua_kong_ffi_get_req_bulk_name(uint32_t index,
-    uint8_t** buf,
-    uint32_t* len);
+void *
+ngx_http_lua_kong_ffi_bulk_carrier_new();
 
 void
-ngx_http_lua_kong_ffi_get_resp_bulk_name(uint32_t index,
-    uint8_t** buf,
-    uint32_t* len);
+ngx_http_lua_kong_ffi_bulk_carrier_free(void *bc);
 
 uint32_t
-ngx_http_lua_kong_ffi_get_value_offset_length();
+ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+    void *bc,
+    const unsigned char *header_name,
+    uint32_t header_name_len,
+    int32_t is_request_header);
 
-int64_t
-ngx_http_lua_kong_ffi_fetch_analytics_bulk(ngx_http_request_t *r,
-    int32_t* value_offsets,
-    uint8_t* buf,
+int32_t
+ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
+    void *bc);
+
+int32_t
+ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
+    void *bc,
+    unsigned char *buf,
     uint32_t buf_len,
-    uint32_t* req_hdrs,
-    uint32_t* resp_hdrs);
+    uint32_t **request_header_fetch_info,
+    uint32_t **response_header_fetch_info);
 ]]
 
 local _M = {}
 
-
-function _M.init()
-    local buf = ffi.new("uint8_t*[?]", 1)
-    local len = ffi.new("uint32_t[?]", 1)
-    local idx = 0
-
-    while true do
-        C.ngx_http_lua_kong_ffi_get_req_bulk_name(idx, buf, len)
-        if len[0] == 0 then
-            break
-        end
-
-        REQ_HDR_IDX[idx] = ffi_string(buf[0], len[0])
-        idx = idx + 1
-    end
-
-    idx = 0
-    while true do
-        C.ngx_http_lua_kong_ffi_get_resp_bulk_name(idx, buf, len)
-        if len[0] == 0 then
-            break
-        end
-
-        RESP_HDR_IDX[idx] = ffi_string(buf[0], len[0])
-        idx = idx + 1
-    end
-end
-
-local value_offset_length = C.ngx_http_lua_kong_ffi_get_value_offset_length()
-local value_offsets = ffi_new("int32_t[?]", value_offset_length)
-local req_hdrs = ffi_new("uint32_t[?]", 1)
-local resp_hdrs = ffi_new("uint32_t[?]", 1)
-function _M.get_response_headers()
-    local r = get_request()
-    local buf_size = DEFAULT_VALUE_BUF_SIZE
-    local buf = get_string_buf(buf_size)
-
-    local rc = C.ngx_http_lua_kong_ffi_fetch_analytics_bulk(r, value_offsets, buf, buf_size, req_hdrs, resp_hdrs)
-    assert(rc == NGX_OK, "failed to get response headers")
-
-    local request_headers = new_tab(0, 8)
-    local response_headers = new_tab(0, 64)
-    local remaining_req_hdrs = req_hdrs[0]
-    local remaining_resp_hdrs = resp_hdrs[0]
-    local bulk = {
-        request_headers = request_headers,
-        response_headers = response_headers,
+function _M.new(request_headers, response_headers)
+    local self = {
+        bc = C.ngx_http_lua_kong_ffi_bulk_carrier_new(),
+        request_header_idx2name = {},
+        response_header_idx2name = {},
+        request_header_count = #request_headers,
+        response_header_count = #response_headers,
     }
 
-    for i = 0, value_offset_length - 1, 2 do
-        local length = value_offsets[i]
-        if length == -1 then
-            goto continue
+    assert(self.bc ~= nil, "failed to create bulk carrier")
+
+    for _k, v in ipairs(request_headers) do
+        local header_name = v[1]
+        local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+            self.bc, header_name, #header_name, 1)
+        if header_idx < 0 then
+            return nil, "failed to register request header: " .. header_name
         end
+        self.request_header_idx2name[header_idx] = header_name
+    end
 
-        local tab, hdr_name
-        if remaining_req_hdrs ~= 0 then
-            tab = request_headers
-            hdr_name = assert(REQ_HDR_IDX[i / 2], "failed to get request header name")
-            remaining_req_hdrs = remaining_req_hdrs - 1
-        else
-            tab = response_headers
-            hdr_name = assert(RESP_HDR_IDX[i / 2], "failed to get response header name")
-            remaining_resp_hdrs = remaining_resp_hdrs - 1
+    for _k, v in ipairs(response_headers) do
+        local header_name = v[1]
+        local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
+            self.bc, header_name, #header_name, 0)
+        if header_idx < 0 then
+            return nil, "failed to register response header: " .. header_name
         end
-
-        tab[hdr_name] = ffi_string(buf + value_offsets[i + 1], length)
-
-        ::continue::
+        self.response_header_idx2name[header_idx] = header_name
     end
 
-    if remaining_req_hdrs ~= 0 then
-        error("failed to parse all request headers: " .. remaining_req_hdrs)
+    local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(self.bc)
+    if rc ~= NGX_OK then
+        return nil, "failed to finalize registration"
     end
 
-    if remaining_resp_hdrs ~= 0 then
-        error("failed to parse all response headers: " .. remaining_resp_hdrs)
-    end
+    ffi.gc(self.bc, C.ngx_http_lua_kong_ffi_bulk_carrier_free)
 
-    return bulk
+    return setmetatable(self, { __index = _M })
 end
+
+
+local p_request_header_fetch_info = ffi.new("uint32_t*[1]")
+local p_response_header_fetch_info = ffi.new("uint32_t*[1]")
+function _M:fetch()
+    local r = get_request()
+    local buf_size = get_string_buf_size(DEFAULT_VALUE_BUF_SIZE)
+    local buf = get_string_buf(buf_size)
+
+    local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_fetch(
+        r,
+        self.bc,
+        buf,
+        buf_size,
+        p_request_header_fetch_info,
+        p_response_header_fetch_info
+    )
+
+    assert(rc == NGX_OK, "failed to fetch headers")
+
+    local request_headers = new_tab(0, self.request_header_count)
+    local response_headers = new_tab(0, self.response_header_count)
+    local request_header_idx2name = self.request_header_idx2name
+    local response_header_idx2name = self.response_header_idx2name
+
+    local request_header_fetch_info = p_request_header_fetch_info[0]
+    local response_header_fetch_info = p_response_header_fetch_info[0]
+    local buf_offset = 0
+
+    for i = 0, self.request_header_count * 2 - 1, 2 do
+        local header_idx = request_header_fetch_info[i]
+        if header_idx == 0 then
+            break
+        end
+
+        local header_value_len = request_header_fetch_info[i + 1]
+        if header_idx == 0 then
+            break
+        end
+
+        local header_name = request_header_idx2name[header_idx]
+        local header_value = ffi_string(buf + buf_offset, header_value_len)
+        buf_offset = buf_offset + header_value_len
+
+        request_headers[header_name] = header_value
+    end
+
+    for i = 0, self.response_header_count * 2 - 1, 2 do
+        local header_idx = response_header_fetch_info[i]
+        if header_idx == 0 then
+            break
+        end
+
+        local header_value_len = response_header_fetch_info[i + 1]
+        if header_idx == 0 then
+            break
+        end
+
+        local header_name = response_header_idx2name[header_idx]
+        local header_value = ffi_string(buf + buf_offset, header_value_len)
+        buf_offset = buf_offset + header_value_len
+
+        response_headers[header_name] = header_value
+    end
+
+    return request_headers, response_headers
+end
+
 
 
 return _M

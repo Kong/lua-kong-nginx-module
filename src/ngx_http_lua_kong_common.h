@@ -32,13 +32,6 @@ typedef struct {
 
 
 typedef struct {
-    ngx_hash_t               analytics_req_hdr_bulk;
-    ngx_hash_t               analytics_resp_hdr_bulk;
-    ngx_hash_t               analytics_var_bulk;
-} ngx_http_lua_kong_main_conf_t;
-
-
-typedef struct {
     ngx_str_t                tag;
     ngx_int_t                request_id_var_index;
 } ngx_http_lua_kong_loc_conf_t;
