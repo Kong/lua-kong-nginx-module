@@ -17,7 +17,7 @@
 
 #include "ngx_http_lua_kong_common.h"
 
-#define HTTP_HEADER_HASH_FUNC (ngx_hash_key_lc)
+#define HTTP_HEADER_HASH_FUNC (ngx_hash_key)
 
 typedef struct bulk_carrier_s {
     ngx_pool_t *mem_pool;
@@ -156,7 +156,7 @@ ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
     hash_init.pool = bc->mem_pool;
     hash_init.temp_pool = bc->mem_temp_pool;
     hash_init.key = HTTP_HEADER_HASH_FUNC;
-    hash_init.bucket_size = ngx_align(40960, ngx_cacheline_size);
+    hash_init.bucket_size = ngx_align(128, ngx_cacheline_size);
 
     hash_init.hash = &bc->request_headers;
     hash_init.max_size = 64; // TODO: use a better size
