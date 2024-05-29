@@ -56,7 +56,7 @@ function _M.new(request_headers, response_headers)
     assert(self.bc ~= nil, "failed to create bulk carrier")
 
     for _k, v in ipairs(request_headers) do
-        v = v:gub("-", "_"):lower()
+        v = v:gsub("-", "_"):lower()
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v, #v, 1)
@@ -68,7 +68,7 @@ function _M.new(request_headers, response_headers)
     end
 
     for _k, v in ipairs(response_headers) do
-        v = v:gub("-", "_"):lower()
+        v = v:gsub("-", "_"):lower()
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v, #v, 0)
