@@ -203,6 +203,8 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
     ngx_str_t req_hdr_host = ngx_string("host");
     ngx_str_t resp_hdr_content_type = ngx_string("content_type");
     ngx_str_t resp_hdr_content_length = ngx_string("content_length");
+    size_t hdr_key_lowercase_buf_len = 128;
+    u_char* hdr_key_lowercase_buf = ngx_pcalloc(r->pool, hdr_key_lowercase_buf_len);
 
     hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
     if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
@@ -255,9 +257,20 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
         hdr_key = &header[i].key;
         hdr_val = &header[i].value;
 
-        hash_key = HTTP_HEADER_HASH_FUNC(hdr_key->data, hdr_key->len);
+        if (hdr_key->len > hdr_key_lowercase_buf_len) {
+            hdr_key_lowercase_buf_len = hdr_key->len * 1.2;
+            hdr_key_lowercase_buf = ngx_pcalloc(r->pool, hdr_key_lowercase_buf_len);
+            if (hdr_key_lowercase_buf == NULL) {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "failed to allocate memory for header key lowercase buffer");
+                return NGX_ERROR;
+            }
+        }
 
-        if (!(hash_val = ngx_hash_find(request_headers, hash_key, hdr_key->data, hdr_key->len))) {
+        ngx_strlow(hdr_key_lowercase_buf, hdr_key->data, hdr_key->len);
+
+        hash_key = HTTP_HEADER_HASH_FUNC(hdr_key_lowercase_buf, hdr_key->len);
+
+        if (!(hash_val = ngx_hash_find(request_headers, hash_key, hdr_key_lowercase_buf, hdr_key->len))) {
             continue;
         }
 
@@ -322,9 +335,18 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
         hdr_key = &header[i].key;
         hdr_val = &header[i].value;
 
-        hash_key = HTTP_HEADER_HASH_FUNC(hdr_key->data, hdr_key->len);
+        if (hdr_key->len > hdr_key_lowercase_buf_len) {
+            hdr_key_lowercase_buf_len = hdr_key->len * 1.2;
+            hdr_key_lowercase_buf = ngx_pcalloc(r->pool, hdr_key_lowercase_buf_len);
+            if (hdr_key_lowercase_buf == NULL) {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "failed to allocate memory for header key lowercase buffer");
+                return NGX_ERROR;
+            }
+        }
 
-        if (!(hash_val = ngx_hash_find(response_headers, hash_key, hdr_key->data, hdr_key->len))) {
+        hash_key = HTTP_HEADER_HASH_FUNC(hdr_key_lowercase_buf, hdr_key->len);
+
+        if (!(hash_val = ngx_hash_find(response_headers, hash_key, hdr_key_lowercase_buf, hdr_key->len))) {
             continue;
         }
 
