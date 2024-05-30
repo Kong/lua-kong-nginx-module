@@ -12,7 +12,6 @@ local new_tab               = require("table.new")
 local NGX_OK                    = ngx.OK
 local NGX_AGAIN                 = ngx.AGAIN
 local NGX_ERROR                 = ngx.ERROR
-local DEFAULT_VALUE_BUF_SIZE    = 16 * 1024 -- 16KB
 
 
 ffi.cdef[[
@@ -59,7 +58,11 @@ function _M.new(request_headers, response_headers)
         v = v:lower()
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, v, #v, 1)
+            self.bc,
+            v,
+            #v,
+            1
+        )
         if header_idx == 0 then
             return nil, "failed to register request header: " .. v
         end
@@ -69,7 +72,11 @@ function _M.new(request_headers, response_headers)
         local v_underscore = v:gsub("-", "_")
         if v_underscore ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, v_underscore, #v_underscore, 1)
+                self.bc,
+                v_underscore,
+                #v_underscore,
+                1
+            )
             if header_idx == 0 then
                 return nil, "failed to register request header (underscored): " .. v_underscore
             end
@@ -80,7 +87,11 @@ function _M.new(request_headers, response_headers)
         local v_dash = v:gsub("_", "-")
         if v_dash ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, v_dash, #v_dash, 1)
+                self.bc,
+                v_dash,
+                #v_dash,
+                1
+            )
             if header_idx == 0 then
                 return nil, "failed to register request header (dashed): " .. v_dash
             end
@@ -93,7 +104,11 @@ function _M.new(request_headers, response_headers)
         v = v:lower()
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, v, #v, 0)
+            self.bc,
+            v,
+            #v,
+            0
+        )
         if header_idx == 0 then
             return nil, "failed to register response header: " .. v
         end
@@ -103,7 +118,11 @@ function _M.new(request_headers, response_headers)
         local v_underscore = v:gsub("-", "_")
         if v_underscore ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, v_underscore, #v_underscore, 0)
+                self.bc,
+                v_underscore,
+                #v_underscore,
+                0
+            )
             if header_idx == 0 then
                 return nil, "failed to register response header (underscored): " .. v_underscore
             end
@@ -114,7 +133,11 @@ function _M.new(request_headers, response_headers)
         local v_dash = v:gsub("_", "-")
         if v_dash ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-            self.bc, v_dash, #v_dash, 0)
+                self.bc,
+                v_dash,
+                #v_dash,
+                0
+            )
             if header_idx == 0 then
                 return nil, "failed to register response header (dashed): " .. v_dash
             end
@@ -138,9 +161,10 @@ local p_request_header_fetch_info = ffi.new("uint32_t*[1]")
 local p_response_header_fetch_info = ffi.new("uint32_t*[1]")
 function _M:fetch()
     local r = get_request()
-    local buf_size = get_string_buf_size(DEFAULT_VALUE_BUF_SIZE)
+    local buf_size = get_string_buf_size()
     local buf = get_string_buf(buf_size)
 
+::again::
     local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_fetch(
         r,
         self.bc,
@@ -150,7 +174,15 @@ function _M:fetch()
         p_response_header_fetch_info
     )
 
-    assert(rc == NGX_OK, "failed to fetch headers")
+    if rc == NGX_AGAIN then
+        buf = ffi_string(buf, buf_size * 2)
+        buf_size = buf_size * 2
+        goto again
+    end
+
+    if rc ~= NGX_OK then
+        return nil, "failed to fetch headers"
+    end
 
     local request_headers = new_tab(0, self.request_header_count)
     local response_headers = new_tab(0, self.response_header_count)
