@@ -112,7 +112,7 @@ function _M.new(request_headers, response_headers)
         end
 
         local v_dash = v:gsub("_", "-")
-        if v_dash ~ v then
+        if v_dash ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc, v_dash, #v_dash, 0)
             if header_idx == 0 then
