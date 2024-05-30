@@ -140,13 +140,13 @@ ngx_http_lua_kong_ffi_bulk_carrier_finalize_registration(
     bc->request_headers_count = bc->request_headers_keys.keys.nelts;
     bc->response_headers_count = bc->response_headers_keys.keys.nelts;
 
-    bc->request_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->request_headers_count * 2 * sizeof(uint32_t));
+    bc->request_header_fetch_info = ngx_pcalloc(bc->mem_pool, (bc->request_headers_count * 2 + 1) * sizeof(uint32_t));
     if (bc->request_header_fetch_info == NULL) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t request_header_fetch_info allocation failed");
         return NGX_ERROR;
     }
 
-    bc->response_header_fetch_info = ngx_pcalloc(bc->mem_pool, bc->response_headers_count * 2 * sizeof(uint32_t));
+    bc->response_header_fetch_info = ngx_pcalloc(bc->mem_pool, (bc->response_headers_count * 2 + 1) * sizeof(uint32_t));
     if (bc->response_header_fetch_info == NULL) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "bulk_carrier_t response_header_fetch_info allocation failed");
         return NGX_ERROR;
