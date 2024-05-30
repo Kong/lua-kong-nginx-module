@@ -208,49 +208,49 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
     size_t hdr_key_lowercase_buf_len = 128;
     u_char* hdr_key_lowercase_buf = ngx_pcalloc(r->pool, hdr_key_lowercase_buf_len);
 
-    hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
-    if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
-        hdr_val = &r->headers_in.user_agent->value;
+    // hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_user_agent.data, req_hdr_user_agent.len);
+    // if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_user_agent.data, req_hdr_user_agent.len))) {
+    //     hdr_val = &r->headers_in.user_agent->value;
 
-        if (hdr_val->len != 0) {
-            if (buf_offset + hdr_val->len >= buf_len) {
-                // buffer too small
-                return NGX_AGAIN;
-            }
+    //     if (hdr_val->len != 0) {
+    //         if (buf_offset + hdr_val->len >= buf_len) {
+    //             // buffer too small
+    //             return NGX_AGAIN;
+    //         }
 
-            request_header_info[req_hdrs_info_off++] = hash_val;
-            request_header_info[req_hdrs_info_off++] = hdr_val->len;
-            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-            buf_offset += hdr_val->len;
+    //         request_header_info[req_hdrs_info_off++] = hash_val;
+    //         request_header_info[req_hdrs_info_off++] = hdr_val->len;
+    //         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+    //         buf_offset += hdr_val->len;
 
-            if (req_hdrs_info_off / 2 == request_headers_count) {
-                // all request headers fetched
-                return NGX_OK;
-            }
-        }
-    }
+    //         if (req_hdrs_info_off / 2 == request_headers_count) {
+    //             // all request headers fetched
+    //             return NGX_OK;
+    //         }
+    //     }
+    // }
 
-    hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_host.data, req_hdr_host.len);
-    if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_host.data, req_hdr_host.len))) {
-        hdr_val = &r->headers_in.host->value;
+    // hash_key = HTTP_HEADER_HASH_FUNC(req_hdr_host.data, req_hdr_host.len);
+    // if ((hash_val = ngx_hash_find(request_headers, hash_key, req_hdr_host.data, req_hdr_host.len))) {
+    //     hdr_val = &r->headers_in.host->value;
 
-        if (hdr_val->len != 0) {
-            if (buf_offset + hdr_val->len >= buf_len) {
-                // buffer too small
-                return NGX_AGAIN;
-            }
+    //     if (hdr_val->len != 0) {
+    //         if (buf_offset + hdr_val->len >= buf_len) {
+    //             // buffer too small
+    //             return NGX_AGAIN;
+    //         }
 
-            request_header_info[req_hdrs_info_off++] = hash_val;
-            request_header_info[req_hdrs_info_off++] = hdr_val->len;
-            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-            buf_offset += hdr_val->len;
+    //         request_header_info[req_hdrs_info_off++] = hash_val;
+    //         request_header_info[req_hdrs_info_off++] = hdr_val->len;
+    //         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+    //         buf_offset += hdr_val->len;
 
-            if (req_hdrs_info_off / 2 == request_headers_count) {
-                // all request headers fetched
-                return NGX_OK;
-            }
-        }
-    }
+    //         if (req_hdrs_info_off / 2 == request_headers_count) {
+    //             // all request headers fetched
+    //             return NGX_OK;
+    //         }
+    //     }
+    // }
 
     part = &r->headers_in.headers.part;
     header = part->elts;
@@ -302,49 +302,49 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
         }
     }
 
-    hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_type.data, resp_hdr_content_type.len);
-    if ((hash_val = ngx_hash_find(response_headers, hash_key, resp_hdr_content_type.data, resp_hdr_content_type.len))) {
-        hdr_val = &r->headers_out.content_type;
+    // hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_type.data, resp_hdr_content_type.len);
+    // if ((hash_val = ngx_hash_find(response_headers, hash_key, resp_hdr_content_type.data, resp_hdr_content_type.len))) {
+    //     hdr_val = &r->headers_out.content_type;
 
-        if (hdr_val->len != 0) {
-            if (buf_offset + hdr_val->len >= buf_len) {
-                // buffer too small
-                return NGX_AGAIN;
-            }
+    //     if (hdr_val->len != 0) {
+    //         if (buf_offset + hdr_val->len >= buf_len) {
+    //             // buffer too small
+    //             return NGX_AGAIN;
+    //         }
 
-            response_header_info[resp_hdrs_info_off++] = hash_val;
-            response_header_info[resp_hdrs_info_off++] = hdr_val->len;
-            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-            buf_offset += hdr_val->len;
+    //         response_header_info[resp_hdrs_info_off++] = hash_val;
+    //         response_header_info[resp_hdrs_info_off++] = hdr_val->len;
+    //         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+    //         buf_offset += hdr_val->len;
 
-            if (resp_hdrs_info_off / 2 == response_headers_count) {
-                // all response headers fetched
-                return NGX_OK;
-            }
-        }
-    }
+    //         if (resp_hdrs_info_off / 2 == response_headers_count) {
+    //             // all response headers fetched
+    //             return NGX_OK;
+    //         }
+    //     }
+    // }
 
-    hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_length.data, resp_hdr_content_length.len);
-    if ((hash_val = ngx_hash_find(response_headers, hash_key, resp_hdr_content_length.data, resp_hdr_content_length.len))) {
-        hdr_val = &r->headers_out.content_length;
+    // hash_key = HTTP_HEADER_HASH_FUNC(resp_hdr_content_length.data, resp_hdr_content_length.len);
+    // if ((hash_val = ngx_hash_find(response_headers, hash_key, resp_hdr_content_length.data, resp_hdr_content_length.len))) {
+    //     hdr_val = &r->headers_out.content_length;
 
-        if (hdr_val->len != 0) {
-            if (buf_offset + hdr_val->len >= buf_len) {
-                // buffer too small
-                return NGX_AGAIN;
-            }
+    //     if (hdr_val->len != 0) {
+    //         if (buf_offset + hdr_val->len >= buf_len) {
+    //             // buffer too small
+    //             return NGX_AGAIN;
+    //         }
 
-            response_header_info[resp_hdrs_info_off++] = hash_val;
-            response_header_info[resp_hdrs_info_off++] = hdr_val->len;
-            ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
-            buf_offset += hdr_val->len;
+    //         response_header_info[resp_hdrs_info_off++] = hash_val;
+    //         response_header_info[resp_hdrs_info_off++] = hdr_val->len;
+    //         ngx_memcpy(buf + buf_offset, hdr_val->data, hdr_val->len);
+    //         buf_offset += hdr_val->len;
 
-            if (resp_hdrs_info_off / 2 == response_headers_count) {
-                // all response headers fetched
-                return NGX_OK;
-            }
-        }
-    }
+    //         if (resp_hdrs_info_off / 2 == response_headers_count) {
+    //             // all response headers fetched
+    //             return NGX_OK;
+    //         }
+    //     }
+    // }
 
     part = &r->headers_out.headers.part;
     header = part->elts;
