@@ -1,5 +1,6 @@
-local ffi                   = require "ffi"
-local base                  = require "resty.core.base"
+local ffi                   = require("ffi")
+local base                  = require("resty.core.base")
+local tablepool             = require("tablepool")
 
 local C                     = ffi.C
 local assert                = assert
@@ -7,6 +8,8 @@ local ffi_string            = ffi.string
 local get_request           = base.get_request
 local get_string_buf        = base.get_string_buf
 local get_string_buf_size   = base.get_string_buf_size
+local tablepool_fetch       = tablepool.fetch
+local tablepool_release     = tablepool.release
 local new_tab               = require("table.new")
 
 local NGX_OK                    = ngx.OK
@@ -50,9 +53,15 @@ function _M.new(request_headers, response_headers)
         response_header_idx2name = new_tab(#response_headers * 3 + 1, 0),
         request_header_count = #request_headers,
         response_header_count = #response_headers,
+        tablepool_name = nil,
     }
 
     assert(self.bc ~= nil, "failed to create bulk carrier")
+
+    self.tablepool_name = "bulk_carrier_" ..
+                          table.concat(request_headers, "_") ..
+                          "_" ..
+                          table.concat(response_headers, "_")
 
     for _k, v in ipairs(request_headers) do
         v = v:lower()
@@ -184,8 +193,9 @@ function _M:fetch()
         return nil, "failed to fetch headers"
     end
 
-    local request_headers = new_tab(0, self.request_header_count)
-    local response_headers = new_tab(0, self.response_header_count)
+    local nrec = self.request_header_count + self.response_header_count
+    local request_headers = tablepool_fetch(self.tablepool_name, 0, nrec)
+    local response_headers = tablepool_fetch(self.tablepool_name, 0, nrec)
     local request_header_idx2name = self.request_header_idx2name
     local response_header_idx2name = self.response_header_idx2name
 
@@ -225,6 +235,11 @@ function _M:fetch()
     return request_headers, response_headers
 end
 
+
+function _M:recycle(request_headers, response_headers)
+    tablepool_release(self.tablepool_name, request_headers)
+    tablepool_release(self.tablepool_name, response_headers)
+end
 
 
 return _M
