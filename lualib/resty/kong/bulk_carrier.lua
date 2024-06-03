@@ -1,3 +1,5 @@
+assert(ngx.config.subsystem == "http", "bulk carrier is only available in the HTTP subsystem")
+
 local ffi                   = require("ffi")
 local base                  = require("resty.core.base")
 local tablepool             = require("tablepool")
