@@ -14,7 +14,10 @@ local new_tab               = require("table.new")
 
 local NGX_OK                    = ngx.OK
 local NGX_AGAIN                 = ngx.AGAIN
-local NGX_ERROR                 = ngx.ERROR
+
+local INVALID_HEADER_NAME_ERR   = "invalid header name: %s, " ..
+                                  "header names must be lowercase," ..
+                                  "alphanumeric strings or underscores"
 
 
 ffi.cdef[[
@@ -45,6 +48,14 @@ ngx_http_lua_kong_ffi_bulk_carrier_fetch(ngx_http_request_t *r,
 ]]
 
 local _M = {}
+local _MT = { __index = _M }
+
+local function is_acceptable_header_name(name)
+    -- A header name is not acceptable if it violates any of the following rules:
+    -- * All alpha characters must be lowercase
+    -- * All non-alpha characters must be numbers or underscores
+    return name:match("^[a-z0-9_]+$")
+end
 
 function _M.new(request_headers, response_headers)
     local self = {
@@ -57,6 +68,7 @@ function _M.new(request_headers, response_headers)
     }
 
     assert(self.bc ~= nil, "failed to create bulk carrier")
+    ffi.gc(self.bc, C.ngx_http_lua_kong_ffi_bulk_carrier_free)
 
     self.tablepool_name = "bulk_carrier_" ..
                           table.concat(request_headers, "_") ..
@@ -64,7 +76,9 @@ function _M.new(request_headers, response_headers)
                           table.concat(response_headers, "_")
 
     for _k, v in ipairs(request_headers) do
-        v = v:lower()
+        if not is_acceptable_header_name(v) then
+            return nil, INVALID_HEADER_NAME_ERR:format(v)
+        end
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc,
@@ -78,21 +92,6 @@ function _M.new(request_headers, response_headers)
 
         self.request_header_idx2name[header_idx] = v
 
-        local v_underscore = v:gsub("-", "_")
-        if v_underscore ~= v then
-            header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-                self.bc,
-                v_underscore,
-                #v_underscore,
-                1
-            )
-            if header_idx == 0 then
-                return nil, "failed to register request header (underscored): " .. v_underscore
-            end
-
-            self.request_header_idx2name[header_idx] = v
-        end
-
         local v_dash = v:gsub("_", "-")
         if v_dash ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
@@ -101,16 +100,16 @@ function _M.new(request_headers, response_headers)
                 #v_dash,
                 1
             )
-            if header_idx == 0 then
-                return nil, "failed to register request header (dashed): " .. v_dash
-            end
+            assert(header_idx ~= 0, "failed to register request header (dashed): " .. v_dash)
 
             self.request_header_idx2name[header_idx] = v
         end
     end
 
     for _k, v in ipairs(response_headers) do
-        v = v:lower()
+        if not is_acceptable_header_name(v) then
+            return nil, INVALID_HEADER_NAME_ERR:format(v)
+        end
 
         local header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
             self.bc,
@@ -124,21 +123,6 @@ function _M.new(request_headers, response_headers)
 
         self.response_header_idx2name[header_idx] = v
 
-        local v_underscore = v:gsub("-", "_")
-        if v_underscore ~= v then
-            header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
-                self.bc,
-                v_underscore,
-                #v_underscore,
-                0
-            )
-            if header_idx == 0 then
-                return nil, "failed to register response header (underscored): " .. v_underscore
-            end
-
-            self.response_header_idx2name[header_idx] = v
-        end
-
         local v_dash = v:gsub("_", "-")
         if v_dash ~= v then
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
@@ -147,9 +131,7 @@ function _M.new(request_headers, response_headers)
                 #v_dash,
                 0
             )
-            if header_idx == 0 then
-                return nil, "failed to register response header (dashed): " .. v_dash
-            end
+            assert(header_idx ~= 0, "failed to register response header (dashed): " .. v_dash)
 
             self.response_header_idx2name[header_idx] = v
         end
@@ -160,9 +142,7 @@ function _M.new(request_headers, response_headers)
         return nil, "failed to finalize registration"
     end
 
-    ffi.gc(self.bc, C.ngx_http_lua_kong_ffi_bulk_carrier_free)
-
-    return setmetatable(self, { __index = _M })
+    return setmetatable(self, _MT)
 end
 
 
@@ -184,6 +164,7 @@ function _M:fetch()
     )
 
     if rc == NGX_AGAIN then
+        ngx.log(ngx.DEBUG, "[bulk-carrier]: buffer too small, resizing")
         buf = ffi_string(buf, buf_size * 2)
         buf_size = buf_size * 2
         goto again
