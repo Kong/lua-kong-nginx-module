@@ -94,6 +94,7 @@ function _M.new(request_headers, response_headers)
 
         local v_dash = v:gsub("_", "-")
         if v_dash ~= v then
+            ngx.log(ngx.DEBUG,"header name " .. v .. " contains underscores, registering dashed version as well: " .. v_dash)
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
                 self.bc,
                 v_dash,
@@ -125,6 +126,7 @@ function _M.new(request_headers, response_headers)
 
         local v_dash = v:gsub("_", "-")
         if v_dash ~= v then
+            ngx.log(ngx.DEBUG,"header name " .. v .. " contains underscores, registering dashed version as well: " .. v_dash)
             header_idx = C.ngx_http_lua_kong_ffi_bulk_carrier_register_header(
                 self.bc,
                 v_dash,
