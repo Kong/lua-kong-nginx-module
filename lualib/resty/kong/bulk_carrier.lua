@@ -68,7 +68,7 @@ function _M.new(request_headers, response_headers)
     }
 
     assert(self.bc ~= nil, "failed to create bulk carrier")
-    ffi.gc(self.bc, C.ngx_http_lua_kong_ffi_bulk_carrier_free)
+    self.bc = ffi.gc(self.bc, C.ngx_http_lua_kong_ffi_bulk_carrier_free)
 
     self.tablepool_name = "bulk_carrier_" ..
                           table.concat(request_headers, "_") ..
