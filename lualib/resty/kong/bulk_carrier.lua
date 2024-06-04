@@ -24,7 +24,7 @@ local INVALID_HEADER_NAME_ERR       = "invalid header name: %s, " ..
 
 ffi.cdef[[
 void *
-ngx_http_lua_kong_ffi_bulk_carrier_new(const u_char* name, uint32_t len);
+ngx_http_lua_kong_ffi_bulk_carrier_new();
 
 void
 ngx_http_lua_kong_ffi_bulk_carrier_free(void *bc);
