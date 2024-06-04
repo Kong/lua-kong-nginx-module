@@ -59,7 +59,7 @@ local function is_acceptable_header_name(name)
     return name:match("^[a-z0-9_]+$")
 end
 
-function _M.new(name, request_headers, response_headers)
+function _M.new(request_headers, response_headers)
     local self = {
         name = name,
         bc = C.ngx_http_lua_kong_ffi_bulk_carrier_new(),
