@@ -3,13 +3,11 @@ assert(ngx.config.subsystem == "http", "bulk carrier is only available in the HT
 local ffi                   = require("ffi")
 local base                  = require("resty.core.base")
 local tablepool             = require("tablepool")
+local buffer                = require("string.buffer")
 
 local C                     = ffi.C
 local assert                = assert
-local ffi_string            = ffi.string
 local get_request           = base.get_request
-local get_string_buf        = base.get_string_buf
-local get_string_buf_size   = base.get_string_buf_size
 local tablepool_fetch       = tablepool.fetch
 local tablepool_release     = tablepool.release
 local new_tab               = require("table.new")
@@ -17,14 +15,16 @@ local new_tab               = require("table.new")
 local NGX_OK                    = ngx.OK
 local NGX_AGAIN                 = ngx.AGAIN
 
-local INVALID_HEADER_NAME_ERR   = "invalid header name: %s, " ..
-                                  "header names must be lowercase," ..
-                                  "alphanumeric strings or underscores"
+local INIT_BUFF_SIZE                = 4096
+local BUF_SIZE_WARN_THRESHOLD       = 1024 * 1024 * 4 -- 4MBytes
+local INVALID_HEADER_NAME_ERR       = "invalid header name: %s, " ..
+                                      "header names must be lowercase," ..
+                                      "alphanumeric strings or underscores"
 
 
 ffi.cdef[[
 void *
-ngx_http_lua_kong_ffi_bulk_carrier_new();
+ngx_http_lua_kong_ffi_bulk_carrier_new(const u_char* name, uint32_t len);
 
 void
 ngx_http_lua_kong_ffi_bulk_carrier_free(void *bc);
@@ -59,13 +59,15 @@ local function is_acceptable_header_name(name)
     return name:match("^[a-z0-9_]+$")
 end
 
-function _M.new(request_headers, response_headers)
+function _M.new(name, request_headers, response_headers)
     local self = {
-        bc = C.ngx_http_lua_kong_ffi_bulk_carrier_new(),
+        name = name,
+        bc = C.ngx_http_lua_kong_ffi_bulk_carrier_new(name, #name),
         request_header_idx2name = new_tab(#request_headers * 3, 0),
         response_header_idx2name = new_tab(#response_headers * 3, 0),
         request_header_count = #request_headers,
         response_header_count = #response_headers,
+        buffer = buffer.new(INIT_BUFF_SIZE),
         tablepool_name = nil,
     }
 
@@ -154,23 +156,55 @@ local p_request_header_fetch_info = ffi.new("uint32_t*[1]")
 local p_response_header_fetch_info = ffi.new("uint32_t*[1]")
 function _M:fetch()
     local r = get_request()
-    local buf_size = get_string_buf_size()
-    local buf = get_string_buf(buf_size)
+    local buf = self.buffer
+    local buf_ptr, buf_len
 
 ::again::
+    buf:reset()
+    buf_ptr, buf_len = buf:ref()
+
     local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_fetch(
         r,
         self.bc,
-        buf,
-        buf_size,
+        buf_ptr,
+        buf_len,
         p_request_header_fetch_info,
         p_response_header_fetch_info
     )
 
     if rc == NGX_AGAIN then
-        ngx.log(ngx.DEBUG, "[bulk-carrier]: buffer too small, resizing")
-        buf = ffi_string(buf, buf_size * 2)
-        buf_size = buf_size * 2
+        ngx.log(
+            ngx.INFO,
+            string.format(
+                "[bulk carrier] buffer too small, resizing from %d to %d",
+                buf_len,
+                buf_len * 2
+            )
+        )
+
+        local _, new_buf_len = buf:reserve(buf_len * 2)
+        assert(
+            new_buf_len >= buf_len * 2,
+            string.format(
+                "[bulk carrier] failed to resize buffer from %d to %d",
+                buf_len,
+                buf_len * 2
+            )
+        )
+
+        if new_buf_len >= BUF_SIZE_WARN_THRESHOLD then
+            ngx.log(
+                ngx.WARN, -- TODO: NOTICE OR WARN?
+                string.format(
+                    "[bulk carrier] buffer size is too large," ..
+                    "which may indicate a problem with the bulk carrier " ..
+                    "as it is not expected to handle such large header values." ..
+                    "Current buffer size: %d bytes",
+                    new_buf_len
+                )
+            )
+        end
+
         goto again
     end
 
@@ -186,44 +220,39 @@ function _M:fetch()
 
     local request_header_fetch_info = p_request_header_fetch_info[0]
     local response_header_fetch_info = p_response_header_fetch_info[0]
-    local buf_offset = 0
 
     for i = 0, self.request_header_count * 2 - 1, 2 do
-        local header_idx = request_header_fetch_info[i]
-        if header_idx == 0 then
+        local hdr_idx = request_header_fetch_info[i]
+        if hdr_idx == 0 then
             break
         end
 
-        local header_value_len = request_header_fetch_info[i + 1]
-        local header_name = request_header_idx2name[header_idx]
-        local header_value = ffi_string(buf + buf_offset, header_value_len)
-        buf_offset = buf_offset + header_value_len
+        local hdr_v_len = request_header_fetch_info[i + 1]
+        local hdr_name = request_header_idx2name[hdr_idx]
 
-        request_headers[header_name] = header_value
+        request_headers[hdr_name] = buf:get(hdr_v_len)
     end
 
     for i = 0, self.response_header_count * 2 - 1, 2 do
-        local header_idx = response_header_fetch_info[i]
-        if header_idx == 0 then
+        local hdr_idx = response_header_fetch_info[i]
+        if hdr_idx == 0 then
             break
         end
 
-        local header_value_len = response_header_fetch_info[i + 1]
+        local hdr_v_len = response_header_fetch_info[i + 1]
+        local hdr_name = response_header_idx2name[hdr_idx]
 
-        local header_name = response_header_idx2name[header_idx]
-        local header_value = ffi_string(buf + buf_offset, header_value_len)
-        buf_offset = buf_offset + header_value_len
-
-        response_headers[header_name] = header_value
+        response_headers[hdr_name] = buf:get(hdr_v_len)
     end
 
     return request_headers, response_headers
 end
 
 
-function _M:recycle(request_headers, response_headers)
-    tablepool_release(self.tablepool_name, request_headers)
-    tablepool_release(self.tablepool_name, response_headers)
+function _M:recycle(request_headers, response_headers, no_clear)
+    no_clear = no_clear or false
+    tablepool_release(self.tablepool_name, request_headers, no_clear)
+    tablepool_release(self.tablepool_name, response_headers, no_clear)
 end
 
 

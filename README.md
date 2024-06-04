@@ -541,10 +541,118 @@ balancer_by_lua_block {
     else
         tries[try_count].cached = false
     end
-    
+
     ...
 }
 ```
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.bulk\_carrier.new
+----------------------------------
+**syntax:** *instance, err = resty.kong.bulk_carrier.new(request_headers, response_headers)*
+
+**context:** *any*
+
+**subsystems:** *http*
+
+Creates a new instance of the bulk carrier object.
+The bulk carrier object is used to fetch specific request and response headers in bulk,
+which would give performance benefits over fetching
+many headers individually.
+
+Parameters:
+- `request_headers`: An array-like table contains the names of the request headers to be fetched in bulk.
+- `response_headers`: An array-like table contains the names of the response headers to be fetched in bulk.
+
+**Note: The name of header must consist only of lowercase letters, digits, and underscores.**
+
+This function returns a new instance of the bulk carrier object on success,
+and `nil` and a string describing the error on failure.
+
+Example:
+```lua
+local bulk_carrier = require("resty.kong.bulk_carrier")
+
+local request_headers = {
+    "x_header_1",
+    "x_header_2",
+    "x_header_3",
+}
+local response_headers = {
+    "x_header_4",
+    "x_header_5",
+    "x_header_6",
+}
+
+local instance, err = bulk_carrier.new(request_headers, response_headers)
+if not instance then
+    ngx.log(ngx.ERR, "failed to create bulk carrier instance: ", err)
+    return
+end
+
+local request_headers, response_headers = instance:fetch()
+for k, v in pairs(request_headers) do
+    ngx.log(ngx.INFO, "request header: ", k, " = ", v)
+end
+for k, v in pairs(response_headers) do
+    ngx.log(ngx.INFO, "response header: ", k, " = ", v)
+end
+
+-- recycle two tables (not required)
+instance:recycle(request_headers, response_headers)
+```
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.bulk\_carrier.fetch
+----------------------------------
+**syntax:** *request_headers, response_headers = instance:fetch()*
+
+**context:** *any context except init_by_lua, init_worker_by_lua, and timer*
+
+**subsystems:** *http*
+
+Fetches the request and response headers in bulk.
+
+The returned values are two map-like tables,
+where the keys are the header names and the values are the header values.
+Header value is a string, empty string means the header value is an empty string,
+`nil` means the header is not present in the request or response.
+
+**Note: The name of header must consist only of lowercase letters, digits, and underscores,**
+**otherwise you will get a `nil`.**
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.bulk\_carrier.recycle
+----------------------------------
+**syntax:** *instance:recycle(request_headers, response_headers, \[no_clear = false\])*
+
+**context:** *any*
+
+**subsystems:** *http*
+
+Recycles the two tables of request and response headers fetched by the `fetch` method,
+this would give performance benefits in some scenarios.
+
+**Note: It doesn't leak memory if you don't recycle the tables.**
+
+Parameters:
+- `request_headers`: The table of request headers fetched by the `fetch` method.
+- `response_headers`: The table of response headers fetched by the `fetch` method.
+- `no_clear`: A boolean value that indicates whether to clear the tables after recycling.
+    - `true`: The tables will not be cleared after recycling.
+    - `false`: The tables will be cleared after recycling.
+
+Setting `no_clear` to `true` saves the cost of clearing the tables,
+but the old key-value pairs will be kept in the tables.
+Which means that you might get the old key-value pairs
+when you call `fetch` method next time.
+Please use this option with caution.
+
+This function is baseed on the
+[openresty/lua-tablepool](https://github.com/openresty/lua-tablepool).
 
 [Back to TOC](#table-of-contents)
 
