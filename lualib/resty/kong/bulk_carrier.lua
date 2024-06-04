@@ -157,11 +157,24 @@ local p_response_header_fetch_info = ffi.new("uint32_t*[1]")
 function _M:fetch()
     local r = get_request()
     local buf = self.buffer
-    local buf_ptr, buf_len
+    local buf_ptr, buf_len = nil, INIT_BUFF_SIZE
 
 ::again::
     buf:reset()
-    buf_ptr, buf_len = buf:ref()
+    buf_ptr, buf_len = buf:reserve(buf_len)
+
+    if buf_len >= BUF_SIZE_WARN_THRESHOLD then
+        ngx.log(
+            ngx.WARN, -- TODO: NOTICE OR WARN?
+            string.format(
+                "[bulk carrier] buffer size is too large," ..
+                "which may indicate a problem with the bulk carrier " ..
+                "as it is not expected to handle such large header values." ..
+                "Current buffer size: %d bytes",
+                buf_len
+            )
+        )
+    end
 
     local rc = C.ngx_http_lua_kong_ffi_bulk_carrier_fetch(
         r,
@@ -182,29 +195,7 @@ function _M:fetch()
             )
         )
 
-        local _, new_buf_len = buf:reserve(buf_len * 2)
-        assert(
-            new_buf_len >= buf_len * 2,
-            string.format(
-                "[bulk carrier] failed to resize buffer from %d to %d",
-                buf_len,
-                buf_len * 2
-            )
-        )
-
-        if new_buf_len >= BUF_SIZE_WARN_THRESHOLD then
-            ngx.log(
-                ngx.WARN, -- TODO: NOTICE OR WARN?
-                string.format(
-                    "[bulk carrier] buffer size is too large," ..
-                    "which may indicate a problem with the bulk carrier " ..
-                    "as it is not expected to handle such large header values." ..
-                    "Current buffer size: %d bytes",
-                    new_buf_len
-                )
-            )
-        end
-
+        buf_len = buf_len * 2
         goto again
     end
 
