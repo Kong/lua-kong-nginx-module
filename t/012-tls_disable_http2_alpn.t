@@ -26,9 +26,9 @@ __DATA__
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
         listen 60000 ssl;
-        server_name   konghq.com;
-        ssl_certificate ../../certs/test.crt;
-        ssl_certificate_key ../../certs/test.key;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
         ssl_session_cache off;
         ssl_session_tickets on;
         server_tokens off;
@@ -51,7 +51,7 @@ __DATA__
     location /t {
         content_by_lua_block {
             local ngx_pipe = require "ngx.pipe"
-            local proc = ngx_pipe.spawn({'curl', '-vk', '--resolve', 'konghq.com:60000:127.0.0.1', 'https://konghq.com:60000'})
+            local proc = ngx_pipe.spawn({'curl', '-vk', '--resolve', 'example.com:60000:127.0.0.1', 'https://example.com:60000'})
             local stdout_data, err = proc:stdout_read_all()
             if not stdout_data then
                 ngx.say(err)
@@ -92,9 +92,9 @@ alpn server accepted http/1.1
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
         listen 60000 ssl;
-        server_name   konghq.com;
-        ssl_certificate ../../certs/test.crt;
-        ssl_certificate_key ../../certs/test.key;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
         ssl_session_cache off;
         ssl_session_tickets on;
         server_tokens off;
@@ -117,7 +117,7 @@ alpn server accepted http/1.1
     location /t {
         content_by_lua_block {
             local ngx_pipe = require "ngx.pipe"
-            local proc = ngx_pipe.spawn({'curl', '-vk', '--resolve', 'konghq.com:60000:127.0.0.1', 'https://konghq.com:60000'})
+            local proc = ngx_pipe.spawn({'curl', '-vk', '--resolve', 'example.com:60000:127.0.0.1', 'https://example.com:60000'})
             local stdout_data, err = proc:stdout_read_all()
             if not stdout_data then
                 ngx.say(err)
