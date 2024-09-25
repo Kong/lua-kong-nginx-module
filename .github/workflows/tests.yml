@@ -136,6 +136,7 @@ jobs:
 
         prove -r t
     - name: Setup tmate session
+      if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
     - name: Run Test with Valgrind
       run: |
