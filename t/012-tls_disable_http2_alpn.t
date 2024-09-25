@@ -64,6 +64,9 @@ __DATA__
                 return
             end
 
+            ngx.log(ngx.ERR, stdout_data)
+            ngx.log(ngx.ERR, stderr_data)
+
             if string.find(stdout_data, "ALPN: server accepted h2") ~= nil then
                 ngx.say("alpn server accepted h2")
                 return
