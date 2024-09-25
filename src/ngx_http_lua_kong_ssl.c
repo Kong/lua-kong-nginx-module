@@ -18,7 +18,7 @@
 #include "ngx_http_lua_kong_common.h"
 #include "ngx_http_lua_socket_tcp.h"
 #include "ngx_http_lua_ssl.h"
-
+#include "ngx_http_lua_util.h"
 /*
  * disables session reuse for the current TLS connection, must be called
  * in ssl_certby_lua* phase
