@@ -64,15 +64,21 @@ __DATA__
                 return
             end
 
-            ngx.log(ngx.ERR, stdout_data)
-            ngx.log(ngx.ERR, stderr_data)
-
             if string.find(stdout_data, "ALPN: server accepted h2") ~= nil then
                 ngx.say("alpn server accepted h2")
                 return
             end
 
             if string.find(stderr_data, "ALPN: server accepted http/1.1") ~= nil then
+                ngx.say("alpn server accepted http/1.1")
+                return
+            end
+            if string.find(stdout_data, "ALPN, server accepted to use h2") ~= nil then
+                ngx.say("alpn server accepted h2")
+                return
+            end
+
+            if string.find(stderr_data, " ALPN, server accepted to use http/1.1") ~= nil then
                 ngx.say("alpn server accepted http/1.1")
                 return
             end
@@ -139,6 +145,16 @@ alpn server accepted http/1.1
             end
 
             if string.find(stderr_data, "ALPN: server accepted http/1.1") ~= nil then
+                ngx.say("alpn server accepted http/1.1")
+                return
+            end
+
+            if string.find(stdout_data, "ALPN, server accepted to use h2") ~= nil then
+                ngx.say("alpn server accepted h2")
+                return
+            end
+
+            if string.find(stderr_data, " ALPN, server accepted to use http/1.1") ~= nil then
                 ngx.say("alpn server accepted http/1.1")
                 return
             end

@@ -135,9 +135,6 @@ jobs:
         openssl version
 
         prove -r t
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
     - name: Run Test with Valgrind
       run: |
         source ${{ env.BUILD_ROOT }}/kong-dev-venv.sh
