@@ -36,5 +36,8 @@ ngx_flag_t
 ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
     ngx_flag_t proxy_ssl_verify);
 
+ngx_flag_t
+ngx_lua_kong_ssl_enable_http2_alpn(ngx_ssl_connection_t *ssl,
+    ngx_flag_t enable_http2);
 
 #endif /* _NGX_HTTP_LUA_KONG_MODULE_H_INCLUDED_ */
