@@ -35,10 +35,6 @@ __DATA__
         http2 on;
         ssl_client_hello_by_lua_block {
             local tls = require("resty.kong.tls")
-            local ok, err = tls.disable_http2_alpn()
-            if not ok then
-                ngx.log(ngx.ERR, "failed to disable http2")
-            end
         }
         location /foo {
             default_type 'text/plain';
@@ -64,7 +60,7 @@ __DATA__
                 return
             end
 
-            if string.find(stdout_data, "ALPN: server accepted h2") ~= nil then
+            if string.find(stderr_data, "ALPN: server accepted h2") ~= nil then
                 ngx.say("alpn server accepted h2")
                 return
             end
@@ -73,7 +69,7 @@ __DATA__
                 ngx.say("alpn server accepted http/1.1")
                 return
             end
-            if string.find(stdout_data, "ALPN, server accepted to use h2") ~= nil then
+            if string.find(stderr_data, "ALPN, server accepted to use h2") ~= nil then
                 ngx.say("alpn server accepted h2")
                 return
             end
@@ -87,7 +83,7 @@ __DATA__
 --- request
 GET /t
 --- response_body
-alpn server accepted http/1.1
+alpn server accepted h2
 --- no_error_log
 [error]
 [alert]
@@ -139,7 +135,7 @@ alpn server accepted http/1.1
                 return
             end
 
-            if string.find(stdout_data, "ALPN: server accepted h2") ~= nil then
+            if string.find(stderr_data, "ALPN: server accepted h2") ~= nil then
                 ngx.say("alpn server accepted h2")
                 return
             end
@@ -149,7 +145,7 @@ alpn server accepted http/1.1
                 return
             end
 
-            if string.find(stdout_data, "ALPN, server accepted to use h2") ~= nil then
+            if string.find(stderr_data, "ALPN, server accepted to use h2") ~= nil then
                 ngx.say("alpn server accepted h2")
                 return
             end
