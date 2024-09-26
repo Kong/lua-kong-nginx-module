@@ -206,7 +206,7 @@ ngx_lua_kong_ssl_enable_http2_alpn(ngx_ssl_connection_t *ssl,
     ngx_http_lua_ssl_ctx_t *cctx;
 
     cctx = ngx_http_lua_ssl_get_ctx(ssl->connection);
-    if (cctx->disable_http2_alpn) {
+    if (cctx && cctx->disable_http2_alpn) {
         return 0;
     }
 
