@@ -200,7 +200,7 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
 }
 
 ngx_flag_t
-ngx_lua_kong_ssl_enable_http2_alpn(ngx_ssl_connection_t *ssl,
+ngx_http_lua_kong_ssl_get_http2_alpn_enabled(ngx_ssl_connection_t *ssl,
     ngx_flag_t enable_http2)
 {
     ngx_http_lua_ssl_ctx_t *cctx;
