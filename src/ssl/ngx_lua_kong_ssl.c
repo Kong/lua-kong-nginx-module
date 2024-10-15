@@ -251,6 +251,13 @@ ngx_lua_kong_ssl_set_upstream_ssl(ngx_lua_kong_ssl_ctx_t *ctx, ngx_connection_t 
             goto failed;
         }
 
+        /* clear the old chain */
+        if (SSL_clear_chain_certs(sc) == 0) {
+            ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                          "SSL_clear_chain_certs() failed");
+            goto failed;            
+        }
+
         /* read rest of the chain */
 
         for (i = 1; i < sk_X509_num(chain); i++) {

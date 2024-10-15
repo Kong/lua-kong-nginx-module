@@ -5,7 +5,7 @@ use Cwd qw(cwd);
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6);
+plan tests => repeat_each() * (blocks() * 6 + 1);
 
 my $pwd = cwd();
 
@@ -806,6 +806,84 @@ it works!
 X509_check_host(): match
 
 --- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 14: set_upstream_client_cert_and_key should clear the old chain
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_client_certificate ../../cert/ca.crt;
+        ssl_verify_client on;
+
+        server_tokens off;
+
+        location /foo {
+            default_type 'text/plain';
+            more_clear_headers Date;
+            echo 'it works!';
+        }
+    }
+
+    upstream foo {
+        server unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+
+        balancer_by_lua_block {
+            collectgarbage() -- to make leak check mode pass
+
+            local tls = require("resty.kong.tls")
+            local ssl = require("ngx.ssl")
+
+            local f = assert(io.open("t/cert/client_leaf.crt"))
+            local cert_data = f:read("*a")
+            f:close()
+
+            local chain = assert(ssl.parse_pem_cert(cert_data))
+
+            f = assert(io.open("t/cert/client_example.com.key"))
+            local key_data = f:read("*a")
+            f:close()
+
+            local key = assert(ssl.parse_pem_priv_key(key_data))
+
+            local ok, err = tls.set_upstream_cert_and_key(chain, key)
+            if not ok then
+                ngx.say("set_upstream_cert_and_key failed: ", err)
+            end
+        }
+    }
+--- config
+    server_tokens off;
+
+    location /t {
+        proxy_ssl_trusted_certificate ../../cert/ca.crt;
+        proxy_ssl_verify on;
+        proxy_ssl_name example.com;
+        proxy_ssl_certificate ../../cert/client_example.com.crt;
+        proxy_ssl_certificate_key ../../cert/client_example.com.key;
+        proxy_ssl_session_reuse off;
+        proxy_pass https://foo/foo;
+    }
+
+--- request
+GET /t
+--- response_body_like
+.+400 The SSL certificate error.+
+
+--- error_log
+verify:0, error:21, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@example.com", issuer:"/C=US/ST=California/O=Kong Testing/CN=Kong Testing Intermidiate CA"
+client SSL certificate verify error: (21:unable to verify the first certificate) while reading client request headers
+
+--- error_code: 400
 --- no_error_log
 [error]
 [crit]
