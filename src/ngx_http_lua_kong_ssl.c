@@ -70,6 +70,29 @@ ngx_http_lua_kong_ffi_get_socket_ssl(ngx_http_lua_socket_tcp_upstream_t *u, void
 }
 
 
+int
+ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r, void **ssl_conn)
+{
+#if (NGX_SSL)
+    if (ssl_conn == NULL) {
+        return NGX_ABORT;
+    }
+
+    ngx_connection_t *c = r->connection;
+
+    if (c && (c->ssl) && (c->ssl->connection)) {
+        *ssl_conn = c->ssl->connection;
+        return NGX_OK;
+    }
+
+    return NGX_ERROR;
+
+#else
+    return NGX_ABORT;
+#endif
+}
+
+
 #if (NGX_HTTP_SSL)
 
 /*

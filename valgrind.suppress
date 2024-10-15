@@ -295,3 +295,27 @@
    fun:ngx_single_process_cycle
    fun:main
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:CRYPTO_malloc
+   fun:ssl_session_dup_intern
+   fun:ssl_session_dup
+   fun:tls_process_new_session_ticket
+   fun:read_state_machine
+   fun:state_machine
+   fun:ssl3_read_bytes
+   fun:ssl3_read_internal
+   fun:ssl3_read_internal
+   fun:ssl3_read
+   fun:SSL_read
+   fun:ngx_ssl_recv
+   fun:ngx_http_upstream_process_header
+   fun:ngx_http_upstream_handler
+   fun:ngx_epoll_process_events
+   fun:ngx_process_events_and_timers
+   fun:ngx_single_process_cycle
+   fun:main
+}

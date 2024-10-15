@@ -40,7 +40,7 @@ local kong_lua_kong_ffi_set_upstream_ssl_trusted_store
 local kong_lua_kong_ffi_set_upstream_ssl_verify
 local kong_lua_kong_ffi_set_upstream_ssl_verify_depth
 local kong_lua_kong_ffi_get_socket_ssl
-
+local kong_lua_kong_ffi_get_request_ssl
 if subsystem == "http" then
     ffi.cdef([[
     typedef struct ssl_st SSL;
@@ -59,6 +59,8 @@ if subsystem == "http" then
         int depth);
     int ngx_http_lua_kong_ffi_get_socket_ssl(ngx_http_lua_socket_tcp_upstream_t *u,
         void **ssl_conn);
+    int ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r,
+        void **ssl_conn);
     ]])
 
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain
@@ -68,6 +70,8 @@ if subsystem == "http" then
     kong_lua_kong_ffi_set_upstream_ssl_verify = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_http_lua_kong_ffi_get_socket_ssl
+    kong_lua_kong_ffi_get_request_ssl = C.ngx_http_lua_kong_ffi_get_request_ssl
+    
 
 elseif subsystem == 'stream' then
     ffi.cdef([[
@@ -97,6 +101,9 @@ elseif subsystem == 'stream' then
     kong_lua_kong_ffi_set_upstream_ssl_verify = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_verify
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_verify_depth
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_stream_lua_kong_get_socket_ssl
+    kong_lua_kong_ffi_get_request_ssl = function()
+        error("API not available for the current subsystem")
+    end
 else
     error("unknown subsystem: " .. subsystem)
 end
@@ -143,6 +150,18 @@ function _M.get_ssl_pointer(sock)
     local u = sock[SOCKET_CTX_INDEX]
 
     local ret = kong_lua_kong_ffi_get_socket_ssl(u, void_pp)
+    if ret ~= NGX_OK then
+        return nil, "no ssl object"
+    end
+
+    return ffi_cast(ssl_type, void_pp[0])
+end
+
+
+function _M.get_request_ssl_pointer()
+    local r = get_request()
+
+    local ret = kong_lua_kong_ffi_get_request_ssl(r, void_pp)
     if ret ~= NGX_OK then
         return nil, "no ssl object"
     end
