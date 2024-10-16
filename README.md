@@ -372,11 +372,11 @@ resty.kong.tls.get\_request\_ssl\_pointer
 ----------------------------------------------------
 **syntax:** *ssl_ptr, err = resty.kong.get\_request\_ssl\_pointer()*
 
-**context:** *client_hello_by_lua&#42;, *ssl_certificate_by_lua&#42;, *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*, *preread_by_lua&#42;*
+**context:** *client_hello_by_lua&#42;, *ssl_certificate_by_lua&#42;, *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*
 
-**subsystems:** *http* *stream*
+**subsystems:** *http*
 
-Retrieves the OpenSSL `SSL*` object for the current tcpsock `sock`.
+Retrieves the OpenSSL `SSL*` object for the current HTTP request.
 
 On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
 describing the error will be returned.
