@@ -5,7 +5,7 @@ use Cwd qw(cwd);
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 7 - 4);
+plan tests => repeat_each() * (blocks() * 7 - 7);
 
 my $pwd = cwd();
 
@@ -488,6 +488,49 @@ nil, connection is not TLS or TLS support for Nginx not enabled
             end
         }
     }
+--- request
+GET /t
+--- response_body
+ok
+--- no_error_log
+[error]
+[emerg]
+
+
+
+
+=== TEST 8: ssl.get_request_ssl_pointer works well
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_session_cache off;
+        ssl_session_tickets on;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                local ssl = require "resty.kong.tls"
+                if ssl.get_request_ssl_pointer() == nil then
+                    ngx.say("cannot get socket")
+                else
+                    ngx.say("ok")
+                end
+            }
+        }
+    }
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+
 --- request
 GET /t
 --- response_body

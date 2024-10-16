@@ -322,4 +322,3 @@ void **ssl_conn)
     return NGX_ABORT;
 #endif
 }
-

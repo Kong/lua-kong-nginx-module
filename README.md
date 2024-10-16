@@ -23,6 +23,7 @@ Table of Contents
     * [resty.kong.tls.set\_upstream\_ssl\_verify](#restykongtlsset_upstream_ssl_verify)
     * [resty.kong.tls.set\_upstream\_ssl\_verify\_depth](#restykongtlsset_upstream_ssl_verify_depth)
     * [resty.kong.tls.get\_ssl\_pointer](#restykongtlsget_ssl_pointer)
+    * [resty.kong.tls.get\_request\_ssl\_pointer](#restykongtlsget_request_ssl_pointer)
     * [resty.kong.grpc.set\_authority](#restykonggrpcset_authority)
     * [resty.kong.tls.disable\_proxy\_ssl](#restykongtlsdisable_proxy_ssl)
     * [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable)
@@ -361,6 +362,21 @@ resty.kong.tls.get\_ssl\_pointer
 **subsystems:** *http* *stream*
 
 Retrieves the OpenSSL `SSL*` object for the current tcpsock `sock`.
+
+On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
+describing the error will be returned.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.get\_request\_ssl\_pointer
+----------------------------------------------------
+**syntax:** *ssl_ptr, err = resty.kong.get\_request\_ssl\_pointer()*
+
+**context:** *client_hello_by_lua&#42;, *ssl_certificate_by_lua&#42;, *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;*
+
+**subsystems:** *http*
+
+Retrieves the OpenSSL `SSL*` object for the current HTTP request.
 
 On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
 describing the error will be returned.
