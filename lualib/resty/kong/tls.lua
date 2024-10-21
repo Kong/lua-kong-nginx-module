@@ -64,7 +64,7 @@ if subsystem == "http" then
         void **ssl_conn);
     int ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r,
         void **ssl_conn);
-    int ngx_http_lua_ffi_ssl_disable_http2_alpn(ngx_http_request_t *r, char **err);
+    int ngx_http_lua_ffi_disable_http2_alpn(ngx_http_request_t *r, char **err);
     ]])
 
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain
@@ -75,7 +75,7 @@ if subsystem == "http" then
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_http_lua_kong_ffi_get_socket_ssl
     kong_lua_kong_ffi_get_request_ssl = C.ngx_http_lua_kong_ffi_get_request_ssl
-    kong_lua_kong_ffi_disable_http2_alpn = C.ngx_http_lua_ffi_ssl_disable_http2_alpn
+    kong_lua_kong_ffi_disable_http2_alpn = C.ngx_http_lua_ffi_disable_http2_alpn
 
 elseif subsystem == 'stream' then
     ffi.cdef([[

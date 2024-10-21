@@ -214,7 +214,7 @@ ngx_http_lua_kong_ssl_get_http2_alpn_enabled(ngx_ssl_connection_t *ssl,
 }
 
 int
-ngx_http_lua_ffi_ssl_disable_http2_alpn(ngx_http_request_t *r, char **err)
+ngx_http_lua_ffi_disable_http2_alpn(ngx_http_request_t *r, char **err)
 {
     ngx_ssl_conn_t    *ssl_conn;
     ngx_http_lua_ssl_ctx_t *cctx;
