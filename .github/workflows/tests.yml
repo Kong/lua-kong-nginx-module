@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  KONG_VERSION: disable-h2-alpn-re
+  KONG_VERSION: master
   BUILD_ROOT: ${{ github.workspace }}/kong/bazel-bin/build
 
 concurrency:
