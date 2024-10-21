@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  KONG_VERSION: master
+  KONG_VERSION: disable-h2-alpn-re
   BUILD_ROOT: ${{ github.workspace }}/kong/bazel-bin/build
 
 concurrency:
@@ -135,7 +135,6 @@ jobs:
         openssl version
 
         prove -r t
-
     - name: Run Test with Valgrind
       run: |
         source ${{ env.BUILD_ROOT }}/kong-dev-venv.sh
