@@ -27,6 +27,7 @@ local metatable_patched
 local str_replace_char
 local replace_dashes_lower
 
+   local HTTP_PREFIX = "http_"
 
 --Add back if stream module is implemented to aid readability
 --see bottom of: https://luajit.org/ext_ffi_tutorial.html
@@ -169,12 +170,12 @@ local function patch_functions()
   
   local orig_set_header = req.set_header
 
-  req.set_header = function(...)
-    local normalized_header = replace_dashes_lower(...)
-    normalized_header = "http_" .. normalized_header
+  req.set_header = function(name, value)
+    local normalized_header = replace_dashes_lower(name)
+    normalized_header = HTTP_PREFIX .. normalized_header
     variable_index[normalized_header] = nil
 
-    return orig_set_header(...)
+    return orig_set_header(name, value)
   end
 end
 
