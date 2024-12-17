@@ -158,4 +158,75 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     return NGX_CONF_OK;
 }
 
+#define NGX_HTTP_UPSTREAM_FT_ERROR           0x00000002
+#define NGX_HTTP_UPSTREAM_FT_TIMEOUT         0x00000004
+#define NGX_HTTP_UPSTREAM_FT_INVALID_HEADER  0x00000008
+#define NGX_HTTP_UPSTREAM_FT_HTTP_500        0x00000010
+#define NGX_HTTP_UPSTREAM_FT_HTTP_502        0x00000020
+#define NGX_HTTP_UPSTREAM_FT_HTTP_503        0x00000040
+#define NGX_HTTP_UPSTREAM_FT_HTTP_504        0x00000080
+#define NGX_HTTP_UPSTREAM_FT_HTTP_403        0x00000100
+#define NGX_HTTP_UPSTREAM_FT_HTTP_404        0x00000200
+#define NGX_HTTP_UPSTREAM_FT_HTTP_429        0x00000400
+#define NGX_HTTP_UPSTREAM_FT_UPDATING        0x00000800
+#define NGX_HTTP_UPSTREAM_FT_BUSY_LOCK       0x00001000
+#define NGX_HTTP_UPSTREAM_FT_MAX_WAITING     0x00002000
+#define NGX_HTTP_UPSTREAM_FT_NON_IDEMPOTENT  0x00004000
+#define NGX_HTTP_UPSTREAM_FT_NOLIVE          0x40000000
+#define NGX_HTTP_UPSTREAM_FT_OFF             0x80000000
 
+#define NGX_HTTP_UPSTREAM_FT_STATUS          (NGX_HTTP_UPSTREAM_FT_HTTP_500  \
+                                             |NGX_HTTP_UPSTREAM_FT_HTTP_502  \
+                                             |NGX_HTTP_UPSTREAM_FT_HTTP_503  \
+                                             |NGX_HTTP_UPSTREAM_FT_HTTP_504  \
+                                             |NGX_HTTP_UPSTREAM_FT_HTTP_403  \
+                                             |NGX_HTTP_UPSTREAM_FT_HTTP_404  \
+                                             |NGX_HTTP_UPSTREAM_FT_HTTP_429)
+
+static ngx_conf_bitmask_t  ngx_http_proxy_next_upstream_masks[] = {
+    { ngx_string("error"), NGX_HTTP_UPSTREAM_FT_ERROR },
+    { ngx_string("timeout"), NGX_HTTP_UPSTREAM_FT_TIMEOUT },
+    { ngx_string("invalid_header"), NGX_HTTP_UPSTREAM_FT_INVALID_HEADER },
+    { ngx_string("non_idempotent"), NGX_HTTP_UPSTREAM_FT_NON_IDEMPOTENT },
+    { ngx_string("http_500"), NGX_HTTP_UPSTREAM_FT_HTTP_500 },
+    { ngx_string("http_502"), NGX_HTTP_UPSTREAM_FT_HTTP_502 },
+    { ngx_string("http_503"), NGX_HTTP_UPSTREAM_FT_HTTP_503 },
+    { ngx_string("http_504"), NGX_HTTP_UPSTREAM_FT_HTTP_504 },
+    { ngx_string("http_403"), NGX_HTTP_UPSTREAM_FT_HTTP_403 },
+    { ngx_string("http_404"), NGX_HTTP_UPSTREAM_FT_HTTP_404 },
+    { ngx_string("http_429"), NGX_HTTP_UPSTREAM_FT_HTTP_429 },
+    { ngx_string("updating"), NGX_HTTP_UPSTREAM_FT_UPDATING },
+    { ngx_string("off"), NGX_HTTP_UPSTREAM_FT_OFF },
+    { ngx_null_string, 0 }
+};
+
+ngx_flag_t
+ngx_http_lua_kong_get_next_upstream_mask(ngx_http_request_t *r,
+    ngx_flag_t upstream_next)
+{
+    ngx_http_lua_kong_ctx_t      *ctx;
+
+    ctx = ngx_http_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return upstream_next;
+    }
+
+    if ctx->next_upstream ~= 0 {
+        return ctx->next_upstream;
+    }
+    return upstream_next;
+}
+
+int
+ngx_http_lua_ffi_set_upstream_next(ngx_http_request_t *r, ngx_uint_t next_upstream, char **err)
+{
+    ngx_http_lua_kong_ctx_t      *ctx;
+
+    ctx = ngx_http_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return NGX_ERROR;
+    }
+
+    ctx->next_upstream = next_upstream;
+    return NGX_OK;
+}
