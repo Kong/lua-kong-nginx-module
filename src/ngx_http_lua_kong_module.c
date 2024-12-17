@@ -211,7 +211,7 @@ ngx_http_lua_kong_get_next_upstream_mask(ngx_http_request_t *r,
         return upstream_next;
     }
 
-    if ctx->next_upstream ~= 0 {
+    if(ctx->next_upstream ~= 0) {
         return ctx->next_upstream;
     }
     return upstream_next;
