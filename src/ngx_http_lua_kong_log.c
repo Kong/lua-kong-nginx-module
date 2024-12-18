@@ -59,7 +59,7 @@ ngx_http_lua_kong_ffi_set_dynamic_log_level(int log_level, int timeout)
     ** we will not change the current log level,
     ** and return an error.
     */
-    if (log_level > NGX_LOG_DEBUG || log_level < NGX_LOG_STDERR) {
+    if (log_level > NGX_LOG_DEBUG_LAST || log_level < NGX_LOG_STDERR) {
         return NGX_ERROR;
     }
 
