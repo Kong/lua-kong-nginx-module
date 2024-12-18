@@ -27,7 +27,7 @@ local metatable_patched
 local str_replace_char
 local replace_dashes_lower
 
-   local HTTP_PREFIX = "http_"
+local HTTP_PREFIX = "http_"
 
 --Add back if stream module is implemented to aid readability
 --see bottom of: https://luajit.org/ext_ffi_tutorial.html
