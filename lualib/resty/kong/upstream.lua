@@ -24,14 +24,11 @@ ngx_http_lua_ffi_set_upstream_next(ngx_http_request_t *r, uint32_t next_upstream
 ]])
 
 local type = type
-local error = error
-local tostring = tostring
 local C = ffi.C
 local get_request = base.get_request
 local ffi_str = ffi.string
 
 local NGX_OK = ngx.OK
-
 
 local next_upstream_table = {
 	error = 0x00000002,
