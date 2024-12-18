@@ -31,6 +31,8 @@ Table of Contents
     * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
     * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
     * [resty.kong.peer_conn.get\_last\_peer\_connection\_cached](#restykongpeer_connget_last_peer_connection_cached)
+    * [resty.kong.upstream.set\_next\_upstream](#restykongupstreamset_next_upstream)
+
 * [License](#license)
 
 Description
@@ -575,6 +577,43 @@ balancer_by_lua_block {
 ```
 
 [Back to TOC](#table-of-contents)
+
+
+resty.kong.upstream.set\_next\_upstream
+----------------------------------
+**syntax:** *res = resty.kong.upstream.set_next_upstream("http_404")*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*
+
+
+**subsystems:** *http*
+
+Set upstream next enablement of current request to the given string of table
+argument . Global setting set by [`proxy_next_upstream`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream) will be overwritten.
+
+The `set_next_upstream` function supports variable length of arguments, and each argument must be one of the following strings (also defined in [`proxy_next_upstream`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream)):
+- `error`
+- `timeout`
+- `invalid_header`
+- `http_500`
+- `http_502`
+- `http_503`
+- `http_504`
+- `http_403`
+- `http_404`
+- `http_429`
+- `non_idempotent`
+- `off`
+
+On success, this function returns `nil`. Otherwise throw a string
+describing the error will be returned.
+
+This function can be called multiple times in the same request. Later calls override
+previous ones.
+
+[Back to TOC](#table-of-contents)
+
+
 
 License
 =======
