@@ -162,7 +162,7 @@ __DATA__
 --- response_body eval
 ["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
 
-=== TEST 3: lua resty.kong.upstream.set_upstream_next() behavior
+=== TEST 3: lua resty.kong.upstream.set_next_upstream() behavior
 --- http_config
     upstream balancer {
         server 127.0.0.1;
@@ -228,7 +228,7 @@ __DATA__
 --- config
     access_by_lua_block {
         local upstream = require "resty.kong.upstream"
-        local err = upstream.set_upstream_next("error", "timeout", "http_500", "http_502", "http_503", "http_504", "http_404", "http_403", "http_429", "non_idempotent", "bala")
+        local err = upstream.set_next_upstream("error", "timeout", "http_500", "http_502", "http_503", "http_504", "http_404", "http_403", "http_429", "non_idempotent", "bala")
         if err then
             ngx.log(ngx.ERR, "failed to set upstream next: ", err)
             return ngx.exit(503)

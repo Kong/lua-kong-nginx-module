@@ -218,7 +218,7 @@ ngx_http_lua_kong_get_next_upstream_mask(ngx_http_request_t *r,
 }
 
 int
-ngx_http_lua_ffi_set_upstream_next(ngx_http_request_t *r, ngx_uint_t next_upstream, char **err)
+ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, ngx_uint_t next_upstream, char **err)
 {
     ngx_http_lua_kong_ctx_t      *ctx;
 
