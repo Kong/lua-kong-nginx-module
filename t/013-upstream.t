@@ -162,7 +162,87 @@ __DATA__
 --- response_body eval
 ["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
 
-=== TEST 3: lua resty.kong.upstream.set_next_upstream() behavior
+=== TEST 3: lua resty.kong.upstream.set_next_upstream() 
+--- http_config
+    upstream balancer {
+        server 127.0.0.1;
+        balancer_by_lua_block {
+            local balancer = require "ngx.balancer"
+            local host = "127.0.0.1"
+            local port
+            ngx.ctx.count = (ngx.ctx.count or 0) + 1
+            if ngx.ctx.count == 1 then
+                port = $TEST_NGINX_RAND_PORT_1
+            elseif ngx.ctx.count == 2 then
+                port = $TEST_NGINX_RAND_PORT_2
+            elseif ngx.ctx.count == 3 then
+                port = $TEST_NGINX_RAND_PORT_3
+            else
+                port = $TEST_NGINX_RAND_PORT_4
+            end
+            ngx.log(ngx.ERR, "balancer_by_lua_block: host: ", host, ", port: ", port, ", count: ", ngx.ctx.count)
+            local ok, err = balancer.set_current_peer(host, port)
+            if not ok then
+                ngx.log(ngx.ERR, "failed to set the current peer: ", err)
+                return ngx.exit(500)
+            end
+            balancer.set_more_tries(4)
+        }
+    }
+    server {
+        # this is the real entry point
+        listen $TEST_NGINX_RAND_PORT_1;
+        location / {
+            content_by_lua_block{
+                ngx.exit(404)
+            }
+        }
+    }
+    server {
+        # this is the real entry point
+        listen $TEST_NGINX_RAND_PORT_2;
+        location / {
+            content_by_lua_block{
+                ngx.exit(403)
+            }
+        }
+    }
+    server {
+        # this is the real entry point
+        listen $TEST_NGINX_RAND_PORT_3;
+        location / {
+            content_by_lua_block{
+                ngx.exit(500)
+            }
+        }
+    }
+    server {
+        # this is the real entry point
+        listen $TEST_NGINX_RAND_PORT_4;
+        location / {
+            content_by_lua_block{
+                ngx.print("this is backend peer $TEST_NGINX_RAND_PORT_4")
+            }
+        }
+    }
+--- config
+    access_by_lua_block {
+        local upstream = require "resty.kong.upstream"
+        local err = upstream.set_next_upstream("error", "timeout", "http_500", "http_502", "http_503", "http_504", "http_404", "http_403", "http_429", "non_idempotent")
+        if err then
+            ngx.log(ngx.ERR, "failed to set upstream next: ", err)
+            return ngx.exit(503)
+        end
+    }
+    location =/balancer {
+        proxy_pass http://balancer;
+    }
+--- pipelined_requests eval
+["GET /balancer", "GET /balancer"]
+--- response_body eval
+["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
+
+=== TEST 4: lua resty.kong.upstream.set_next_upstream() with error
 --- http_config
     upstream balancer {
         server 127.0.0.1;
