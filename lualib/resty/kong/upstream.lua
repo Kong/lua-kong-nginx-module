@@ -20,7 +20,7 @@ base.allows_subsystem("http")
 
 ffi.cdef([[
 int
-ngx_http_lua_ffi_set_upstream_next(ngx_http_request_t *r, uint next_upstream, char **err);
+ngx_http_lua_ffi_set_upstream_next(ngx_http_request_t *r, uint32_t next_upstream, char **err);
 ]])
 
 local type = type
@@ -58,15 +58,20 @@ function _M.set_upstream_next(...)
 		error("no request found")
 	end
 
-	local next_upstream_table = { ... }
+	local arg_table = { ... }
 	local next_upstream = 0
 	for i = 1, nargs do
-		local v = next_upstream_table[i]
-		if type(v) ~= "number" then
+		local v = arg_table[i]
+		if type(v) ~= "string" then
 			error("argument #" .. i .. " is not a valid argument")
 		end
 
-		next_upstream = bit.bor(next_upstream, v)
+		local next_upstream_value = next_upstream_table[v]
+		if not next_upstream_value then
+			error("argument #" .. i .. " is not a valid argument")
+		end
+
+		next_upstream = bit.bor(next_upstream, next_upstream_value)
 	end
 
 	local err = ffi.new("char *[1]")
