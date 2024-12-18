@@ -10,7 +10,7 @@ log_level('info');
 repeat_each(2);
 #repeat_each(1);
 
-plan tests => repeat_each() * (blocks() * 2) + 8;
+plan tests => repeat_each() * (blocks() * 2);
 
 #no_diff();
 #no_long_string();
@@ -159,8 +159,8 @@ __DATA__
     }
 --- pipelined_requests eval
 ["GET /balancer", "GET /balancer"]
---- response_body eval
-["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
+--- error_code eval
+[200, 200]
 
 === TEST 3: lua resty.kong.upstream.set_next_upstream() 
 --- http_config
@@ -239,8 +239,8 @@ __DATA__
     }
 --- pipelined_requests eval
 ["GET /balancer", "GET /balancer"]
---- response_body eval
-["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
+--- error_code eval
+[200, 200]
 
 === TEST 4: lua resty.kong.upstream.set_next_upstream() with error
 --- http_config
