@@ -20,7 +20,7 @@ base.allows_subsystem("http")
 
 ffi.cdef([[
 int
-ngx_http_lua_ffi_set_upstream_next(ngx_http_request_t *r, uint32_t next_upstream, char **err);
+ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, uint32_t next_upstream, char **err);
 ]])
 
 local type = type
@@ -46,7 +46,7 @@ local next_upstream_table = {
 	non_idempotent = 0x00004000,
 }
 
-function _M.set_upstream_next(...)
+function _M.set_next_upstream(...)
 	local nargs = select("#", ...)
 	if nargs == 0 then
 		return "no argument"
@@ -74,7 +74,7 @@ function _M.set_upstream_next(...)
 	end
 
 	local err = ffi.new("char *[1]")
-	local rc = C.ngx_http_lua_ffi_set_upstream_next(r, next_upstream, err)
+	local rc = C.ngx_http_lua_ffi_set_next_upstream(r, next_upstream, err)
 
 	if rc ~= NGX_OK then
 		return "failed to set upstream next: " .. ffi_str(err[0])
