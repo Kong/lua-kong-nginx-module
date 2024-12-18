@@ -163,7 +163,6 @@ __DATA__
 ["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
 
 === TEST 3: lua resty.kong.upstream.set_upstream_next() behavior
---- timeout: 1000
 --- http_config
     upstream balancer {
         server 127.0.0.1;
@@ -204,7 +203,7 @@ __DATA__
         listen $TEST_NGINX_RAND_PORT_2;
         location / {
             content_by_lua_block{
-                ngx.exit(404)
+                ngx.exit(403)
             }
         }
     }
@@ -213,7 +212,7 @@ __DATA__
         listen $TEST_NGINX_RAND_PORT_3;
         location / {
             content_by_lua_block{
-                ngx.exit(404)
+                ngx.exit(500)
             }
         }
     }
@@ -229,7 +228,7 @@ __DATA__
 --- config
     access_by_lua_block {
         local upstream = require "resty.kong.upstream"
-        upstream.set_upstream_next("error", "timeout", "http_404")
+        upstream.set_upstream_next("error", "timeout", "http_500", "http_502", "http_503", "http_504", "http_404", "http_403", "http_429", "non_idempotent")
     }
     location =/balancer {
         proxy_pass http://balancer;
@@ -238,3 +237,4 @@ __DATA__
 ["GET /balancer", "GET /balancer"]
 --- response_body eval
 ["this is backend peer \$TEST_NGINX_RAND_PORT_4", "this is backend peer \$TEST_NGINX_RAND_PORT_4"]
+
