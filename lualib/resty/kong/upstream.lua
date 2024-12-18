@@ -32,6 +32,7 @@ local ffi_str = ffi.string
 
 local NGX_OK = ngx.OK
 
+
 local next_upstream_table = {
 	error = 0x00000002,
 	timeout = 0x00000004,
@@ -45,17 +46,18 @@ local next_upstream_table = {
 	http_429 = 0x00000400,
 	updating = 0x00000800,
 	off = 0x00001000,
+	non_idempotent = 0x00004000,
 }
 
 function _M.set_upstream_next(...)
 	local nargs = select("#", ...)
 	if nargs == 0 then
-		error("no argument")
+		return "no argument"
 	end
 
 	local r = get_request()
 	if not r then
-		error("no request found")
+		return "no request found"
 	end
 
 	local arg_table = { ... }
@@ -63,12 +65,12 @@ function _M.set_upstream_next(...)
 	for i = 1, nargs do
 		local v = arg_table[i]
 		if type(v) ~= "string" then
-			error("argument #" .. i .. " is not a valid argument")
+			return "argument #" .. i .. " is not a string"
 		end
 
 		local next_upstream_value = next_upstream_table[v]
 		if not next_upstream_value then
-			error("argument #" .. i .. " is not a valid argument")
+			return "argument #" .. i .. " is not a valid argument"
 		end
 
 		next_upstream = bit.bor(next_upstream, next_upstream_value)
@@ -78,10 +80,10 @@ function _M.set_upstream_next(...)
 	local rc = C.ngx_http_lua_ffi_set_upstream_next(r, next_upstream, err)
 
 	if rc ~= NGX_OK then
-		error("failed to set upstream next: " .. tostring(ffi_str(err[0])))
+		return "failed to set upstream next: " .. ffi_str(err[0])
 	end
 
-	return true
+	return nil
 end
 
 return _M
