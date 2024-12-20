@@ -41,7 +41,6 @@ local next_upstream_table = {
 	http_403 = 0x00000100,
 	http_404 = 0x00000200,
 	http_429 = 0x00000400,
-	updating = 0x00000800,
 	off = 0x00001000,
 	non_idempotent = 0x00004000,
 }
