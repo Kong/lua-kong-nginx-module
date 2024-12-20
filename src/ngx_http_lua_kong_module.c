@@ -158,4 +158,33 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     return NGX_CONF_OK;
 }
 
+ngx_flag_t
+ngx_http_lua_kong_get_next_upstream_mask(ngx_http_request_t *r,
+    ngx_flag_t upstream_next)
+{
+    ngx_http_lua_kong_ctx_t      *ctx;
 
+    ctx = ngx_http_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return upstream_next;
+    }
+
+    if(ctx->next_upstream != 0) {
+        return ctx->next_upstream;
+    }
+    return upstream_next;
+}
+
+int
+ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, ngx_uint_t next_upstream, char **err)
+{
+    ngx_http_lua_kong_ctx_t      *ctx;
+
+    ctx = ngx_http_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return NGX_ERROR;
+    }
+
+    ctx->next_upstream = next_upstream;
+    return NGX_OK;
+}
