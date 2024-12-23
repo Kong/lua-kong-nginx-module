@@ -16,6 +16,7 @@ local _M = {}
 
 local ffi = require("ffi")
 local base = require("resty.core.base")
+local select = select
 base.allows_subsystem("http")
 
 ffi.cdef([[
