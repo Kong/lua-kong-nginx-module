@@ -28,6 +28,7 @@ typedef struct {
     ngx_lua_kong_ssl_ctx_t   ssl_ctx;
     ngx_str_t                grpc_authority;
     ngx_http_log_handler_pt  orig_log_handler;
+    ngx_uint_t               next_upstream;
 } ngx_http_lua_kong_ctx_t;
 
 
