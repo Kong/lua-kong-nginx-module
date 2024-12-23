@@ -22,6 +22,18 @@ base.allows_subsystem("http")
 ffi.cdef([[
 int
 ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, uint32_t next_upstream, char **err);
+const uint32_t ngx_http_lua_kong_next_upstream_mask_error;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_timeout;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_invalid_header;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_500;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_502;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_503;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_504;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_403;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_404;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_429;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_off;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_non_idempotent;
 ]])
 
 local type = type
