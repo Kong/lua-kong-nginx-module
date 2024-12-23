@@ -16,7 +16,7 @@
 
 
 #include "ngx_http_lua_kong_directive.h"
-
+#include "ngx_http_upstream.h"
 
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
 static void* ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf);
@@ -157,6 +157,19 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     return NGX_CONF_OK;
 }
+
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_error = NGX_HTTP_UPSTREAM_FT_ERROR;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_timeout = NGX_HTTP_UPSTREAM_FT_TIMEOUT;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_invalid_header = NGX_HTTP_UPSTREAM_FT_INVALID_HEADER;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_500 = NGX_HTTP_UPSTREAM_FT_HTTP_500;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_502 = NGX_HTTP_UPSTREAM_FT_HTTP_502;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_503 = NGX_HTTP_UPSTREAM_FT_HTTP_503;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_504 = NGX_HTTP_UPSTREAM_FT_HTTP_504;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_403 = NGX_HTTP_UPSTREAM_FT_HTTP_403;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_404 = NGX_HTTP_UPSTREAM_FT_HTTP_404;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_http_429 = NGX_HTTP_UPSTREAM_FT_HTTP_429;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_off = NGX_HTTP_UPSTREAM_FT_OFF;
+const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_non_idempotent = NGX_HTTP_UPSTREAM_FT_NON_IDEMPOTENT;
 
 ngx_flag_t
 ngx_http_lua_kong_get_next_upstream_mask(ngx_http_request_t *r,

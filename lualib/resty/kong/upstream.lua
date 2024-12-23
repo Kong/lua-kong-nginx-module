@@ -32,18 +32,18 @@ local ffi_str = ffi.string
 local NGX_OK = ngx.OK
 
 local next_upstream_table = {
-	error = 0x00000002,
-	timeout = 0x00000004,
-	invalid_header = 0x00000008,
-	http_500 = 0x00000010,
-	http_502 = 0x00000020,
-	http_503 = 0x00000040,
-	http_504 = 0x00000080,
-	http_403 = 0x00000100,
-	http_404 = 0x00000200,
-	http_429 = 0x00000400,
-	off = 0x00001000,
-	non_idempotent = 0x00004000,
+	error = C.ngx_http_lua_kong_next_upstream_mask_error,
+	timeout = C.ngx_http_lua_kong_next_upstream_mask_timeout,
+	invalid_header = C.ngx_http_lua_kong_next_upstream_mask_invalid_header,
+	http_500 = C.ngx_http_lua_kong_next_upstream_mask_http_500,
+	http_502 = C.ngx_http_lua_kong_next_upstream_mask_http_502,
+	http_503 = C.ngx_http_lua_kong_next_upstream_mask_http_503,
+	http_504 = C.ngx_http_lua_kong_next_upstream_mask_http_504,
+	http_403 = C.ngx_http_lua_kong_next_upstream_mask_http_403,
+	http_404 = C.ngx_http_lua_kong_next_upstream_mask_http_404,
+	http_429 = C.ngx_http_lua_kong_next_upstream_mask_http_429,
+	off = C.ngx_http_lua_kong_next_upstream_mask_off,
+	non_idempotent = C.ngx_http_lua_kong_next_upstream_mask_non_idempotent,
 }
 
 function _M.set_next_upstream(...)
