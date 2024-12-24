@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  KONG_VERSION: feat-next-upstream
+  KONG_VERSION: master
   BUILD_ROOT: ${{ github.workspace }}/kong/bazel-bin/build
 
 concurrency:
