@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  KONG_VERSION: master
+  KONG_VERSION: release/3.4.x
   BUILD_ROOT: ${{ github.workspace }}/kong/bazel-bin/build
 
 concurrency:
@@ -63,6 +63,22 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         cd kong
+        
+        # Find the .rockspec file (handles varying filenames like kong-3.4.x-0.rockspec)
+        ROCKSPEC_FILE=$(ls kong-*.rockspec | head -n 1)
+        
+        # Check if the rockspec file exists
+        if [[ -f "$ROCKSPEC_FILE" ]]; then
+          echo "Modifying lua-messagepack version in $ROCKSPEC_FILE"
+          
+          # Use sed to replace "lua-messagepack == 0.5.2" with "lua-messagepack == 0.5.4"
+          sed -i 's/"lua-messagepack == 0\.5\.2"/"lua-messagepack == 0.5.4"/' "$ROCKSPEC_FILE"
+        else
+          echo "Error: .rockspec file not found!"
+          exit 1
+        fi
+
+        # Proceed with the build steps
         make build-kong
         make build-venv
         BUILD_PREFIX=$BUILD_ROOT/kong-dev
