@@ -9,7 +9,8 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 2 + 9 + 4 + 3);
+plan tests => repeat_each() * (blocks() * 2 + 9 + 4 + 3 + 3);
+
 
 #no_diff();
 #no_long_string();
@@ -383,6 +384,60 @@ GET /t
 foo=bar&added=yes
 
 --- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 14: patch metatable does not invalidate function req.set_header
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index default;
+
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+
+--- config
+    location /auth {
+        content_by_lua_block {
+            ngx.say(ngx.var.http_authorization)
+            ngx.req.set_header("Authorization", "foo")
+            ngx.say(ngx.var.http_authorization)
+            ngx.req.set_header("Authorization", "bar")
+            ngx.say(ngx.var.http_authorization)
+            ngx.req.set_header("Authorization", "baz")
+            ngx.say(ngx.var.http_authorization)
+            ngx.req.set_header("Authorization", "qux")
+            ngx.say(ngx.var.http_authorization)
+            
+            ngx.say(ngx.var.http_kong_debug)
+            ngx.req.set_header("Kong-Debug", "true")
+            ngx.say(ngx.var.http_kong_debug)
+            ngx.req.set_header("Kong-Debug", "false")
+            ngx.say(ngx.var.http_kong_debug)
+            ngx.req.set_header("Kong-Debug", "true")
+            ngx.say(ngx.var.http_kong_debug)
+            ngx.req.set_header("Kong-Debug", "false")
+            ngx.say(ngx.var.http_kong_debug)
+        }
+    }
+
+--- request
+GET /auth
+--- response_body
+nil
+foo
+bar
+baz
+qux
+nil
+true
+false
+true
+false
 --- no_error_log
 [error]
 [crit]
