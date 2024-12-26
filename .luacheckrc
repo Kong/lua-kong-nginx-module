@@ -20,6 +20,9 @@ globals = {
         req = {
             set_uri_args = {
                 read_only = false
+            },
+            set_header = {
+                read_only = false
             }
         }
     }
