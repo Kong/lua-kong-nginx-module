@@ -91,6 +91,13 @@ static ngx_str_t default_vars[] = {
     ngx_string("upstream_http_upgrade"),
     ngx_string("upstream_status"),
 
+    /* detailed upstream timing vars */
+    ngx_string("upstream_start_timestamp_us"),
+    ngx_string("upstream_connect_timestamp_us"),
+    ngx_string("upstream_request_timestamp_us"),
+    ngx_string("upstream_header_timestamp_us"),
+    ngx_string("upstream_response_timestamp_us"),
+
     /* lua-kong-module vars */
     ngx_string("kong_request_id"),
 
