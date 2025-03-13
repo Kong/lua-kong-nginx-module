@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) + 10;
+plan tests => repeat_each() * (blocks() * 8) + 14;
 
 #no_diff();
 #no_long_string();
@@ -440,6 +440,39 @@ true 12345 false
 get variable value 'true' by index
 get variable value '12345' by index
 get variable value 'false' by index
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+=== TEST 14: upstream timing variables
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index default;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+
+--- config
+    location = /test {
+        content_by_lua_block {
+            ngx.say(ngx.var.upstream_start_timestamp_us, " ",
+                    ngx.var.upstream_connect_timestamp_us, " ",
+                    ngx.var.upstream_request_timestamp_us, " ",
+                    ngx.var.upstream_header_timestamp_us, " ",
+                    ngx.var.upstream_response_timestamp_us)
+        }
+    }
+--- request
+GET /test
+--- response_body
+nil nil nil nil nil
+--- error_log
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
+variable value is not found by index
 --- no_error_log
 [error]
 [crit]
