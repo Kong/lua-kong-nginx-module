@@ -25,7 +25,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: kong/kong
-        ref: 8e441df4c6ffce1c5ce9cc307f8e54b2242fcdd4
+        ref: 35a1052a64c6af3d1b77959fb73a27631937d40e
         path: kong
 
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
@@ -85,7 +85,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: kong/kong
-        ref: 8e441df4c6ffce1c5ce9cc307f8e54b2242fcdd4
+        ref: 35a1052a64c6af3d1b77959fb73a27631937d40e
         path: kong
 
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
