@@ -127,6 +127,12 @@ index *commonly used variables* as follows:
 - `$upstream_http_trailer`
 - `$upstream_http_upgrade`
 - `$upstream_status`
+- `$upstream_start_timestamp_us`
+- `$upstream_connect_timestamp_us`
+- `$upstream_request_timestamp_us`
+- `$upstream_header_timestamp_us`
+- `$upstream_response_timestamp_us`
+- `$kong_request_id`
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
