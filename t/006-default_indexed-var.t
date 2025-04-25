@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) + 14;
+plan tests => repeat_each() * (blocks() * 8) + 12;
 
 #no_diff();
 #no_long_string();
@@ -205,7 +205,6 @@ get variable value '666' by index
             ngx.say(ngx.var.request_method, " ",
                     ngx.var.request_length, " ",
                     ngx.var.request_uri, " ",
-                    ngx.var.request_time, " ",
                     ngx.var.server_addr, " ",
                     ngx.var.server_port
                     )
@@ -214,12 +213,11 @@ get variable value '666' by index
 --- request
 GET /test
 --- response_body
-GET 58 /test 0.000 127.0.0.1 1984
+GET 58 /test 127.0.0.1 1984
 --- error_log
 get variable value 'GET' by index
 get variable value '58' by index
 get variable value '/test' by index
-get variable value '0.000' by index
 get variable value '127.0.0.1' by index
 get variable value '1984' by index
 --- no_error_log
