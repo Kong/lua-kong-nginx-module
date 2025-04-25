@@ -113,7 +113,6 @@ index *commonly used variables* as follows:
 - `$remote_port`
 - `$request_length`
 - `$request_method`
-- `$request_time`
 - `$request_uri`
 - `$scheme`
 - `$server_addr`

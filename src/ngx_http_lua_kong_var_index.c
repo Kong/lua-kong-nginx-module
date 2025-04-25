@@ -71,7 +71,6 @@ static ngx_str_t default_vars[] = {
     /* ngx_string("request"), */
     ngx_string("request_length"),
     ngx_string("request_method"),
-    ngx_string("request_time"),
     ngx_string("request_uri"),
     ngx_string("scheme"),
     ngx_string("server_addr"),
