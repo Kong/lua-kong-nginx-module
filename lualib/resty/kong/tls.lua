@@ -23,6 +23,7 @@ local get_phase = ngx.get_phase
 local type = type
 local error = error
 local tostring = tostring
+local concat = table.concat
 local C = ffi.C
 local ffi_cast = ffi.cast
 local SOCKET_CTX_INDEX = 1
@@ -41,6 +42,8 @@ local kong_lua_kong_ffi_set_upstream_client_cert_and_key
 local kong_lua_kong_ffi_set_upstream_ssl_trusted_store
 local kong_lua_kong_ffi_set_upstream_ssl_verify
 local kong_lua_kong_ffi_set_upstream_ssl_verify_depth
+local kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames
+local kong_lua_kong_ffi_set_upstream_ssl_sans_uris
 local kong_lua_kong_ffi_get_socket_ssl
 local kong_lua_kong_ffi_get_request_ssl
 local kong_lua_kong_ffi_disable_http2_alpn
@@ -60,6 +63,10 @@ if subsystem == "http" then
         int verify);
     int ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth(ngx_http_request_t *r,
         int depth);
+    int ngx_http_lua_kong_ffi_set_upstream_ssl_sans_dnsnames(ngx_http_request_t *r,
+        const char *input, size_t input_len);
+    int ngx_http_lua_kong_ffi_set_upstream_ssl_sans_uris(ngx_http_request_t *r,
+        const char *input, size_t input_len);
     int ngx_http_lua_kong_ffi_get_socket_ssl(ngx_http_lua_socket_tcp_upstream_t *u,
         void **ssl_conn);
     int ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r,
@@ -73,6 +80,8 @@ if subsystem == "http" then
     kong_lua_kong_ffi_set_upstream_ssl_trusted_store = C.ngx_http_lua_kong_ffi_set_upstream_ssl_trusted_store
     kong_lua_kong_ffi_set_upstream_ssl_verify = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_http_lua_kong_ffi_set_upstream_ssl_verify_depth
+    kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames = C.ngx_http_lua_kong_ffi_set_upstream_ssl_sans_dnsnames
+    kong_lua_kong_ffi_set_upstream_ssl_sans_uris = C.ngx_http_lua_kong_ffi_set_upstream_ssl_sans_uris
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_http_lua_kong_ffi_get_socket_ssl
     kong_lua_kong_ffi_get_request_ssl = C.ngx_http_lua_kong_ffi_get_request_ssl
     kong_lua_kong_ffi_disable_http2_alpn = C.ngx_http_lua_ffi_disable_http2_alpn
@@ -94,6 +103,10 @@ elseif subsystem == 'stream' then
         int verify);
     int ngx_stream_lua_kong_ffi_set_upstream_ssl_verify_depth(ngx_stream_lua_request_t *r,
         int depth);
+    int ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_dnsnames(ngx_stream_lua_request_t *r,
+        const char *input, size_t input_len);
+    int ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_uris(ngx_stream_lua_request_t *r,
+        const char *input, size_t input_len);
     int ngx_stream_lua_kong_get_socket_ssl(ngx_stream_lua_socket_tcp_upstream_t *u,
         void **ssl_conn);
     ]])
@@ -104,6 +117,8 @@ elseif subsystem == 'stream' then
     kong_lua_kong_ffi_set_upstream_ssl_trusted_store = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_trusted_store
     kong_lua_kong_ffi_set_upstream_ssl_verify = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_verify
     kong_lua_kong_ffi_set_upstream_ssl_verify_depth = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_verify_depth
+    kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_dnsnames
+    kong_lua_kong_ffi_set_upstream_ssl_sans_uris = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_uris
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_stream_lua_kong_get_socket_ssl
     kong_lua_kong_ffi_get_request_ssl = function()
         error("API not available for the current subsystem")
@@ -333,6 +348,64 @@ do
 
         if ret == NGX_ERROR then
             return nil, "error while setting upstream ssl verify depth"
+        end
+
+        error("unknown return code: " .. tostring(ret))
+    end
+
+    function _M.set_upstream_ssl_sans_dnsnames(sans)
+        if not ALLOWED_PHASES[get_phase()] then
+            error("API disabled in the current context", 2)
+        end
+
+        if type(sans) ~= "table" then
+            error("incorrect argument, expects an array, got " ..
+                  type(sans), 2)
+        end
+
+        if #sans == 0 then
+            error("incorrect argument, the value can not be an empty array", 2)
+        end
+
+        local r = get_request()
+
+        local ssl_sans = concat(sans, " ")
+        local ret = kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames(r, ssl_sans, #ssl_sans)
+        if ret == NGX_OK then
+            return true
+        end
+
+        if ret == NGX_ERROR then
+            return nil, "error while setting upstream SSL dnsnames SANs"
+        end
+
+        error("unknown return code: " .. tostring(ret))
+    end
+
+    function _M.set_upstream_ssl_sans_uris(uris)
+        if not ALLOWED_PHASES[get_phase()] then
+            error("API disabled in the current context", 2)
+        end
+
+        if type(uris) ~= "table" then
+            error("incorrect argument, expects an array, got " ..
+                  type(uris), 2)
+        end
+
+        if #uris == 0 then
+            error("incorrect argument, the value can not be an empty array", 2)
+        end
+
+        local r = get_request()
+
+        local ssl_sans = concat(uris, " ")
+        local ret = kong_lua_kong_ffi_set_upstream_ssl_sans_uris(r, ssl_sans, #ssl_sans)
+        if ret == NGX_OK then
+            return true
+        end
+
+        if ret == NGX_ERROR then
+            return nil, "error while setting upstream SSL URIs SANs"
         end
 
         error("unknown return code: " .. tostring(ret))
