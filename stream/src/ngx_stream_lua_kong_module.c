@@ -297,6 +297,90 @@ ngx_stream_lua_kong_get_upstream_ssl_verify(ngx_stream_session_t *s,
 
     return ngx_lua_kong_ssl_get_upstream_ssl_verify(&ctx->ssl_ctx, proxy_ssl_verify);
 }
+
+int
+ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_dnsnames(ngx_stream_lua_request_t *r,
+    const char *input, size_t input_len)
+{
+    u_char                      *sans_data;
+    ngx_stream_lua_kong_ctx_t   *ctx;
+
+    ctx = ngx_stream_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return NGX_ERROR;
+    }
+
+    sans_data = ngx_palloc(r->pool, input_len);
+    if (sans_data == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_memcpy(sans_data, input, input_len);
+
+    ctx->ssl_ctx.upstream_ssl_sans_dnsnames.data = sans_data;
+    ctx->ssl_ctx.upstream_ssl_sans_dnsnames.len = input_len;
+
+    return NGX_OK;
+}
+
+ngx_str_t *
+ngx_stream_lua_kong_get_upstream_ssl_sans_dnsnames(ngx_stream_session_t *s)
+{
+    ngx_stream_lua_kong_ctx_t   *ctx;
+
+    ctx = ngx_stream_get_module_ctx(s, ngx_stream_lua_kong_module);
+    if (ctx == NULL) {
+        return NULL;
+    }
+
+    if (ctx->ssl_ctx.upstream_ssl_sans_dnsnames.len == 0) {
+        return NULL;
+    }
+
+    return &ctx->ssl_ctx.upstream_ssl_sans_dnsnames;
+}
+
+int
+ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_uris(ngx_stream_lua_request_t *r,
+    const char *input, size_t input_len)
+{
+    u_char                      *sans_data;
+    ngx_stream_lua_kong_ctx_t   *ctx;
+
+    ctx = ngx_stream_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        return NGX_ERROR;
+    }
+
+    sans_data = ngx_palloc(r->pool, input_len);
+    if (sans_data == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_memcpy(sans_data, input, input_len);
+
+    ctx->ssl_ctx.upstream_ssl_sans_uris.data = sans_data;
+    ctx->ssl_ctx.upstream_ssl_sans_uris.len = input_len;
+
+    return NGX_OK;
+}
+
+ngx_str_t *
+ngx_stream_lua_kong_get_upstream_ssl_sans_uris(ngx_stream_session_t *s)
+{
+    ngx_stream_lua_kong_ctx_t   *ctx;
+
+    ctx = ngx_stream_get_module_ctx(s, ngx_stream_lua_kong_module);
+    if (ctx == NULL) {
+        return NULL;
+    }
+
+    if (ctx->ssl_ctx.upstream_ssl_sans_uris.len == 0) {
+        return NULL;
+    }
+
+    return &ctx->ssl_ctx.upstream_ssl_sans_uris;
+}
 #endif
 
 
