@@ -128,6 +128,68 @@ ngx_lua_kong_ssl_disable_session_reuse(ngx_connection_t *c)
 
 
 int
+ngx_lua_kong_ssl_get_full_upstream_certificate(ngx_connection_t *c,
+    char *buf, size_t *buf_len)
+{
+    ngx_ssl_conn_t      *sc;
+    STACK_OF(X509)      *chain;
+    X509                *cert;
+    int                  i, n;
+    size_t               len;
+    BIO                 *bio;
+    int                  ret;
+    
+    if (c->ssl == NULL) {
+        return NGX_ABORT;
+    }
+
+    cert = SSL_get_peer_certificate(c->ssl->connection);
+    if (cert == NULL) {
+        /* client did not present a certificate or server did not request it */
+        return NGX_DECLINED;
+    }
+
+    bio = BIO_new(BIO_s_mem());
+    if (bio == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "BIO_new() failed");
+
+        X509_free(cert);
+        ret = NGX_ERROR;
+        goto done;
+    }
+
+    if (PEM_write_bio_X509(bio, cert) == 0) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "PEM_write_bio_X509() failed");
+
+        X509_free(cert);
+        ret = NGX_ERROR;
+        goto done;
+    }
+
+    X509_free(cert);
+
+    len = BIO_pending(bio);
+    if (len > *buf_len) {
+        *buf_len = len;
+
+        ret = NGX_AGAIN;
+        goto done;
+    }
+
+    BIO_read(bio, buf, len);
+    *buf_len = len;
+
+    ret = NGX_OK;
+
+done:
+
+    BIO_free(bio);
+
+    return ret;
+}
+
+
+int
 ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
     char *buf, size_t *buf_len)
 {

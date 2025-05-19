@@ -37,6 +37,30 @@ ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r)
 
 
 int
+ngx_http_lua_kong_ffi_get_full_upstream_certificate(ngx_http_request_t *r,
+    char *buf, size_t *buf_len)
+{
+#if (NGX_SSL)
+    ngx_http_upstream_t *u = r->upstream;
+    if (u == NULL) {
+        return NGX_ABORT;
+    }
+    ngx_peer_connection_t *peer = &(u->peer);
+    if (peer == NULL) {
+        return NGX_ABORT;
+    }
+    ngx_connection_t *c = peer->connection;
+    if (c == NULL) {
+        return NGX_ABORT;
+    }
+    return ngx_lua_kong_ssl_get_full_upstream_certificate(c, buf, buf_len);
+#else
+    return NGX_ABORT;
+#endif
+}
+
+
+int
 ngx_http_lua_kong_ffi_get_full_client_certificate_chain(ngx_http_request_t *r,
     char *buf, size_t *buf_len)
 {
