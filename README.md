@@ -19,6 +19,8 @@ Table of Contents
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
     * [resty.kong.tls.set\_upstream\_cert\_and\_key](#restykongtlsset_upstream_cert_and_key)
+    * [resty.kong.tls.set\_upstream\_ssl\_sans\_dnsnames](#restykongtlsset_upstream_ssl_sans_dnsnames)
+    * [resty.kong.tls.set\_upstream\_ssl\_sans\_uris](#restykongtlsset_upstream_ssl_sans_uris)
     * [resty.kong.tls.set\_upstream\_ssl\_trusted\_store](#restykongtlsset_upstream_ssl_trusted_store)
     * [resty.kong.tls.set\_upstream\_ssl\_verify](#restykongtlsset_upstream_ssl_verify)
     * [resty.kong.tls.set\_upstream\_ssl\_verify\_depth](#restykongtlsset_upstream_ssl_verify_depth)
@@ -252,6 +254,44 @@ functions such as [ngx.ssl.parse\_pem\_priv\_key](https://github.com/openresty/l
 On success, this function returns `true` and future handshakes with upstream servers
 will always use the provided client certificate. Otherwise `nil` and a string describing the error
 will be returned.
+
+This function can be called multiple times in the same request. Later calls override
+previous ones.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.set\_upstream\_ssl\_sans\_dnsnames
+-----------------------------------------
+**syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_sans\_dnsnames(entries)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*, *preread_by_lua&#42;*
+
+**subsystems:** *http* *stream*
+
+Set additional SANs entries for name validation of upstream ssl certificate,
+where `entries` is an array of DNS-names.
+
+On success, this function returns `true`. Otherwise `nil` and a string
+describing the error will be returned.
+
+This function can be called multiple times in the same request. Later calls override
+previous ones.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.set\_upstream\_ssl\_sans\_uris
+-----------------------------------------
+**syntax:** *ok, err = resty.kong.tls.set\_upstream\_ssl\_sans\_uris(entries)*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, balancer_by_lua&#42;*, *preread_by_lua&#42;*
+
+**subsystems:** *http* *stream*
+
+Set additional SANs entries for name validation of upstream ssl certificate,
+where `entries` is an array of URIs.
+
+On success, this function returns `true`. Otherwise `nil` and a string
+describing the error will be returned.
 
 This function can be called multiple times in the same request. Later calls override
 previous ones.
