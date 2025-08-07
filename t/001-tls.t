@@ -5,7 +5,7 @@ use Cwd qw(cwd);
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 7 - 7);
+plan tests => repeat_each() * (blocks() * 7 - 19);
 
 my $pwd = cwd();
 
@@ -451,10 +451,9 @@ GET /t
 nil, connection is not TLS or TLS support for Nginx not enabled
 
 --- error_log
-
+kong: connection or ssl is NULL
 --- no_error_log
 [error]
-[alert]
 [warn]
 [crit]
 
@@ -535,6 +534,385 @@ ok
 GET /t
 --- response_body
 ok
+--- no_error_log
+[error]
+[emerg]
+
+
+
+
+=== TEST 9: ssl.get_request_ssl_pointer(kong_tls.UPSTREAM_NGX_CONNECTION) works well in header_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("ok")
+            }
+        }
+    }
+
+    # This is the intermediate server that proxies to upstream
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                -- Simple proxy to upstream
+                local res = ngx.location.capture(
+                    "/proxy_to_upstream",
+                    { method = ngx.HTTP_GET }
+                )
+
+                -- Output upstream response directly
+                if res.status == 200 then
+                    ngx.say(res.header["X-Upstream-Ssl"])
+                else
+                    ngx.say("Error from upstream: ", res.status)
+                end
+            }
+        }
+        
+        # Internal location to proxy to upstream
+        location = /proxy_to_upstream {
+            internal;
+            proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+            proxy_ssl_server_name on;
+            proxy_ssl_name upstream.example.com;
+
+            header_filter_by_lua_block {
+                local kong_tls = require "resty.kong.tls"
+                local ssl_ptr, err = kong_tls.get_upstream_request_ssl_pointer()
+                if ssl_ptr then
+                    ngx.header["X-Upstream-Ssl"] = "ssl_ptr exists"
+                else
+                    ngx.header["X-Upstream-Ssl"] = "ssl_pt is nil"
+                end
+            }
+        }
+    }
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name example.com;
+        proxy_ssl_session_reuse off;
+    }
+
+--- request
+GET /t
+--- response_body
+ssl_ptr exists
+--- no_error_log
+[error]
+[emerg]
+
+
+
+
+=== TEST 10: ssl.get_request_ssl_pointer(kong_tls.UPSTREAM_NGX_CONNECTION) works well in body_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("ok")
+            }
+        }
+    }
+
+    # This is the intermediate server that proxies to upstream
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                -- Simple proxy to upstream
+                local res = ngx.location.capture(
+                    "/proxy_to_upstream",
+                    { method = ngx.HTTP_GET }
+                )
+
+                -- Output upstream response directly
+                if res.status == 200 then
+                    ngx.say(res.body)
+                else
+                    ngx.say("Error from upstream: ", res.status)
+                end
+            }
+        }
+        
+        # Internal location to proxy to upstream
+        location = /proxy_to_upstream {
+            internal;
+            proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+            proxy_ssl_server_name on;
+            proxy_ssl_name upstream.example.com;
+
+            body_filter_by_lua_block {
+                local kong_tls = require "resty.kong.tls"
+                local ssl_ptr, err = kong_tls.get_upstream_request_ssl_pointer()
+                if ssl_ptr then
+                    ngx.arg[1] = "ssl_ptr exists"
+                end
+            }
+        }
+    }
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name example.com;
+        proxy_ssl_session_reuse off;
+    }
+
+--- request
+GET /t
+--- response_body
+ssl_ptr exists
+--- no_error_log
+[error]
+[emerg]
+
+
+
+
+=== TEST 11: Basic upstream proxy functionality works in header_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("ok")
+            }
+        }
+    }
+
+    # This is the intermediate server that proxies to upstream
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                -- Simple proxy to upstream
+                local res = ngx.location.capture(
+                    "/proxy_to_upstream",
+                    { method = ngx.HTTP_GET }
+                )
+
+                -- Output upstream response directly
+                if res.status == 200 then
+                    ngx.say(res.header["X-Upstream-Cert"] or "No cert")
+                else
+                    ngx.say("Error from upstream: ", res.status)
+                end
+            }
+        }
+        
+        # Internal location to proxy to upstream
+        location = /proxy_to_upstream {
+            internal;
+            proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+            proxy_ssl_server_name on;
+            proxy_ssl_name upstream.example.com;
+
+            header_filter_by_lua_block {
+                local kong_tls = require "resty.kong.tls"
+                local cert, err = kong_tls.get_full_upstream_certificate_chain()
+                if cert then
+                    ngx.header["X-Upstream-Cert"] = cert
+                else
+                    ngx.header["X-Upstream-Cert"] = "nil: " .. (err or "")
+                end
+            }
+        }
+    }
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name example.com;
+        proxy_ssl_session_reuse off;
+    }
+
+--- request
+GET /t
+--- response_body
+-----BEGIN CERTIFICATE-----%0AMIIDlTCCAn2gAwIBAgIUEYBZNDoOJlmg1B3lCS0WCk8bd2gwDQYJKoZIhvcNAQEN%0ABQAwWjEQMA4GA1UEAwwHeHh4LmNvbTELMAkGA1UEBhMCQ04xCzAJBgNVBAgMAkpT%0AMRAwDgYDVQQHDAdKaWFuZ3N1MQwwCgYDVQQKDANBQUExDDAKBgNVBAsMA0JCQjAe%0AFw0yNTA4MDQxMjUyNDRaFw0zNTA4MDIxMjUyNDRaMFoxEDAOBgNVBAMMB3h4eC5j%0Ab20xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJKUzEQMA4GA1UEBwwHSmlhbmdzdTEM%0AMAoGA1UECgwDQUFBMQwwCgYDVQQLDANCQkIwggEiMA0GCSqGSIb3DQEBAQUAA4IB%0ADwAwggEKAoIBAQDTuNAcos+LA//fjl1qr3lUOAIQczp9wN3hoQ1v/Yt9m+4rLJcu%0AdewGT0o+tOMXAHYVo3KyRfVTdpGNUAZBOpLC5x20LYhzGOM9vL+VnZ/jci7poPsF%0AynNWLd/JGUOlv68JHyNFG+ghIgEym/Lu4qAC5REvyO7D988zzvOEY9gTV33VRRph%0A+OI//eSqEfGKj4s2Yfg9aXMD2gK+ORtJx1bMo98p35plyYQWm3kQWq/pUm+7LXbR%0Aq7Zp7I611G0XDdSVAt/+SzhNUKOxyMSrpGUdlRxQsR7OhwITiOxN4Pp4lhlQRHFA%0AT8sQum/+SrVeXtAdZnJEn0Aj2y+P70+vhjUTAgMBAAGjUzBRMB0GA1UdDgQWBBTn%0AJn6CXjeLpRXdqpCUqofdgDMh8zAfBgNVHSMEGDAWgBTnJn6CXjeLpRXdqpCUqofd%0AgDMh8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBDQUAA4IBAQDJfIOc/uv0%0AQ2Ob/EjXas8x1kLst9ktT8XiAYg1P8y2KZJGnJ/M0bEgyJGNdXJMfQjEntbjwLm9%0AL0qdROfKb1WeKWfCXI49gNmErtddHUAhHLIlm9W8hCGE6yH7VsEfE/6e2L4qV6RO%0AtWmGu5ZTAMi2mInJsFojq+q4IQAeXeEigde5i83TjRi9o56f7TcAcnTBhuXNPAuK%0AULzbPEqPUw5Au6EsW2Y9X3Vg/qRsMLEJBk+2QVaG11lOIYEVgW+LbX7HywGf6E43%0A+U4EWZfeqaMsiYgh1ah3H9JD6RIxoy6VaOV88lnGs/Qi5faP5Z4rIoDTo1wsfCwE%0AMQVJX0HYQMLS%0A-----END CERTIFICATE-----%0A-----BEGIN CERTIFICATE-----%0AMIIDlTCCAn2gAwIBAgIUEYBZNDoOJlmg1B3lCS0WCk8bd2gwDQYJKoZIhvcNAQEN%0ABQAwWjEQMA4GA1UEAwwHeHh4LmNvbTELMAkGA1UEBhMCQ04xCzAJBgNVBAgMAkpT%0AMRAwDgYDVQQHDAdKaWFuZ3N1MQwwCgYDVQQKDANBQUExDDAKBgNVBAsMA0JCQjAe%0AFw0yNTA4MDQxMjUyNDRaFw0zNTA4MDIxMjUyNDRaMFoxEDAOBgNVBAMMB3h4eC5j%0Ab20xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJKUzEQMA4GA1UEBwwHSmlhbmdzdTEM%0AMAoGA1UECgwDQUFBMQwwCgYDVQQLDANCQkIwggEiMA0GCSqGSIb3DQEBAQUAA4IB%0ADwAwggEKAoIBAQDTuNAcos+LA//fjl1qr3lUOAIQczp9wN3hoQ1v/Yt9m+4rLJcu%0AdewGT0o+tOMXAHYVo3KyRfVTdpGNUAZBOpLC5x20LYhzGOM9vL+VnZ/jci7poPsF%0AynNWLd/JGUOlv68JHyNFG+ghIgEym/Lu4qAC5REvyO7D988zzvOEY9gTV33VRRph%0A+OI//eSqEfGKj4s2Yfg9aXMD2gK+ORtJx1bMo98p35plyYQWm3kQWq/pUm+7LXbR%0Aq7Zp7I611G0XDdSVAt/+SzhNUKOxyMSrpGUdlRxQsR7OhwITiOxN4Pp4lhlQRHFA%0AT8sQum/+SrVeXtAdZnJEn0Aj2y+P70+vhjUTAgMBAAGjUzBRMB0GA1UdDgQWBBTn%0AJn6CXjeLpRXdqpCUqofdgDMh8zAfBgNVHSMEGDAWgBTnJn6CXjeLpRXdqpCUqofd%0AgDMh8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBDQUAA4IBAQDJfIOc/uv0%0AQ2Ob/EjXas8x1kLst9ktT8XiAYg1P8y2KZJGnJ/M0bEgyJGNdXJMfQjEntbjwLm9%0AL0qdROfKb1WeKWfCXI49gNmErtddHUAhHLIlm9W8hCGE6yH7VsEfE/6e2L4qV6RO%0AtWmGu5ZTAMi2mInJsFojq+q4IQAeXeEigde5i83TjRi9o56f7TcAcnTBhuXNPAuK%0AULzbPEqPUw5Au6EsW2Y9X3Vg/qRsMLEJBk+2QVaG11lOIYEVgW+LbX7HywGf6E43%0A+U4EWZfeqaMsiYgh1ah3H9JD6RIxoy6VaOV88lnGs/Qi5faP5Z4rIoDTo1wsfCwE%0AMQVJX0HYQMLS%0A-----END CERTIFICATE-----%0A
+--- no_error_log
+[error]
+[emerg]
+
+
+
+
+=== TEST 12: Basic upstream proxy functionality works in body_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("ok")
+            }
+        }
+    }
+
+    # This is the intermediate server that proxies to upstream
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                -- Simple proxy to upstream
+                local res = ngx.location.capture(
+                    "/proxy_to_upstream",
+                    { method = ngx.HTTP_GET }
+                )
+
+                -- Output upstream response directly
+                if res.status == 200 then
+                    ngx.say(res.body:sub(0, -2))  -- Remove trailing newline
+                else
+                    ngx.say("Error from upstream: ", res.status)
+                end
+            }
+        }
+        
+        # Internal location to proxy to upstream
+        location = /proxy_to_upstream {
+            internal;
+            proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+            proxy_ssl_server_name on;
+            proxy_ssl_name upstream.example.com;
+
+            body_filter_by_lua_block {
+                local kong_tls = require "resty.kong.tls"
+                local cert, err = kong_tls.get_full_upstream_certificate_chain()
+                if cert then
+                    ngx.arg[1] = cert
+                end
+            }
+        }
+    }
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name example.com;
+        proxy_ssl_session_reuse off;
+    }
+
+--- request
+GET /t
+--- response_body
+-----BEGIN CERTIFICATE-----
+MIIDlTCCAn2gAwIBAgIUEYBZNDoOJlmg1B3lCS0WCk8bd2gwDQYJKoZIhvcNAQEN
+BQAwWjEQMA4GA1UEAwwHeHh4LmNvbTELMAkGA1UEBhMCQ04xCzAJBgNVBAgMAkpT
+MRAwDgYDVQQHDAdKaWFuZ3N1MQwwCgYDVQQKDANBQUExDDAKBgNVBAsMA0JCQjAe
+Fw0yNTA4MDQxMjUyNDRaFw0zNTA4MDIxMjUyNDRaMFoxEDAOBgNVBAMMB3h4eC5j
+b20xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJKUzEQMA4GA1UEBwwHSmlhbmdzdTEM
+MAoGA1UECgwDQUFBMQwwCgYDVQQLDANCQkIwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQDTuNAcos+LA//fjl1qr3lUOAIQczp9wN3hoQ1v/Yt9m+4rLJcu
+dewGT0o+tOMXAHYVo3KyRfVTdpGNUAZBOpLC5x20LYhzGOM9vL+VnZ/jci7poPsF
+ynNWLd/JGUOlv68JHyNFG+ghIgEym/Lu4qAC5REvyO7D988zzvOEY9gTV33VRRph
++OI//eSqEfGKj4s2Yfg9aXMD2gK+ORtJx1bMo98p35plyYQWm3kQWq/pUm+7LXbR
+q7Zp7I611G0XDdSVAt/+SzhNUKOxyMSrpGUdlRxQsR7OhwITiOxN4Pp4lhlQRHFA
+T8sQum/+SrVeXtAdZnJEn0Aj2y+P70+vhjUTAgMBAAGjUzBRMB0GA1UdDgQWBBTn
+Jn6CXjeLpRXdqpCUqofdgDMh8zAfBgNVHSMEGDAWgBTnJn6CXjeLpRXdqpCUqofd
+gDMh8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBDQUAA4IBAQDJfIOc/uv0
+Q2Ob/EjXas8x1kLst9ktT8XiAYg1P8y2KZJGnJ/M0bEgyJGNdXJMfQjEntbjwLm9
+L0qdROfKb1WeKWfCXI49gNmErtddHUAhHLIlm9W8hCGE6yH7VsEfE/6e2L4qV6RO
+tWmGu5ZTAMi2mInJsFojq+q4IQAeXeEigde5i83TjRi9o56f7TcAcnTBhuXNPAuK
+ULzbPEqPUw5Au6EsW2Y9X3Vg/qRsMLEJBk+2QVaG11lOIYEVgW+LbX7HywGf6E43
++U4EWZfeqaMsiYgh1ah3H9JD6RIxoy6VaOV88lnGs/Qi5faP5Z4rIoDTo1wsfCwE
+MQVJX0HYQMLS
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIDlTCCAn2gAwIBAgIUEYBZNDoOJlmg1B3lCS0WCk8bd2gwDQYJKoZIhvcNAQEN
+BQAwWjEQMA4GA1UEAwwHeHh4LmNvbTELMAkGA1UEBhMCQ04xCzAJBgNVBAgMAkpT
+MRAwDgYDVQQHDAdKaWFuZ3N1MQwwCgYDVQQKDANBQUExDDAKBgNVBAsMA0JCQjAe
+Fw0yNTA4MDQxMjUyNDRaFw0zNTA4MDIxMjUyNDRaMFoxEDAOBgNVBAMMB3h4eC5j
+b20xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJKUzEQMA4GA1UEBwwHSmlhbmdzdTEM
+MAoGA1UECgwDQUFBMQwwCgYDVQQLDANCQkIwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQDTuNAcos+LA//fjl1qr3lUOAIQczp9wN3hoQ1v/Yt9m+4rLJcu
+dewGT0o+tOMXAHYVo3KyRfVTdpGNUAZBOpLC5x20LYhzGOM9vL+VnZ/jci7poPsF
+ynNWLd/JGUOlv68JHyNFG+ghIgEym/Lu4qAC5REvyO7D988zzvOEY9gTV33VRRph
++OI//eSqEfGKj4s2Yfg9aXMD2gK+ORtJx1bMo98p35plyYQWm3kQWq/pUm+7LXbR
+q7Zp7I611G0XDdSVAt/+SzhNUKOxyMSrpGUdlRxQsR7OhwITiOxN4Pp4lhlQRHFA
+T8sQum/+SrVeXtAdZnJEn0Aj2y+P70+vhjUTAgMBAAGjUzBRMB0GA1UdDgQWBBTn
+Jn6CXjeLpRXdqpCUqofdgDMh8zAfBgNVHSMEGDAWgBTnJn6CXjeLpRXdqpCUqofd
+gDMh8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBDQUAA4IBAQDJfIOc/uv0
+Q2Ob/EjXas8x1kLst9ktT8XiAYg1P8y2KZJGnJ/M0bEgyJGNdXJMfQjEntbjwLm9
+L0qdROfKb1WeKWfCXI49gNmErtddHUAhHLIlm9W8hCGE6yH7VsEfE/6e2L4qV6RO
+tWmGu5ZTAMi2mInJsFojq+q4IQAeXeEigde5i83TjRi9o56f7TcAcnTBhuXNPAuK
+ULzbPEqPUw5Au6EsW2Y9X3Vg/qRsMLEJBk+2QVaG11lOIYEVgW+LbX7HywGf6E43
++U4EWZfeqaMsiYgh1ah3H9JD6RIxoy6VaOV88lnGs/Qi5faP5Z4rIoDTo1wsfCwE
+MQVJX0HYQMLS
+-----END CERTIFICATE-----
 --- no_error_log
 [error]
 [emerg]

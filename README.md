@@ -33,6 +33,8 @@ Table of Contents
     * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
     * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
     * [resty.kong.upstream.set\_next\_upstream](#restykongupstreamset_next_upstream)
+    * [resty.kong.tls.get\_upstream\_request\_ssl\_pointer](#restykongtlsget_upstream_request_ssl_pointer)
+    * [resty.kong.tls.get\_full\_upstream\_certificate\_chain](#restykongtlsget_full_upstream_certificate_chain)
 * [License](#license)
 
 Description
@@ -425,6 +427,9 @@ Retrieves the OpenSSL `SSL*` object for the current HTTP request.
 
 On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
 describing the error will be returned.
+
+[Back to TOC](#table-of-contents)
+
 resty.kong.tls.disable\_http2\_alpn
 ----------------------------------------------------
 **syntax:** *ok, err = resty.kong.tls.disable\_http2\_alpn()*
@@ -548,6 +553,7 @@ default `log_level` setting from Nginx configuration immediately.
 If this method is called again before the timeout, the log level and timeout will be overwritten.
 
 If we don’t pass timeout to set_log_level(), it will raise a Lua error.
+
 [Back to TOC](#table-of-contents)
 
 resty.kong.log.get\_log\_level
@@ -600,6 +606,36 @@ describing the error will be returned.
 
 This function can be called multiple times in the same request. Later calls override
 previous ones.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.get\_upstream\_request\_ssl\_pointer
+----------------------------------------------------
+**syntax:** *ssl_ptr, err = resty.kong.get\_upstream\_request\_ssl\_pointer()*
+
+**context:** *header_filter_by_lua&#42;, body_filter_by_lua&#42;*
+
+**subsystems:** *http*
+
+Retrieves the OpenSSL `SSL*` object for the upstream HTTP request.
+
+On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
+describing the error will be returned.
+
+[Back to TOC](#table-of-contents)
+
+resty.kong.tls.get\_full\_upstream\_certificate\_chain
+----------------------------------------------------
+**syntax:** *pem, err = resty.kong.tls.get\_full\_uptream\_certificate\_chain()*
+
+**context:** *header_filter_by_lua&#42;, body_filter_by_lua&#42;*
+
+**subsystems:** *http*
+
+Returns the PEM encoded upstream server certificate chain with the server certificate
+at the top and intermediate certificates (if any) at the bottom.
+
+If server did not present any certificate, then this function will return `nil`.
 
 [Back to TOC](#table-of-contents)
 
