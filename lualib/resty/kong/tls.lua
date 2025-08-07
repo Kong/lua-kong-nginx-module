@@ -36,6 +36,7 @@ local errmsg = base.get_errmsg_ptr()
 local FFI_OK = base.FFI_OK
 base.allows_subsystem('http', 'stream')
 
+local kong_lua_kong_ffi_get_full_upstream_certificate_chain
 local kong_lua_kong_ffi_get_full_client_certificate_chain
 local kong_lua_kong_ffi_disable_session_reuse
 local kong_lua_kong_ffi_set_upstream_client_cert_and_key
@@ -46,12 +47,15 @@ local kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames
 local kong_lua_kong_ffi_set_upstream_ssl_sans_uris
 local kong_lua_kong_ffi_get_socket_ssl
 local kong_lua_kong_ffi_get_request_ssl
+local kong_lua_kong_ffi_get_upstream_request_ssl
 local kong_lua_kong_ffi_disable_http2_alpn
 if subsystem == "http" then
     ffi.cdef([[
     typedef struct ssl_st SSL;
     typedef struct ngx_http_lua_socket_tcp_upstream_s ngx_http_lua_socket_tcp_upstream_t;
 
+    int ngx_http_lua_kong_ffi_get_full_upstream_certificate_chain(
+        ngx_http_request_t *r, char *buf, size_t *buf_len);
     int ngx_http_lua_kong_ffi_get_full_client_certificate_chain(
         ngx_http_request_t *r, char *buf, size_t *buf_len);
     const char *ngx_http_lua_kong_ffi_disable_session_reuse(ngx_http_request_t *r);
@@ -71,9 +75,12 @@ if subsystem == "http" then
         void **ssl_conn);
     int ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r,
         void **ssl_conn);
+    int ngx_http_lua_kong_ffi_get_upstream_request_ssl(ngx_http_request_t *r,
+        void **ssl_conn);
     int ngx_http_lua_ffi_disable_http2_alpn(ngx_http_request_t *r, char **err);
     ]])
 
+    kong_lua_kong_ffi_get_full_upstream_certificate_chain = C.ngx_http_lua_kong_ffi_get_full_upstream_certificate_chain
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain
     kong_lua_kong_ffi_disable_session_reuse = C.ngx_http_lua_kong_ffi_disable_session_reuse
     kong_lua_kong_ffi_set_upstream_client_cert_and_key = C.ngx_http_lua_kong_ffi_set_upstream_client_cert_and_key
@@ -84,6 +91,7 @@ if subsystem == "http" then
     kong_lua_kong_ffi_set_upstream_ssl_sans_uris = C.ngx_http_lua_kong_ffi_set_upstream_ssl_sans_uris
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_http_lua_kong_ffi_get_socket_ssl
     kong_lua_kong_ffi_get_request_ssl = C.ngx_http_lua_kong_ffi_get_request_ssl
+    kong_lua_kong_ffi_get_upstream_request_ssl = C.ngx_http_lua_kong_ffi_get_upstream_request_ssl
     kong_lua_kong_ffi_disable_http2_alpn = C.ngx_http_lua_ffi_disable_http2_alpn
 
 elseif subsystem == 'stream' then
@@ -111,6 +119,9 @@ elseif subsystem == 'stream' then
         void **ssl_conn);
     ]])
 
+    kong_lua_kong_ffi_get_full_upstream_certificate_chain = function()
+        error("API not available for the current subsystem")
+    end
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_stream_lua_kong_ffi_get_full_client_certificate_chain
     kong_lua_kong_ffi_disable_session_reuse = C.ngx_stream_lua_kong_ffi_disable_session_reuse
     kong_lua_kong_ffi_set_upstream_client_cert_and_key = C.ngx_stream_lua_kong_ffi_set_upstream_client_cert_and_key
@@ -121,6 +132,9 @@ elseif subsystem == 'stream' then
     kong_lua_kong_ffi_set_upstream_ssl_sans_uris = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_uris
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_stream_lua_kong_get_socket_ssl
     kong_lua_kong_ffi_get_request_ssl = function()
+        error("API not available for the current subsystem")
+    end
+    kong_lua_kong_ffi_get_upstream_request_ssl = function()
         error("API not available for the current subsystem")
     end
 else
@@ -186,6 +200,76 @@ function _M.get_request_ssl_pointer()
     end
 
     return ffi_cast(ssl_type, void_pp[0])
+end
+
+
+do
+    local ALLOWED_PHASES = {
+        ['header_filter'] = true,
+        ['body_filter'] = true,
+    }
+
+    function _M.get_upstream_request_ssl_pointer()
+        local r = get_request()
+
+        if not ALLOWED_PHASES[get_phase()] then
+            error("API disabled in the current context", 2)
+        end
+
+        local ret = kong_lua_kong_ffi_get_upstream_request_ssl(r, void_pp)
+        if ret ~= NGX_OK then
+            return nil, "no ssl object"
+        end
+
+        return ffi_cast(ssl_type, void_pp[0])
+    end
+end
+
+
+do
+    local ALLOWED_PHASES = {
+        ['header_filter'] = true,
+        ['body_filter'] = true,
+    }
+
+    function _M.get_full_upstream_certificate_chain()
+        if not ALLOWED_PHASES[get_phase()] then
+            error("API disabled in the current context", 2)
+        end
+
+        local r = get_request()
+
+        size_ptr[0] = DEFAULT_CERT_CHAIN_SIZE
+
+::again::
+
+        local buf = get_string_buf(size_ptr[0])
+
+        local ret = kong_lua_kong_ffi_get_full_upstream_certificate_chain(
+            r, buf, size_ptr)
+        if ret == NGX_OK then
+            return ffi_string(buf, size_ptr[0])
+        end
+
+        if ret == NGX_ERROR then
+            return nil, "error while obtaining upstream certificate chain"
+        end
+
+        if ret == NGX_ABORT then
+            return nil,
+                    "connection is not TLS or TLS support for upstream Nginx not enabled"
+        end
+
+        if ret == NGX_DECLINED then
+            return nil
+        end
+
+        if ret == NGX_AGAIN then
+            goto again
+        end
+
+        error("unknown return code: " .. tostring(ret))
+    end
 end
 
 

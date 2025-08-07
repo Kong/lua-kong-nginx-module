@@ -36,6 +36,8 @@ ngx_int_t ngx_lua_kong_ssl_init(ngx_conf_t *cf);
 const char *ngx_lua_kong_ssl_disable_session_reuse(ngx_connection_t *c);
 int ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
     char *buf, size_t *buf_len);
+int ngx_lua_kong_ssl_get_certificate_chain(ngx_ssl_conn_t *sc,
+    char *buf, size_t *buf_len);
 
 void ngx_lua_kong_ssl_set_upstream_ssl(ngx_lua_kong_ssl_ctx_t *ctx, ngx_connection_t *c);
 void ngx_lua_kong_ssl_cleanup(ngx_lua_kong_ssl_ctx_t *ctx);

@@ -94,6 +94,117 @@ ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r, void **ssl_conn)
 }
 
 
+int
+ngx_http_lua_kong_ffi_get_upstream_request_ssl(ngx_http_request_t *r, void **ssl_conn)
+{
+#if (NGX_SSL)
+    if (ssl_conn == NULL) {
+        return NGX_ABORT;
+    }
+
+    ngx_connection_t *c; // for error logging
+    ngx_connection_t *uc; // upstream connection
+    ngx_http_upstream_t *u;
+    ngx_peer_connection_t *peer;
+
+    c = r->connection;
+    if (c == NULL) {
+        return NGX_ABORT;
+    }
+
+    u = r->upstream;
+    if (u == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "kong: upstream not set");
+        return NGX_ABORT;
+    }
+
+    peer = &(u->peer);
+    if (peer == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "kong: upstream peer is NULL");
+        return NGX_ABORT;
+    }
+
+    uc = peer->connection;
+    if (uc == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "kong: upstream connection is NULL");
+        return NGX_ABORT;
+    }
+
+    if (uc && (uc->ssl) && (uc->ssl->connection)) {
+        *ssl_conn = uc->ssl->connection;
+        return NGX_OK;
+    } else {
+        ngx_ssl_error(NGX_LOG_ALERT, c ? uc->log : NULL, 0,
+                      "kong: connection or ssl is NULL");
+    }
+
+    return NGX_ERROR;
+
+#else
+    return NGX_ABORT;
+#endif
+}
+
+
+int
+ngx_http_lua_kong_ffi_get_full_upstream_certificate_chain(ngx_http_request_t *r,
+    char *buf, size_t *buf_len)
+{
+#if (NGX_SSL)
+    int ret;
+    ngx_connection_t *c; // for error logging
+    ngx_connection_t *uc; // upstream connection
+    ngx_http_upstream_t *u;
+    ngx_peer_connection_t *peer;
+
+    c = r->connection;
+    if (c == NULL) {
+        return NGX_ABORT;
+    }
+
+    u = r->upstream;
+    if (u == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "kong: upstream not set");
+        return NGX_ABORT;
+    }
+
+    peer = &(u->peer);
+    if (peer == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "kong: upstream peer is NULL");
+        return NGX_ABORT;
+    }
+
+    uc = peer->connection;
+    if (uc == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
+                      "kong: upstream connection is NULL");
+        return NGX_ABORT;
+    }
+
+    if (uc && (uc->ssl) && (uc->ssl->connection)) {
+        ret = ngx_lua_kong_ssl_get_certificate_chain(uc->ssl->connection, buf, buf_len);
+
+        if (ret != NGX_OK) {
+            ngx_ssl_error(NGX_LOG_ALERT, uc->log, 0, buf);
+        }
+    } else {
+        ngx_ssl_error(NGX_LOG_ALERT, uc ? uc->log : NULL, 0,
+                      "kong: connection or ssl is NULL");
+        return NGX_ABORT;
+    }
+
+    return ret;
+#else
+    return NGX_ABORT;
+#endif
+}
+
+
 #if (NGX_HTTP_SSL)
 
 /*

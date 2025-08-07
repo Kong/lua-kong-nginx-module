@@ -128,10 +128,9 @@ ngx_lua_kong_ssl_disable_session_reuse(ngx_connection_t *c)
 
 
 int
-ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
+ngx_lua_kong_ssl_get_certificate_chain(ngx_ssl_conn_t *sc,
     char *buf, size_t *buf_len)
 {
-    ngx_ssl_conn_t      *sc;
     STACK_OF(X509)      *chain;
     X509                *cert;
     int                  i, n;
@@ -139,21 +138,28 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
     BIO                 *bio;
     int                  ret;
 
-    if (c->ssl == NULL) {
+    if (sc == NULL) {
+        if (buf && buf_len > 0) {
+            /* buf returns error message when return value is not NGX_OK */
+            ngx_snprintf(buf, buf_len, "ssl connection is NULL");
+        }
         return NGX_ABORT;
     }
 
-    sc = c->ssl->connection;
-
-    cert = SSL_get_peer_certificate(c->ssl->connection);
+    cert = SSL_get_peer_certificate(sc);
     if (cert == NULL) {
+        if (buf && buf_len > 0) {
+            ngx_snprintf(buf, buf_len, "no peer certificate");
+        }
         /* client did not present a certificate or server did not request it */
         return NGX_DECLINED;
     }
 
     bio = BIO_new(BIO_s_mem());
     if (bio == NULL) {
-        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "BIO_new() failed");
+        if (buf && buf_len > 0) {
+            ngx_snprintf(buf, buf_len, "BIO_new() failed");
+        }
 
         X509_free(cert);
         ret = NGX_ERROR;
@@ -161,7 +167,9 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
     }
 
     if (PEM_write_bio_X509(bio, cert) == 0) {
-        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "PEM_write_bio_X509() failed");
+        if (buf && buf_len > 0) {
+            ngx_snprintf(buf, buf_len, "PEM_write_bio_X509() failed");
+        }
 
         X509_free(cert);
         ret = NGX_ERROR;
@@ -172,6 +180,10 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
 
     chain = SSL_get_peer_cert_chain(sc);
     if (chain == NULL) {
+        if (buf && buf_len > 0) {
+            ngx_snprintf(buf, buf_len, "no peer cert chain");
+        }
+
         ret = NGX_DECLINED;
         goto done;
     }
@@ -181,8 +193,9 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
         cert = sk_X509_value(chain, i);
 
         if (PEM_write_bio_X509(bio, cert) == 0) {
-            ngx_ssl_error(NGX_LOG_ALERT, c->log, 0,
-                          "PEM_write_bio_X509() failed");
+            if (buf && buf_len > 0) {
+                ngx_snprintf(buf, buf_len, "PEM_write_bio_X509() failed");
+            }
 
             ret = NGX_ERROR;
             goto done;
@@ -193,10 +206,15 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
     if (len > *buf_len) {
         *buf_len = len;
 
+        if (buf && buf_len > 0) {
+            ngx_snprintf(buf, buf_len, "buffer too small");
+        }
+
         ret = NGX_AGAIN;
         goto done;
     }
 
+    /* buf returns certificate when return value is NGX_OK */
     BIO_read(bio, buf, len);
     *buf_len = len;
 
@@ -205,6 +223,28 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
 done:
 
     BIO_free(bio);
+
+    return ret;
+}
+
+
+int
+ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
+    char *buf, size_t *buf_len)
+{
+    int ret;
+
+    if (c == NULL || c->ssl == NULL) {
+        ngx_ssl_error(NGX_LOG_ALERT, c ? c->log : NULL, 0,
+                      "kong: connection or ssl is NULL");
+        return NGX_ABORT;
+    }
+
+    ret = ngx_lua_kong_ssl_get_certificate_chain(c->ssl->connection, buf, buf_len);
+
+    if (ret != NGX_OK) {
+        ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, buf);
+    }
 
     return ret;
 }
