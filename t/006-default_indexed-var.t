@@ -9,7 +9,9 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) + 12;
+plan tests => repeat_each() * (blocks() * 8) - 10;
+
+$ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
 
 #no_diff();
 #no_long_string();
@@ -475,3 +477,375 @@ variable value is not found by index
 [error]
 [crit]
 [alert]
+
+
+
+
+=== TEST 15: Test ngx.var.kong_upstream_ssl_protocol works well in header_filter phase, cannot get ngx.var.kong_upstream_ssl_protocol in access phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("testtes") -- clear warning
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+        proxy_ssl_protocols TLSv1.2;
+
+        access_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.say("Upstream TLS version: ", upstream_tls_version)
+            else
+                ngx.say("No upstream TLS version available in access phase")
+            end
+        }
+
+        header_filter_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.header["X-Upstream-Ssl"] = upstream_tls_version
+            end
+        }
+    }
+
+--- request
+GET /t
+--- response_body
+No upstream TLS version available in access phase
+--- response_header
+X-Upstream-Ssl: TLSv1.2
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]
+
+
+
+
+=== TEST 16: Test ngx.var.kong_upstream_ssl_protocol works well in body_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("testtes") -- clear warning
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+        proxy_ssl_protocols TLSv1.2;
+
+        body_filter_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.arg[1] = upstream_tls_version .. "\n"
+            end
+        }
+    }
+
+--- request
+GET /t
+--- response_body
+TLSv1.2
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]
+
+
+
+
+=== TEST 17: Test ngx.var.kong_upstream_ssl_server_raw_cert works in header_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                local blanks = string.rep(" ", 1346) -- clear warning
+                ngx.say(blanks) --- simulate a large response to contain the cert
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+
+        body_filter_by_lua_block {
+            ngx.arg[1] = ngx.header["X-Upstream-Cert"] .. "\n"
+            ngx.arg[2] = true -- signal that the body has been modified
+        }
+
+        header_filter_by_lua_block {
+            local cert = ngx.var.kong_upstream_ssl_server_raw_cert
+            if cert then
+                ngx.header["X-Upstream-Cert"] = cert
+            else
+                ngx.header["X-Upstream-Cert"] = "nil"
+            end
+        }
+    }
+
+--- request
+GET /t
+--- response_body
+-----BEGIN CERTIFICATE-----%0AMIIDlTCCAn2gAwIBAgIUEYBZNDoOJlmg1B3lCS0WCk8bd2gwDQYJKoZIhvcNAQEN%0ABQAwWjEQMA4GA1UEAwwHeHh4LmNvbTELMAkGA1UEBhMCQ04xCzAJBgNVBAgMAkpT%0AMRAwDgYDVQQHDAdKaWFuZ3N1MQwwCgYDVQQKDANBQUExDDAKBgNVBAsMA0JCQjAe%0AFw0yNTA4MDQxMjUyNDRaFw0zNTA4MDIxMjUyNDRaMFoxEDAOBgNVBAMMB3h4eC5j%0Ab20xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJKUzEQMA4GA1UEBwwHSmlhbmdzdTEM%0AMAoGA1UECgwDQUFBMQwwCgYDVQQLDANCQkIwggEiMA0GCSqGSIb3DQEBAQUAA4IB%0ADwAwggEKAoIBAQDTuNAcos+LA//fjl1qr3lUOAIQczp9wN3hoQ1v/Yt9m+4rLJcu%0AdewGT0o+tOMXAHYVo3KyRfVTdpGNUAZBOpLC5x20LYhzGOM9vL+VnZ/jci7poPsF%0AynNWLd/JGUOlv68JHyNFG+ghIgEym/Lu4qAC5REvyO7D988zzvOEY9gTV33VRRph%0A+OI//eSqEfGKj4s2Yfg9aXMD2gK+ORtJx1bMo98p35plyYQWm3kQWq/pUm+7LXbR%0Aq7Zp7I611G0XDdSVAt/+SzhNUKOxyMSrpGUdlRxQsR7OhwITiOxN4Pp4lhlQRHFA%0AT8sQum/+SrVeXtAdZnJEn0Aj2y+P70+vhjUTAgMBAAGjUzBRMB0GA1UdDgQWBBTn%0AJn6CXjeLpRXdqpCUqofdgDMh8zAfBgNVHSMEGDAWgBTnJn6CXjeLpRXdqpCUqofd%0AgDMh8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBDQUAA4IBAQDJfIOc/uv0%0AQ2Ob/EjXas8x1kLst9ktT8XiAYg1P8y2KZJGnJ/M0bEgyJGNdXJMfQjEntbjwLm9%0AL0qdROfKb1WeKWfCXI49gNmErtddHUAhHLIlm9W8hCGE6yH7VsEfE/6e2L4qV6RO%0AtWmGu5ZTAMi2mInJsFojq+q4IQAeXeEigde5i83TjRi9o56f7TcAcnTBhuXNPAuK%0AULzbPEqPUw5Au6EsW2Y9X3Vg/qRsMLEJBk+2QVaG11lOIYEVgW+LbX7HywGf6E43%0A+U4EWZfeqaMsiYgh1ah3H9JD6RIxoy6VaOV88lnGs/Qi5faP5Z4rIoDTo1wsfCwE%0AMQVJX0HYQMLS%0A-----END CERTIFICATE-----%0A
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]
+
+
+
+
+=== TEST 18: Test ngx.var.kong_upstream_ssl_server_raw_cert works in body_filter phase
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                local blanks = string.rep(" ", 1301) -- clear warning
+                ngx.say(blanks) --- simulate a large response to contain the cert
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+
+        body_filter_by_lua_block {
+            local cert = ngx.var.kong_upstream_ssl_server_raw_cert
+            if cert then
+                ngx.arg[1] = cert -- replace the body with the cert
+                ngx.arg[2] = true -- signal that the body has been modified
+            end
+        }
+    }
+
+--- request
+GET /t
+--- response_body
+-----BEGIN CERTIFICATE-----
+MIIDlTCCAn2gAwIBAgIUEYBZNDoOJlmg1B3lCS0WCk8bd2gwDQYJKoZIhvcNAQEN
+BQAwWjEQMA4GA1UEAwwHeHh4LmNvbTELMAkGA1UEBhMCQ04xCzAJBgNVBAgMAkpT
+MRAwDgYDVQQHDAdKaWFuZ3N1MQwwCgYDVQQKDANBQUExDDAKBgNVBAsMA0JCQjAe
+Fw0yNTA4MDQxMjUyNDRaFw0zNTA4MDIxMjUyNDRaMFoxEDAOBgNVBAMMB3h4eC5j
+b20xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJKUzEQMA4GA1UEBwwHSmlhbmdzdTEM
+MAoGA1UECgwDQUFBMQwwCgYDVQQLDANCQkIwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQDTuNAcos+LA//fjl1qr3lUOAIQczp9wN3hoQ1v/Yt9m+4rLJcu
+dewGT0o+tOMXAHYVo3KyRfVTdpGNUAZBOpLC5x20LYhzGOM9vL+VnZ/jci7poPsF
+ynNWLd/JGUOlv68JHyNFG+ghIgEym/Lu4qAC5REvyO7D988zzvOEY9gTV33VRRph
++OI//eSqEfGKj4s2Yfg9aXMD2gK+ORtJx1bMo98p35plyYQWm3kQWq/pUm+7LXbR
+q7Zp7I611G0XDdSVAt/+SzhNUKOxyMSrpGUdlRxQsR7OhwITiOxN4Pp4lhlQRHFA
+T8sQum/+SrVeXtAdZnJEn0Aj2y+P70+vhjUTAgMBAAGjUzBRMB0GA1UdDgQWBBTn
+Jn6CXjeLpRXdqpCUqofdgDMh8zAfBgNVHSMEGDAWgBTnJn6CXjeLpRXdqpCUqofd
+gDMh8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBDQUAA4IBAQDJfIOc/uv0
+Q2Ob/EjXas8x1kLst9ktT8XiAYg1P8y2KZJGnJ/M0bEgyJGNdXJMfQjEntbjwLm9
+L0qdROfKb1WeKWfCXI49gNmErtddHUAhHLIlm9W8hCGE6yH7VsEfE/6e2L4qV6RO
+tWmGu5ZTAMi2mInJsFojq+q4IQAeXeEigde5i83TjRi9o56f7TcAcnTBhuXNPAuK
+ULzbPEqPUw5Au6EsW2Y9X3Vg/qRsMLEJBk+2QVaG11lOIYEVgW+LbX7HywGf6E43
++U4EWZfeqaMsiYgh1ah3H9JD6RIxoy6VaOV88lnGs/Qi5faP5Z4rIoDTo1wsfCwE
+MQVJX0HYQMLS
+-----END CERTIFICATE-----
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]
+
+
+
+
+=== TEST 19: Test ngx.var.kong_upstream_ssl_protocol can get in log phase after accessed in header_filter phase with lua_kong_load_var_index set to default
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+    lua_kong_load_var_index default;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("testtes") -- clear warning
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+        proxy_ssl_protocols TLSv1.2;
+
+        header_filter_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.header["X-Upstream-Ssl"] = upstream_tls_version
+            else
+                ngx.header["X-Upstream-Ssl"] = "No upstream TLS version available"
+            end
+        }
+
+        log_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.log(ngx.INFO, "Upstream TLS version: " .. upstream_tls_version)
+            else
+                ngx.log(ngx.INFO, "No upstream TLS version available in log phase")
+            end
+        }
+    }
+
+--- request
+GET /t
+--- error_log
+Upstream TLS version: TLSv1.2
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]
+
+
+
+
+=== TEST 20: Test ngx.var.kong_upstream_ssl_protocol cannot get in access phase and log phase even if with lua_kong_load_var_index set to default
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_ssl_protocols SSLV3 TLSv1 TLSv1.1 TLSv1.2;
+    lua_kong_load_var_index default;
+
+    # This is the upstream server
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("testtes") -- clear warning
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+        proxy_ssl_protocols TLSv1.2;
+
+        access_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.say("Upstream TLS version: ", upstream_tls_version)
+            else
+                ngx.say("No upstream TLS version available in access phase")
+            end
+        }
+
+        log_by_lua_block {
+            local upstream_tls_version = ngx.var.kong_upstream_ssl_protocol
+            if upstream_tls_version then
+                ngx.log(ngx.INFO, "Upstream TLS version: " .. upstream_tls_version)
+            else
+                ngx.log(ngx.INFO, "No upstream TLS version available in log phase")
+            end
+        }
+    }
+
+--- request
+GET /t
+--- response_body
+No upstream TLS version available in access phase
+--- error_log
+No upstream TLS version available in log phase
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]

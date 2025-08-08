@@ -15,6 +15,8 @@ Table of Contents
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
+    * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
+    * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -182,6 +184,22 @@ $kong\_request\_id
 ------------------
 Unique request identifier generated from 16 pseudo-random bytes, in hexadecimal.
 This variable is indexed.
+
+[Back to TOC](#table-of-contents)
+
+$kong\_upstream\_ssl\_server\_raw\_cert
+----------------------------------------------------
+
+Returns the upstream server certificate in the PEM format for an established SSL connection.
+
+[Back to TOC](#table-of-contents)
+
+$kong\_upstream\_ssl\_protocol
+----------------------------------------------------
+
+Returns the protocol of an established SSL connection for an upstream
+HTTP request.
+
 
 [Back to TOC](#table-of-contents)
 
@@ -425,6 +443,9 @@ Retrieves the OpenSSL `SSL*` object for the current HTTP request.
 
 On success, this function returns the pointer of type `SSL`. Otherwise `nil` and a string
 describing the error will be returned.
+
+[Back to TOC](#table-of-contents)
+
 resty.kong.tls.disable\_http2\_alpn
 ----------------------------------------------------
 **syntax:** *ok, err = resty.kong.tls.disable\_http2\_alpn()*
@@ -548,6 +569,7 @@ default `log_level` setting from Nginx configuration immediately.
 If this method is called again before the timeout, the log level and timeout will be overwritten.
 
 If we don’t pass timeout to set_log_level(), it will raise a Lua error.
+
 [Back to TOC](#table-of-contents)
 
 resty.kong.log.get\_log\_level

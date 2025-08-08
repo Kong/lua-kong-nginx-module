@@ -53,6 +53,7 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
 }
 
 
+#if (NGX_SSL)
 static ngx_int_t
 ngx_http_lua_kong_get_ssl_raw_certificate(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
 {
@@ -114,17 +115,17 @@ ngx_http_lua_kong_get_upstream_raw_certificate(ngx_http_request_t *r, ngx_http_v
 
     u = r->upstream;
     if (u == NULL) {
-        return NGX_ABORT;
+        goto not_found;
     }
 
     peer = &(u->peer);
     if (peer == NULL) {
-        return NGX_ABORT;
+        goto not_found;
     }
 
     uc = peer->connection;
     if (uc == NULL) {
-        return NGX_ABORT;
+        goto not_found;
     }
 
     if (uc->ssl) {
@@ -143,6 +144,8 @@ ngx_http_lua_kong_get_upstream_raw_certificate(ngx_http_request_t *r, ngx_http_v
             return NGX_OK;
         }
     }
+
+not_found:
 
     v->not_found = 1;
 
@@ -171,17 +174,17 @@ ngx_http_lua_kong_get_upstream_tls_protocol(ngx_http_request_t *r, ngx_http_vari
 
     u = r->upstream;
     if (u == NULL) {
-        return NGX_ABORT;
+        goto not_found;
     }
 
     peer = &(u->peer);
     if (peer == NULL) {
-        return NGX_ABORT;
+        goto not_found;
     }
 
     uc = peer->connection;
     if (uc == NULL) {
-        return NGX_ABORT;
+        goto not_found;
     }
 
     if (uc->ssl) {
@@ -199,10 +202,13 @@ ngx_http_lua_kong_get_upstream_tls_protocol(ngx_http_request_t *r, ngx_http_vari
         return NGX_OK;
     }
 
+not_found:
+
     v->not_found = 1;
 
     return NGX_OK;
 }
+#endif /* NGX_SSL */
 
 
 static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
@@ -210,14 +216,16 @@ static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
     { ngx_string("kong_request_id"), NULL,
       ngx_http_lua_kong_variable_request_id,
       0, 0, 0 },
-    { ngx_string("upstream_ssl_server_raw_cert"), NULL,
+#if (NGX_SSL)
+    { ngx_string("kong_upstream_ssl_server_raw_cert"), NULL,
       ngx_http_lua_kong_get_upstream_raw_certificate,
       0,
       NGX_HTTP_VAR_CHANGEABLE, 0 },
-    { ngx_string("upstream_ssl_protocol"), NULL,
+    { ngx_string("kong_upstream_ssl_protocol"), NULL,
       ngx_http_lua_kong_get_upstream_tls_protocol,
       0,
       NGX_HTTP_VAR_CHANGEABLE, 0 },
+#endif
       ngx_http_null_variable
 };
 
