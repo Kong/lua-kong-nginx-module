@@ -156,8 +156,7 @@ ngx_lua_kong_ssl_get_full_client_certificate_chain(ngx_connection_t *c,
         ngx_ssl_error(NGX_LOG_ALERT, c->log, 0, "BIO_new() failed");
 
         X509_free(cert);
-        ret = NGX_ERROR;
-        goto done;
+        return NGX_ERROR;
     }
 
     if (PEM_write_bio_X509(bio, cert) == 0) {
