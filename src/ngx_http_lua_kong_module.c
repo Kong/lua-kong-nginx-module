@@ -19,6 +19,7 @@
 #include "ngx_http_upstream.h"
 
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
+static ngx_int_t ngx_http_lua_kong_init_worker(ngx_cycle_t *cycle);
 static void* ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf);
 static char* ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
@@ -72,7 +73,7 @@ ngx_module_t ngx_http_lua_kong_module = {
     NGX_HTTP_MODULE,                   /* module type */
     NULL,                              /* init master */
     NULL,                              /* init module */
-    NULL,                              /* init process */
+    ngx_http_lua_kong_init_worker,     /* init process */
     NULL,                              /* init thread */
     NULL,                              /* exit thread */
     NULL,                              /* exit process */
@@ -89,6 +90,24 @@ ngx_http_lua_kong_init(ngx_conf_t *cf)
     }
 
     return ngx_lua_kong_ssl_init(cf);
+}
+
+
+static ngx_int_t
+ngx_http_lua_kong_init_worker(ngx_cycle_t *cycle)
+{
+    ngx_uint_t rnd;
+
+    if (RAND_bytes((u_char *)&rnd, sizeof(rnd)) <= 0) {
+        ngx_log_error(NGX_LOG_ERR, cycle->log, 0,
+            "could not generate random bytes for random seed, OpenSSL error: %s",
+            ERR_error_string(ERR_get_error(), NULL));
+        return NGX_ERROR;
+    }
+
+    srandom(rnd);
+
+    return NGX_OK;
 }
 
 
