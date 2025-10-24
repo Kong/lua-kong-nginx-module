@@ -17,8 +17,6 @@
 
 #include "ngx_http_lua_kong_common.h"
 #include "ngx_http_lua_socket_tcp.h"
-#include "ngx_http_lua_ssl.h"
-#include "ngx_http_lua_util.h"
 
 /*
  * disables session reuse for the current TLS connection, must be called
@@ -199,50 +197,6 @@ ngx_http_lua_kong_get_upstream_ssl_verify(ngx_http_request_t *r,
     return ngx_lua_kong_ssl_get_upstream_ssl_verify(&ctx->ssl_ctx, proxy_ssl_verify);
 }
 
-ngx_flag_t
-ngx_http_lua_kong_ssl_get_http2_alpn_enabled(ngx_ssl_connection_t *ssl,
-    ngx_flag_t enable_http2)
-{
-    ngx_http_lua_ssl_ctx_t *cctx;
-
-    cctx = ngx_http_lua_ssl_get_ctx(ssl->connection);
-    if (cctx && cctx->disable_http2_alpn) {
-        return 0;
-    }
-
-    return enable_http2;
-}
-
-int
-ngx_http_lua_ffi_disable_http2_alpn(ngx_http_request_t *r, char **err)
-{
-    ngx_ssl_conn_t    *ssl_conn;
-    ngx_http_lua_ssl_ctx_t *cctx;
-
-    if (r->connection == NULL || r->connection->ssl == NULL) {
-        *err = "bad request";
-        return NGX_ERROR;
-    }
-
-    ssl_conn = r->connection->ssl->connection;
-    if (ssl_conn == NULL) {
-        *err = "bad ssl conn";
-        return NGX_ERROR;
-    }
-
-    cctx = ngx_http_lua_ssl_get_ctx(ssl_conn);
-    if (cctx == NULL) {
-        *err = "bad lua context";
-        return NGX_ERROR;
-    }
-    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
-                  "lua ssl disable http2");
-    cctx->disable_http2_alpn = 1;
-
-    return NGX_OK;
-}
-
-
 int
 ngx_http_lua_kong_ffi_set_upstream_ssl_sans_dnsnames(ngx_http_request_t *r,
     const char *input, size_t input_len)
@@ -330,5 +284,3 @@ ngx_http_lua_kong_ssl_get_upstream_ssl_sans_uris(ngx_http_request_t *r)
 }
 
 #endif
-
-

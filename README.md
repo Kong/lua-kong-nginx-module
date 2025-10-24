@@ -447,21 +447,6 @@ describing the error will be returned.
 
 [Back to TOC](#table-of-contents)
 
-resty.kong.tls.disable\_http2\_alpn
-----------------------------------------------------
-**syntax:** *ok, err = resty.kong.tls.disable\_http2\_alpn()*
-
-**context:** *client_hello_by_lua*
-
-**subsystems:** *http*
-
-Disables HTTP/2 ALPN negotiation for the current TLS connection. When called, the
-connection will not negotiate HTTP/2 using ALPN and will fallback to HTTP/1.1 even though [`http2`](https://nginx.org/en/docs/http/ngx_http_v2_module.html#http2) directive is enabled.
-
-This function returns `true` when the call is successful. Otherwise it returns `false` and a string describing the error.
-
-[Back to TOC](#table-of-contents)
-
 resty.kong.grpc.set\_authority
 ------------------------------
 **syntax:** *ok, err = resty.kong.grpc.set_authority(new_authority)*

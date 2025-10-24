@@ -32,8 +32,6 @@ local get_string_buf = base.get_string_buf
 local size_ptr = base.get_size_ptr()
 local orig_get_request = base.get_request
 local subsystem = ngx.config.subsystem
-local errmsg = base.get_errmsg_ptr()
-local FFI_OK = base.FFI_OK
 base.allows_subsystem('http', 'stream')
 
 local kong_lua_kong_ffi_get_full_client_certificate_chain
@@ -46,7 +44,6 @@ local kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames
 local kong_lua_kong_ffi_set_upstream_ssl_sans_uris
 local kong_lua_kong_ffi_get_socket_ssl
 local kong_lua_kong_ffi_get_request_ssl
-local kong_lua_kong_ffi_disable_http2_alpn
 if subsystem == "http" then
     ffi.cdef([[
     typedef struct ssl_st SSL;
@@ -71,7 +68,6 @@ if subsystem == "http" then
         void **ssl_conn);
     int ngx_http_lua_kong_ffi_get_request_ssl(ngx_http_request_t *r,
         void **ssl_conn);
-    int ngx_http_lua_ffi_disable_http2_alpn(ngx_http_request_t *r, char **err);
     ]])
 
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_http_lua_kong_ffi_get_full_client_certificate_chain
@@ -84,7 +80,6 @@ if subsystem == "http" then
     kong_lua_kong_ffi_set_upstream_ssl_sans_uris = C.ngx_http_lua_kong_ffi_set_upstream_ssl_sans_uris
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_http_lua_kong_ffi_get_socket_ssl
     kong_lua_kong_ffi_get_request_ssl = C.ngx_http_lua_kong_ffi_get_request_ssl
-    kong_lua_kong_ffi_disable_http2_alpn = C.ngx_http_lua_ffi_disable_http2_alpn
 
 elseif subsystem == 'stream' then
     ffi.cdef([[
@@ -409,24 +404,6 @@ do
         end
 
         error("unknown return code: " .. tostring(ret))
-    end
-
-    function _M.disable_http2_alpn()
-        if get_phase() ~= "ssl_client_hello" then
-            error("API disabled in the current context")
-        end
-
-        local r = get_request()
-        if not r then
-            error("no request found")
-        end
-
-        local rc = kong_lua_kong_ffi_disable_http2_alpn(r, errmsg)
-        if rc == FFI_OK then
-            return true
-        end
-
-        return false, ffi_string(errmsg[0])
     end
 end
 
