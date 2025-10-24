@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  KONG_VERSION: master
+  KONG_VERSION: refactor/patches-h2-alpn-removal
   BUILD_ROOT: ${{ github.workspace }}/kong/bazel-bin/build
 
 concurrency:
