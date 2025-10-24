@@ -1,5 +1,5 @@
 /**
- * Copyright 2019-2022 Kong Inc.
+ * Copyright 2019-2025 Kong Inc.
 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,5 +27,3 @@ ngx_http_lua_kong_ffi_get_static_tag(ngx_http_request_t *r)
 
     return &lcf->tag;
 }
-
-

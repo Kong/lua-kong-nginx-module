@@ -1,5 +1,5 @@
 /**
- * Copyright 2019-2023 Kong Inc.
+ * Copyright 2019-2025 Kong Inc.
 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,5 +143,3 @@ ngx_http_lua_kong_error_log_request_id(ngx_conf_t *cf, ngx_command_t *cmd, void 
 
     return NGX_CONF_OK;
 }
-
-
