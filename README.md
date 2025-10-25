@@ -101,6 +101,7 @@ index *commonly used variables* as follows:
 - `$http_proxy_connection`
 - `$http_te`
 - `$http_upgrade`
+- `$http_via`
 - `$http_x_forwarded_for`
 - `$http_x_forwarded_host`
 - `$http_x_forwarded_path`

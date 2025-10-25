@@ -35,6 +35,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("http_proxy_connection"),
     ngx_string("http_te"),
     ngx_string("http_upgrade"),
+    ngx_string("http_via"),
 
     /* http request headers */
     ngx_string("http_x_forwarded_for"),
@@ -333,5 +334,3 @@ nomem:
     *err = "no memory";
     return NGX_ERROR;
 }
-
-

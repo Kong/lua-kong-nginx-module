@@ -9,7 +9,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8) - 10;
+plan tests => repeat_each() * (blocks() * 8) - 8;
 
 $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
 
@@ -117,7 +117,8 @@ get variable value '/test' by index
                     ngx.var.http_proxy, " ",
                     ngx.var.http_proxy_connection, " ",
                     ngx.var.http_te, " ",
-                    ngx.var.http_upgrade
+                    ngx.var.http_upgrade, " ",
+                    ngx.var.http_via
                     )
         }
     }
@@ -132,8 +133,9 @@ proxy: 111
 proxy-connection: 222
 te: 333
 upgrade: 444
+via: 1.1 kong
 --- response_body
-auth close test.com 1 111 222 333 444
+auth close test.com 1 111 222 333 444 1.1 kong
 --- error_log
 get variable value 'auth' by index
 get variable value 'close' by index
@@ -143,6 +145,7 @@ get variable value '111' by index
 get variable value '222' by index
 get variable value '333' by index
 get variable value '444' by index
+get variable value '1.1 kong' by index
 --- no_error_log
 [error]
 [crit]
