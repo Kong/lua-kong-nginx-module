@@ -1154,3 +1154,32 @@ GET /test
 ]
 --- no_log eval
 "you can't see me init_worker"
+
+
+
+=== TEST 25: set_log_level and get_log_level support extended Nginx debug levels
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        content_by_lua_block {
+            local log = require("resty.kong.log")
+            local DEBUG_MAIL = 0x200
+
+            assert(pcall(log.set_log_level, DEBUG_MAIL, 2))
+            assert(log.get_log_level(ngx.WARN) == DEBUG_MAIL)
+
+            ngx.sleep(3)
+            assert(log.get_log_level(ngx.WARN) == ngx.WARN)
+
+            ngx.say("ok")
+        }
+    }
+--- timeout: 5s
+--- request
+GET /test
+--- response_body
+ok
+--- no_error_log
+[error]
+[crit]
