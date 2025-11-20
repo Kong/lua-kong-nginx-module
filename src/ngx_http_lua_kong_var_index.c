@@ -92,6 +92,15 @@ static ngx_str_t default_vars[] = {
     ngx_string("upstream_http_trailer"),
     ngx_string("upstream_http_upgrade"),
     ngx_string("upstream_status"),
+    ngx_string("upstream_via"),
+
+    /* upstream x-forwarded vars */
+    ngx_string("upstream_x_forwarded_for"),
+    ngx_string("upstream_x_forwarded_host"),
+    ngx_string("upstream_x_forwarded_path"),
+    ngx_string("upstream_x_forwarded_port"),
+    ngx_string("upstream_x_forwarded_prefix"),
+    ngx_string("upstream_x_forwarded_proto"),
 
     /* detailed upstream timing vars */
     ngx_string("upstream_start_timestamp_us"),
@@ -101,6 +110,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("upstream_response_timestamp_us"),
 
     /* lua-kong-module vars */
+    ngx_string("kong_proxy_mode"),
     ngx_string("kong_request_id"),
 
     ngx_null_string
