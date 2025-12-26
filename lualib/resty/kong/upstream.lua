@@ -95,4 +95,11 @@ function _M.set_next_upstream(...)
     return nil
 end
 
+function _M.get_keepalive_cache_free_count()
+    local r = get_request()
+    local rc = C.ngx_http_lua_balancer_get_ka_cache_free_count(r)
+
+    return tonumber(rc)
+end
+
 return _M

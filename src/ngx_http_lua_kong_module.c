@@ -201,3 +201,29 @@ ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, ngx_uint_t next_upstre
     ctx->next_upstream = next_upstream;
     return NGX_OK;
 }
+
+int
+ngx_http_lua_balancer_get_ka_cache_free_count(ngx_http_request_t *r)
+{
+    int n = 0;
+    ngx_queue_t *q;
+    ngx_http_lua_balancer_peer_data_t *bp;
+    ngx_http_lua_srv_conf_t *lscf;
+
+    if (r->upstream == NULL)
+        return 0;
+
+    if ((bp = r->upstream->peer.data) == NULL)
+        return 0;
+
+    if ((lscf = bp->conf) == NULL)
+        return 0;
+
+    for (q = ngx_queue_head(&lscf->balancer.free);
+         q != ngx_queue_sentinel(&lscf->balancer.free);
+         q = ngx_queue_next(q), ++n)
+        ;
+
+    return n;
+}
+

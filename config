@@ -18,6 +18,12 @@ else
     ngx_lua_loc="$NGX_LUA_LOC"
 fi
 
+echo "============================================================"
+pwd
+
+ls ../
+echo "-------------------------------------------------------------"
+
 ngx_module_incs="$ngx_addon_dir/src $ngx_lua_loc/src"
 
 . auto/module
