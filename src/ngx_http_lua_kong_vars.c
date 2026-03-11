@@ -211,11 +211,212 @@ not_found:
 #endif /* NGX_SSL */
 
 
+static ngx_int_t
+ngx_http_lua_kong_variable_worker_pid(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    u_char  *p;
+
+    p = ngx_pnalloc(r->pool, NGX_INT64_LEN);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    v->data = p;
+    p = ngx_sprintf(p, "%P", ngx_pid);
+    v->len = p - v->data;
+    v->valid = 1;
+    v->no_cacheable = 1;
+    v->not_found = 0;
+
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                  "kong var worker_pid: %P", ngx_pid);
+
+    return NGX_OK;
+}
+
+
+static ngx_int_t
+ngx_http_lua_kong_variable_worker_connections_total(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    u_char  *p;
+
+    p = ngx_pnalloc(r->pool, NGX_INT64_LEN);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    v->data = p;
+    p = ngx_sprintf(p, "%ui", ngx_cycle->connection_n);
+    v->len = p - v->data;
+    v->valid = 1;
+    v->no_cacheable = 1;
+    v->not_found = 0;
+
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                  "kong var worker_connections_total: %ui",
+                  ngx_cycle->connection_n);
+
+    return NGX_OK;
+}
+
+
+/*
+ * ngx_http_lua_kong_count_worker_connections
+ *
+ * Iterates this worker's connection pool and counts per-type connections.
+ *
+ * After ngx_get_connection() every slot is zeroed (ngx_memzero), so field
+ * states are reliable:
+ *
+ *   fd <= 0                              → free slot (fd == -1 after
+ *                                          ngx_close_connection) or stdin
+ *                                          placeholder (fd == 0); skip both.
+ *
+ *   fd > 0, listening != NULL,
+ *   listening->connection == &c[i]  → listening socket's own slot.
+ *                                     ngx_event_process_init does:
+ *                                       c = ngx_get_connection(ls[i].fd)
+ *                                       ls[i].connection = c   ← back-ptr
+ *                                     So this pointer comparison is the
+ *                                     idiomatic check (used by ngx_debug_conn).
+ *
+ *   fd > 0, listening != NULL,
+ *   listening->connection != &c[i]  → accepted HTTP/stream client connection
+ *                                     (comparable to ngx_stat_active but
+ *                                      scoped to this worker only;
+ *                                      ngx_stat_active is a shared-memory
+ *                                      atomic summed across ALL workers)
+ *
+ *   fd > 0, listening == NULL       → outbound upstream connection
+ *                                     (proxy, keepalive pool, channel IPC, …)
+ *
+ * This distinction explains why (connection_n - free_connection_n) can
+ * greatly exceed ngx_stat_active: Kong's upstream keepalive pool keeps
+ * hundreds of upstream slots allocated even when very few client requests
+ * are in flight.
+ */
+static void
+ngx_http_lua_kong_count_worker_connections(ngx_uint_t *out_client,
+    ngx_uint_t *out_upstream, ngx_uint_t *out_listening)
+{
+    ngx_uint_t        i;
+    ngx_connection_t *c;
+
+    *out_client    = 0;
+    *out_upstream  = 0;
+    *out_listening = 0;
+
+    c = ngx_cycle->connections;
+
+    for (i = 0; i < ngx_cycle->connection_n; i++) {
+
+        if (c[i].fd <= 0) {
+            continue;  /* free slot (fd == -1) or stdin placeholder (fd == 0) */
+        }
+
+        if (c[i].listening == NULL) {
+            /* outbound: upstream proxy / keepalive pool / channel IPC */
+            (*out_upstream)++;
+            continue;
+        }
+
+        if (c[i].listening->connection == &c[i]) {
+            /*
+             * This connection slot IS the listening socket itself.
+             * ngx_event_process_init sets ls[i].connection = c after
+             * ngx_get_connection(ls[i].fd), so this pointer comparison
+             * is the idiomatic way to detect it (used by ngx_debug_conn).
+             */
+            (*out_listening)++;
+            continue;
+        }
+
+        /* accepted client connection */
+        (*out_client)++;
+    }
+}
+
+
+static ngx_int_t
+ngx_http_lua_kong_variable_worker_connections_active(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    u_char      *p;
+    ngx_uint_t   client, upstream, listening;
+
+    ngx_http_lua_kong_count_worker_connections(&client, &upstream, &listening);
+
+    p = ngx_pnalloc(r->pool, NGX_INT64_LEN);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    v->data = p;
+    p = ngx_sprintf(p, "%ui", client);
+    v->len = p - v->data;
+    v->valid = 1;
+    v->no_cacheable = 1;
+    v->not_found = 0;
+
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                  "kong var worker_connections_active: client=%ui"
+                  " upstream=%ui listening=%ui free=%ui",
+                  client, upstream, listening,
+                  ngx_cycle->free_connection_n);
+
+    return NGX_OK;
+}
+
+
+static ngx_int_t
+ngx_http_lua_kong_variable_worker_connections_free(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    u_char  *p;
+
+    p = ngx_pnalloc(r->pool, NGX_INT64_LEN);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    v->data = p;
+    p = ngx_sprintf(p, "%ui", ngx_cycle->free_connection_n);
+    v->len = p - v->data;
+    v->valid = 1;
+    v->no_cacheable = 1;
+    v->not_found = 0;
+
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                  "kong var worker_connections_free: %ui",
+                  ngx_cycle->free_connection_n);
+
+    return NGX_OK;
+}
+
+
 static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
 
     { ngx_string("kong_request_id"), NULL,
       ngx_http_lua_kong_variable_request_id,
       0, 0, 0 },
+
+    { ngx_string("worker_pid"), NULL,
+      ngx_http_lua_kong_variable_worker_pid,
+      0, NGX_HTTP_VAR_NOCACHEABLE, 0 },
+
+    { ngx_string("worker_connections_total"), NULL,
+      ngx_http_lua_kong_variable_worker_connections_total,
+      0, NGX_HTTP_VAR_NOCACHEABLE, 0 },
+
+    { ngx_string("worker_connections_active"), NULL,
+      ngx_http_lua_kong_variable_worker_connections_active,
+      0, NGX_HTTP_VAR_NOCACHEABLE, 0 },
+
+    { ngx_string("worker_connections_free"), NULL,
+      ngx_http_lua_kong_variable_worker_connections_free,
+      0, NGX_HTTP_VAR_NOCACHEABLE, 0 },
 #if (NGX_SSL)
     { ngx_string("kong_upstream_ssl_server_raw_cert"), NULL,
       ngx_http_lua_kong_get_upstream_raw_certificate,
