@@ -17,6 +17,8 @@ Table of Contents
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
     * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
+    * [$kong\_worker\_connections\_total](#kong_worker_connections_total)
+    * [$kong\_worker\_connections\_free](#kong_worker_connections_free)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -201,6 +203,44 @@ $kong\_upstream\_ssl\_protocol
 Returns the protocol of an established SSL connection for an upstream
 HTTP request.
 
+[Back to TOC](#table-of-contents)
+
+$kong\_worker\_connections\_total
+----------------------------------
+
+Returns the total number of connection slots allocated for the current
+worker process, corresponding to the
+[`worker_connections`](https://nginx.org/en/docs/ngx_core_module.html#worker_connections)
+directive value. This is a fixed value set at startup and does not change
+at runtime.
+
+Example:
+```lua
+local total = tonumber(ngx.var.kong_worker_connections_total)
+```
+
+[Back to TOC](#table-of-contents)
+
+$kong\_worker\_connections\_free
+---------------------------------
+
+Returns the number of free (unused) connection slots currently available
+in this worker process. This is the live value of
+`ngx_cycle->free_connection_n` and reflects real-time connection pressure
+on the worker.
+
+Together with `$kong_worker_connections_total`, you can derive the number
+of connections in use:
+
+```lua
+local total    = tonumber(ngx.var.kong_worker_connections_total)
+local free     = tonumber(ngx.var.kong_worker_connections_free)
+local in_use   = total - free
+```
+
+Note: `in_use` counts all connection slots consumed by this worker,
+including listening sockets, upstream/keepalive pool connections, and
+accepted client connections — not just active HTTP requests.
 
 [Back to TOC](#table-of-contents)
 

@@ -102,6 +102,8 @@ static ngx_str_t default_vars[] = {
 
     /* lua-kong-module vars */
     ngx_string("kong_request_id"),
+    ngx_string("kong_worker_connections_total"),
+    ngx_string("kong_worker_connections_free"),
 
     ngx_null_string
 };
