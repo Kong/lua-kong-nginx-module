@@ -212,20 +212,6 @@ in this worker process. This is the live value of
 `ngx_cycle->free_connection_n` and reflects real-time connection pressure
 on the worker.
 
-The total capacity (`worker_connections` directive value) is available as
-`ngx_cycle->connection_n` and can be read in Lua via `ngx.worker.count`
-or your own FFI. Together they let you derive connections in use:
-
-```lua
-local free   = tonumber(ngx.var.kong_worker_connections_free)
-local total  = ngx_cycle_connection_n  -- obtained via Lua FFI or another means
-local in_use = total - free
-```
-
-Note: `in_use` counts all connection slots consumed by this worker,
-including listening sockets, upstream/keepalive pool connections, and
-accepted client connections — not just active HTTP requests.
-
 [Back to TOC](#table-of-contents)
 
 Methods
