@@ -17,7 +17,6 @@ Table of Contents
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
     * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
-    * [$kong\_worker\_connections\_total](#kong_worker_connections_total)
     * [$kong\_worker\_connections\_free](#kong_worker_connections_free)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
@@ -205,22 +204,6 @@ HTTP request.
 
 [Back to TOC](#table-of-contents)
 
-$kong\_worker\_connections\_total
-----------------------------------
-
-Returns the total number of connection slots allocated for the current
-worker process, corresponding to the
-[`worker_connections`](https://nginx.org/en/docs/ngx_core_module.html#worker_connections)
-directive value. This is a fixed value set at startup and does not change
-at runtime.
-
-Example:
-```lua
-local total = tonumber(ngx.var.kong_worker_connections_total)
-```
-
-[Back to TOC](#table-of-contents)
-
 $kong\_worker\_connections\_free
 ---------------------------------
 
@@ -229,13 +212,14 @@ in this worker process. This is the live value of
 `ngx_cycle->free_connection_n` and reflects real-time connection pressure
 on the worker.
 
-Together with `$kong_worker_connections_total`, you can derive the number
-of connections in use:
+The total capacity (`worker_connections` directive value) is available as
+`ngx_cycle->connection_n` and can be read in Lua via `ngx.worker.count`
+or your own FFI. Together they let you derive connections in use:
 
 ```lua
-local total    = tonumber(ngx.var.kong_worker_connections_total)
-local free     = tonumber(ngx.var.kong_worker_connections_free)
-local in_use   = total - free
+local free   = tonumber(ngx.var.kong_worker_connections_free)
+local total  = ngx_cycle_connection_n  -- obtained via Lua FFI or another means
+local in_use = total - free
 ```
 
 Note: `in_use` counts all connection slots consumed by this worker,
