@@ -17,6 +17,7 @@ Table of Contents
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
     * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
+    * [$kong\_worker\_connections\_free](#kong_worker_connections_free)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -201,6 +202,15 @@ $kong\_upstream\_ssl\_protocol
 Returns the protocol of an established SSL connection for an upstream
 HTTP request.
 
+[Back to TOC](#table-of-contents)
+
+$kong\_worker\_connections\_free
+---------------------------------
+
+Returns the number of free (unused) connection slots currently available
+in this worker process. This is the live value of
+`ngx_cycle->free_connection_n` and reflects real-time connection pressure
+on the worker.
 
 [Back to TOC](#table-of-contents)
 
