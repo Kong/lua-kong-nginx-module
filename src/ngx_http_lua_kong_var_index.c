@@ -64,6 +64,7 @@ static ngx_str_t default_vars[] = {
 #if (NGX_HTTP_REALIP)
     ngx_string("realip_remote_addr"),
     ngx_string("realip_remote_port"),
+    ngx_string("kong_client_addr"),
 #endif
 
     /* ngx_string("remote_addr"), */

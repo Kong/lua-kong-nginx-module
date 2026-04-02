@@ -18,6 +18,7 @@ Table of Contents
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
     * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
     * [$kong\_worker\_connections\_free](#kong_worker_connections_free)
+    * [$kong\_client\_addr](#kong_client_addr)
 * [Methods](#methods)
     * [resty.kong.tls.disable\_session\_reuse](#restykongtlsdisable_session_reuse)
     * [resty.kong.tls.get\_full\_client\_certificate\_chain](#restykongtlsget_full_client_certificate_chain)
@@ -138,6 +139,7 @@ index *commonly used variables* as follows:
 - `$upstream_header_timestamp_us`
 - `$upstream_response_timestamp_us`
 - `$kong_request_id`
+- `$kong_client_addr`
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
@@ -211,6 +213,20 @@ Returns the number of free (unused) connection slots currently available
 in this worker process. This is the live value of
 `ngx_cycle->free_connection_n` and reflects real-time connection pressure
 on the worker.
+
+[Back to TOC](#table-of-contents)
+
+$kong\_client\_addr
+--------------------
+
+Returns the client address, considering the PROXY protocol.
+When the connection uses PROXY protocol and the `proxy_protocol_addr`
+differs from `remote_addr`, and `remote_addr` is trusted (as configured
+by `set_real_ip_from`), this variable returns the `proxy_protocol_addr`.
+Otherwise it returns `remote_addr`.
+
+This variable is only available when Nginx is built with
+`--with-http_realip_module`.
 
 [Back to TOC](#table-of-contents)
 

@@ -232,6 +232,75 @@ ngx_http_lua_kong_variable_worker_connections_free(ngx_http_request_t *r,
 }
 
 
+#if (NGX_HTTP_REALIP)
+
+extern ngx_module_t  ngx_http_realip_module;
+
+static ngx_int_t
+ngx_http_lua_kong_variable_client_addr(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    ngx_connection_t       *c;
+    ngx_str_t              *remote_addr;
+    ngx_str_t              *pp_addr;
+    ngx_array_t            *from;
+    void                   *rlcf;
+
+    c = r->connection;
+    remote_addr = &c->addr_text;
+
+    /* check if proxy_protocol_addr is available and non-empty */
+    if (c->proxy_protocol == NULL
+        || c->proxy_protocol->src_addr.len == 0)
+    {
+        goto use_remote_addr;
+    }
+
+    pp_addr = &c->proxy_protocol->src_addr;
+
+    /* check if proxy_protocol_addr differs from remote_addr */
+    if (pp_addr->len == remote_addr->len
+        && ngx_strncmp(pp_addr->data, remote_addr->data, pp_addr->len) == 0)
+    {
+        goto use_remote_addr;
+    }
+
+    /* check if remote_addr is trusted via set_real_ip_from */
+    rlcf = ngx_http_get_module_loc_conf(r, ngx_http_realip_module);
+
+    /* from is the first field of ngx_http_realip_loc_conf_t */
+    from = *(ngx_array_t **) rlcf;
+
+    if (from == NULL) {
+        goto use_remote_addr;
+    }
+
+    if (ngx_cidr_match(c->sockaddr, from) != NGX_OK) {
+        goto use_remote_addr;
+    }
+
+    /* remote_addr is trusted, use proxy_protocol_addr */
+    v->len = pp_addr->len;
+    v->data = pp_addr->data;
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+
+    return NGX_OK;
+
+use_remote_addr:
+
+    v->len = remote_addr->len;
+    v->data = remote_addr->data;
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+
+    return NGX_OK;
+}
+#endif
+
+
 static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
 
     { ngx_string("kong_request_id"), NULL,
@@ -250,6 +319,10 @@ static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
     { ngx_string("kong_worker_connections_free"), NULL,
       ngx_http_lua_kong_variable_worker_connections_free,
       0, NGX_HTTP_VAR_NOCACHEABLE, 0 },
+#if (NGX_HTTP_REALIP)
+    { ngx_string("kong_client_addr"), NULL,
+      ngx_http_lua_kong_variable_client_addr, 0, 0, 0 },
+#endif
       ngx_http_null_variable
 };
 
