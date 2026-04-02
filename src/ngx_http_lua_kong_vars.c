@@ -212,6 +212,27 @@ not_found:
 
 
 static ngx_int_t
+ngx_http_lua_kong_variable_worker_connections_total(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    u_char  *p;
+
+    p = ngx_pnalloc(r->pool, NGX_INT_T_LEN);
+    if (p == NULL) {
+        return NGX_ERROR;
+    }
+
+    v->len = ngx_sprintf(p, "%ui", ngx_cycle->connection_n) - p;
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+    v->data = p;
+
+    return NGX_OK;
+}
+
+
+static ngx_int_t
 ngx_http_lua_kong_variable_worker_connections_free(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
@@ -247,6 +268,9 @@ static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
       0,
       NGX_HTTP_VAR_CHANGEABLE, 0 },
 #endif
+    { ngx_string("kong_worker_connections_total"), NULL,
+      ngx_http_lua_kong_variable_worker_connections_total,
+      0, 0, 0 },
     { ngx_string("kong_worker_connections_free"), NULL,
       ngx_http_lua_kong_variable_worker_connections_free,
       0, NGX_HTTP_VAR_NOCACHEABLE, 0 },
