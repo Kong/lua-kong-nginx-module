@@ -17,7 +17,28 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: $worker_connections_free is a non-negative integer
+=== TEST 1: $worker_connections_total is a positive integer
+--- config
+    location /t {
+        content_by_lua_block {
+            local total = ngx.var.kong_worker_connections_total
+            assert(total ~= nil, "worker_connections_total is nil")
+            local n = tonumber(total)
+            assert(n ~= nil and n > 0,
+                   "worker_connections_total is not a positive integer: " .. tostring(total))
+            ngx.say("ok")
+        }
+    }
+--- request
+GET /t
+--- response_body
+ok
+--- error_code: 200
+--- no_error_log
+[error]
+
+
+=== TEST 2: $worker_connections_free is a non-negative integer
 --- config
     location /t {
         content_by_lua_block {
@@ -38,7 +59,27 @@ ok
 [error]
 
 
-=== TEST 2: $worker_connections_free is re-evaluated on each access (no_cacheable)
+=== TEST 3: $worker_connections_free is less than or equal to $worker_connections_total
+--- config
+    location /t {
+        content_by_lua_block {
+            local total = tonumber(ngx.var.kong_worker_connections_total)
+            local free  = tonumber(ngx.var.kong_worker_connections_free)
+            assert(free <= total,
+                   "free(" .. free .. ") > total(" .. total .. ")")
+            ngx.say("ok")
+        }
+    }
+--- request
+GET /t
+--- response_body
+ok
+--- error_code: 200
+--- no_error_log
+[error]
+
+
+=== TEST 4: $worker_connections_free is re-evaluated on each access (no_cacheable)
 --- config
     location /t {
         content_by_lua_block {
