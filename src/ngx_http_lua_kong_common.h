@@ -33,8 +33,11 @@ typedef struct {
 
 
 typedef struct {
-    ngx_str_t                tag;
-    ngx_int_t                request_id_var_index;
+    ngx_str_t                  tag;
+    ngx_int_t                  request_id_var_index;
+    ngx_http_complex_value_t  *pass_selector;
+    ngx_http_handler_pt        proxy_handler;
+    ngx_http_handler_pt        grpc_handler;
 } ngx_http_lua_kong_loc_conf_t;
 
 
