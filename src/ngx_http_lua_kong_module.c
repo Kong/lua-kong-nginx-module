@@ -61,6 +61,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       offsetof(ngx_http_lua_kong_loc_conf_t, request_id_var_index),
       NULL },
 
+    { ngx_string("kong_pass"),
+      NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE23,
+      ngx_http_lua_kong_pass,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
     ngx_null_command
 };
 
