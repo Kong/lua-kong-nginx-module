@@ -37,4 +37,8 @@ char *
 ngx_http_lua_kong_request_id_header(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 
+char *
+ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+
 #endif /* _NGX_HTTP_LUA_KONG_DIRECTIVE_H_INCLUDED_ */
