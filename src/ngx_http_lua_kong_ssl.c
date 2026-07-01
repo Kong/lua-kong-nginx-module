@@ -110,7 +110,7 @@ ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r, ngx_connection_t *c)
     ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
 
     if (ctx == NULL) {
-        if ( r!= r->main) {
+        if (r != r->main) {
             ctx = ngx_http_get_module_ctx(r->main, ngx_http_lua_kong_module);
         }
 
