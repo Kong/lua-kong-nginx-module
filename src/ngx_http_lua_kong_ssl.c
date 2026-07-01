@@ -110,10 +110,16 @@ ngx_http_lua_kong_set_upstream_ssl(ngx_http_request_t *r, ngx_connection_t *c)
     ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
 
     if (ctx == NULL) {
-        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                       "skip overriding upstream SSL configuration, "
-                       "module ctx not set");
-        return;
+        if ( r!= r->main) {
+            ctx = ngx_http_get_module_ctx(r->main, ngx_http_lua_kong_module);
+        }
+
+        if (ctx == NULL) {
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                           "skip overriding upstream SSL configuration, "
+                           "module ctx not set");
+            return;
+        }
     }
 
     return ngx_lua_kong_ssl_set_upstream_ssl(&ctx->ssl_ctx, c);

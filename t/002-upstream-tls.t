@@ -888,3 +888,88 @@ client SSL certificate verify error: (21:unable to verify the first certificate)
 [error]
 [crit]
 [alert]
+
+
+
+=== TEST 15: set_upstream_cert_and_key set in main request is inherited by subrequest via ngx.location.capture
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    # to suppress a valgrind false positive in the nginx core:
+    proxy_ssl_session_reuse off;
+
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        server_name   example.com;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_client_certificate ../../cert/ca.crt;
+        ssl_verify_client on;
+
+        server_tokens off;
+
+        location /foo {
+            default_type 'text/plain';
+            more_clear_headers Date;
+            content_by_lua_block {
+                -- backend reports what client cert (if any) nginx presented
+                ngx.say("verify=" .. ngx.var.ssl_client_verify ..
+                          " dn=" .. tostring(ngx.var.ssl_client_s_dn))
+            }
+        }
+    }
+--- config
+    server_tokens off;
+
+    location /t {
+        access_by_lua_block {
+            local tls = require("resty.kong.tls")
+            local ssl = require("ngx.ssl")
+
+            local f = assert(io.open("t/cert/client_example.com.crt"))
+            local cert_data = f:read("*a")
+            f:close()
+
+            local chain = assert(ssl.parse_pem_cert(cert_data))
+
+            f = assert(io.open("t/cert/client_example.com.key"))
+            local key_data = f:read("*a")
+            f:close()
+
+            local key = assert(ssl.parse_pem_priv_key(key_data))
+
+            local ok, err = tls.set_upstream_cert_and_key(chain, key)
+            if not ok then
+                ngx.log(ngx.ERR, "set_upstream_cert_and_key failed: ", err)
+                return ngx.exit(500)
+            end
+        }
+
+        content_by_lua_block {
+            local res = ngx.location.capture("/sub")
+            ngx.print(res.body)
+            if res.status ~= 200 then
+                ngx.log(ngx.ERR, "subrequest returned status: ", res.status)
+            end
+        }
+    }
+
+    location /sub {
+        proxy_ssl_trusted_certificate ../../cert/ca.crt;
+        proxy_ssl_verify on;
+        proxy_ssl_name example.com;
+        proxy_ssl_session_reuse off;
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/nginx.sock:/foo;
+    }
+
+--- request
+GET /t
+--- response_body_like
+verify=SUCCESS dn=CN=foo@example.com,O=Kong Testing,ST=California,C=US
+
+--- error_code: 200
+--- no_error_log
+skip overriding upstream SSL configuration
+[error]
+[crit]
+[alert]
