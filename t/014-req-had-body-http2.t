@@ -51,6 +51,21 @@ our $Config = <<'_EOC_';
             ngx.say(request.had_body())
         }
     }
+
+    # Observe the request before and after nginx parses the frame that ends
+    # an empty stream. This exposes the pending state hidden by the boolean API.
+    location = /pending {
+        content_by_lua_block {
+            local request = require("resty.kong.request")
+
+            local before_read = request.had_body()   # should be false
+            ngx.req.read_body()
+            local after_read = request.had_body()
+
+            ngx.say(before_read, ":", after_read, ":",
+                    ngx.req.get_body_data() or "")
+        }
+    }
 _EOC_
 
 add_block_preprocessor(sub {
@@ -181,6 +196,49 @@ POST /read
 invali
 --- response_body
 true:invali
+--- error_code: 200
+--- no_error_log
+[error]
+http v2 not supported yet
+
+
+=== TEST 10: pending stream ends with an empty DATA frame
+# /dev/null is a non-regular file, so curl starts an upload without a known
+# length. It sends HEADERS without END_STREAM, followed by a zero-length DATA
+# frame with END_STREAM. nginx runs the content phase between those frames.
+# Test::Nginx passes curl_options as one argv item. The full curl form is
+# "--upload-file /dev/null", so this test uses its compact -T/dev/null form.
+# The request has no body, so had_body() must remain false before and after
+# read_body(). The current boolean API reports true while the stream is pending.
+--- http2
+--- curl_options: -T/dev/null
+--- more_headers
+Content-Type:
+Content-Length:
+--- request
+POST /pending
+--- response_body
+false:false:
+--- error_code: 200
+--- no_error_log
+[error]
+http v2 not supported yet
+
+
+=== TEST 11: empty --data-binary ends a pending stream
+# Test::Nginx cannot pass the two argv items in "--data-binary ''". For an
+# empty payload, the compact -d@/dev/null form has the same wire behavior.
+# curl sends HEADERS without END_STREAM, then an empty DATA with END_STREAM.
+# The request has no body, so the result must be false in both states.
+--- http2
+--- curl_options: -d@/dev/null
+--- more_headers
+Content-Type:
+Content-Length:
+--- request
+POST /pending
+--- response_body
+false:false:
 --- error_code: 200
 --- no_error_log
 [error]
