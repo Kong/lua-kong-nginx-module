@@ -63,20 +63,6 @@ ngx_http_lua_kong_req_has_body(ngx_http_request_t *r)
     }
 #endif
 
-/* HTTP/3: no pre-read signal exists, so the exact answer needs the body
- * read to its end.  Disabled for now -- the Lua wrapper rejects HTTP/3 --
- * but kept for future use.
- *
-#if (NGX_HTTP_V3)
-    if (r->http_version == NGX_HTTP_VERSION_30
-        && rb != NULL
-        && rb->last_saved)
-    {
-        return 0;
-    }
-#endif
-*/
-
     if (r->headers_in.content_length_n > 0) {
         return 1;
     }
