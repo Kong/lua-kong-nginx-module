@@ -36,7 +36,7 @@
  * chunked is pending.  HTTP/3 is rejected by the Lua wrapper.
  */
 ngx_int_t
-ngx_http_lua_kong_req_had_body(ngx_http_request_t *r)
+ngx_http_lua_kong_req_has_body(ngx_http_request_t *r)
 {
     ngx_http_request_body_t  *rb;
 
@@ -90,7 +90,7 @@ ngx_http_lua_kong_req_had_body(ngx_http_request_t *r)
 
 
 int
-ngx_http_lua_kong_ffi_req_had_body(ngx_http_request_t *r)
+ngx_http_lua_kong_ffi_req_has_body(ngx_http_request_t *r)
 {
-    return ngx_http_lua_kong_req_had_body(r);
+    return ngx_http_lua_kong_req_has_body(r);
 }

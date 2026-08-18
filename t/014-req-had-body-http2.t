@@ -19,16 +19,16 @@ our $HttpConfig = <<'_EOC_';
 _EOC_
 
 our $Config = <<'_EOC_';
-    # had_body() is three-valued: true / false / nil + "pending".
+    # has_body() is three-valued: true / false / nil + "pending".
     # nil is not printable, so handlers render it as "pending".
 
-    # gate ngx.req.socket() on had_body(): it raises
+    # gate ngx.req.socket() on has_body(): it raises
     # "http v2 not supported yet" on HTTP/2 (wrong "true" => 500 + [error])
     location = /gate {
         content_by_lua_block {
             local request = require("resty.kong.request")
 
-            local had = request.had_body()
+            local had = request.has_body()
             if had then
                 ngx.req.socket()
             end
@@ -43,7 +43,7 @@ our $Config = <<'_EOC_';
             local request = require("resty.kong.request")
 
             ngx.req.read_body()
-            local had = request.had_body()
+            local had = request.has_body()
             ngx.say(had == nil and "pending" or tostring(had), ":",
                     ngx.req.get_body_data() or "")
         }
@@ -53,7 +53,7 @@ our $Config = <<'_EOC_';
     location = /noread {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            local had = request.had_body()
+            local had = request.has_body()
             ngx.say(had == nil and "pending" or tostring(had))
         }
     }
@@ -70,9 +70,9 @@ our $Config = <<'_EOC_';
                 return had == nil and "pending" or tostring(had)
             end
 
-            local before_read = request.had_body()
+            local before_read = request.has_body()
             ngx.req.read_body()
-            local after_read = request.had_body()
+            local after_read = request.has_body()
 
             ngx.say(fmt(before_read), ":", fmt(after_read), ":",
                     ngx.req.get_body_data() or "")
@@ -155,7 +155,7 @@ http v2 not supported yet
 
 === TEST 5: POST with no content-length and no body, body not read
 # curl ends the request on the HEADERS frame (no DATA frame at all), so
-# had_body() is false; the pre-parse "DATA still allowed" window of the
+# has_body() is false; the pre-parse "DATA still allowed" window of the
 # hand-rolled variant is not reachable through curl.
 --- http2
 --- request

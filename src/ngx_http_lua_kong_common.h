@@ -57,6 +57,6 @@ ngx_int_t
 ngx_http_lua_kong_add_vars(ngx_conf_t *cf);
 
 ngx_int_t
-ngx_http_lua_kong_req_had_body(ngx_http_request_t *r);
+ngx_http_lua_kong_req_has_body(ngx_http_request_t *r);
 
 #endif /* _NGX_HTTP_LUA_KONG_COMMON_H_INCLUDED_ */

@@ -27,7 +27,7 @@ __DATA__
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            ngx.say(request.had_body())
+            ngx.say(request.has_body())
         }
     }
 --- request
@@ -47,7 +47,7 @@ false
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            ngx.say(request.had_body())
+            ngx.say(request.has_body())
         }
     }
 --- request
@@ -68,7 +68,7 @@ true
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            ngx.say(request.had_body())
+            ngx.say(request.has_body())
         }
     }
 --- raw_request eval
@@ -93,7 +93,7 @@ false
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            local had = request.had_body()
+            local had = request.has_body()
             ngx.say(had == nil and "pending" or tostring(had))
             ngx.say("content_length: ", ngx.var.content_length or "nil")
         }
@@ -126,7 +126,7 @@ content_length: nil
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            local had = request.had_body()
+            local had = request.has_body()
             ngx.say(had == nil and "pending" or tostring(had))
             ngx.say("body: ", ngx.req.get_body_data() or "nil")
         }
@@ -160,7 +160,7 @@ body: invalid
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            local had = request.had_body()
+            local had = request.has_body()
             ngx.say(had == nil and "pending" or tostring(had))
         }
     }
@@ -189,7 +189,7 @@ pending
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            local had = request.had_body()
+            local had = request.has_body()
             ngx.say(had == nil and "pending" or tostring(had))
             ngx.say("body: ", ngx.req.get_body_data() or "nil")
         }
@@ -220,7 +220,7 @@ body: nil
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            ngx.say(request.had_body())
+            ngx.say(request.has_body())
         }
     }
 --- request

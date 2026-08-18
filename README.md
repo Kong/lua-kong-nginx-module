@@ -37,8 +37,8 @@ Table of Contents
     * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
     * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
     * [resty.kong.upstream.set\_next\_upstream](#restykongupstreamset_next_upstream)
-    * [resty.kong.request.had\_body](#restykongrequesthad_body)
-    * [resty.kong.request.had\_body](#restykongrequesthad_body)
+    * [resty.kong.request.had\_body](#restykongrequesthas_body)
+    * [resty.kong.request.had\_body](#restykongrequesthas_body)
 * [License](#license)
 
 Description
@@ -656,7 +656,7 @@ previous ones.
 resty.kong.request.had\_body
 ----------------------------------
 
-**syntax:** *had_body = resty.kong.request.had_body()*
+**syntax:** *has_body = resty.kong.request.has_body()*
 
 **context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;*
 

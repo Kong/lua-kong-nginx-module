@@ -23,7 +23,7 @@ base.allows_subsystem("http")
 
 ffi.cdef([[
 int
-ngx_http_lua_kong_ffi_req_had_body(ngx_http_request_t *r);
+ngx_http_lua_kong_ffi_req_has_body(ngx_http_request_t *r);
 ]])
 
 
@@ -33,7 +33,7 @@ local get_request = base.get_request
 local http_version = ngx.req.http_version
 
 
-function _M.had_body()
+function _M.has_body()
     local r = get_request()
 
     if not r then
@@ -41,10 +41,10 @@ function _M.had_body()
     end
 
     if http_version() == 3.0 then
-        error("had_body() does not support HTTP/3 yet")
+        error("has_body() does not support HTTP/3 yet")
     end
 
-    local res = C.ngx_http_lua_kong_ffi_req_had_body(r)
+    local res = C.ngx_http_lua_kong_ffi_req_has_body(r)
 
     if res < 0 then
         return nil, "pending"
