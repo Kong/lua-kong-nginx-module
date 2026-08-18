@@ -652,7 +652,7 @@ previous ones.
 
 [Back to TOC](#table-of-contents)
 
-resty.kong.request.had\_body
+resty.kong.request.has\_body
 ----------------------------------
 
 **syntax:** *has_body = resty.kong.request.has_body()*
