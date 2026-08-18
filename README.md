@@ -699,10 +699,14 @@ Two further notes:
 * The answer always describes the downstream client request. Inside a subrequest
   (`ngx.location.capture`) it still reports the main request, not the body given
   to the subrequest.
-* Rewriting the body from Lua with
+* The answer always describes the body the client sent, never one set
+  from Lua.
   [ngx.req.set_body_data](https://github.com/openresty/lua-nginx-module#ngxreqset_body_data)
-  changes the answer, because it rewrites the request's content length the same
-  way it changes `ngx.var.content_length`.
+  rewrites the request buffers and `content_length_n`, but not the
+  received-byte counter or the HTTP/2 stream state this function relies on, so
+  after a rewrite the answer can still describe the original body. Call it
+  before any Lua request-body mutation; describing the effective body after a
+  rewrite is outside this API's contract.
 
 
 [Back to TOC](#table-of-contents)

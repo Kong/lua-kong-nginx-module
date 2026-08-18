@@ -1,6 +1,6 @@
 # vim:set ft= ts=4 sw=4 et:
 
-# HTTP/1.x coverage; the HTTP/2 cases live in 014-req-had-body-http2.t.
+# HTTP/1.x coverage; the HTTP/2 cases live in 014-req-has-body-http2.t.
 # TEST 4/6: chunked + unread is pending (the h1 body filter has not parsed
 # any chunk yet).  TEST 5: once read, the h1 chunked filter accumulates the
 # parsed chunk sizes into content_length_n, so a non-empty body proves true.
@@ -93,8 +93,8 @@ false
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            local had = request.has_body()
-            ngx.say(had == nil and "pending" or tostring(had))
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
             ngx.say("content_length: ", ngx.var.content_length or "nil")
         }
     }
@@ -126,8 +126,8 @@ content_length: nil
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            local had = request.has_body()
-            ngx.say(had == nil and "pending" or tostring(had))
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
             ngx.say("body: ", ngx.req.get_body_data() or "nil")
         }
     }
@@ -160,8 +160,8 @@ body: invalid
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            local had = request.has_body()
-            ngx.say(had == nil and "pending" or tostring(had))
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
         }
     }
 --- raw_request eval
@@ -189,8 +189,8 @@ pending
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            local had = request.has_body()
-            ngx.say(had == nil and "pending" or tostring(had))
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
             ngx.say("body: ", ngx.req.get_body_data() or "nil")
         }
     }

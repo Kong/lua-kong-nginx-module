@@ -10,7 +10,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 4);
+plan tests => repeat_each() * (blocks() * 4) - 4;
 
 no_long_string();
 
@@ -28,12 +28,12 @@ our $Config = <<'_EOC_';
         content_by_lua_block {
             local request = require("resty.kong.request")
 
-            local had = request.has_body()
-            if had then
+            local has = request.has_body()
+            if has then
                 ngx.req.socket()
             end
 
-            ngx.say("ok ", had == nil and "pending" or tostring(had))
+            ngx.say("ok ", has == nil and "pending" or tostring(has))
         }
     }
 
@@ -43,8 +43,8 @@ our $Config = <<'_EOC_';
             local request = require("resty.kong.request")
 
             ngx.req.read_body()
-            local had = request.has_body()
-            ngx.say(had == nil and "pending" or tostring(had), ":",
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has), ":",
                     ngx.req.get_body_data() or "")
         }
     }
@@ -53,21 +53,34 @@ our $Config = <<'_EOC_';
     location = /noread {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            local had = request.has_body()
-            ngx.say(had == nil and "pending" or tostring(had))
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
         }
     }
 
-    # Observe the request before and after nginx parses the frame that ends
-    # an empty stream.  Before read_body() the DATA frame has not been
-    # parsed, so the honest answer is pending; after read_body() the
-    # received-bytes count proves there was no body.
+    # around read_body(): pending until the ending DATA frame is parsed
+    # pins the contract: has_body() reports the client-sent body, not one
+    # set from Lua with ngx.req.set_body_data()
+    location = /rewrite {
+        content_by_lua_block {
+            local request = require("resty.kong.request")
+
+            ngx.req.read_body()
+            local has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
+
+            ngx.req.set_body_data(ngx.var.arg_set == "add" and "hello" or "")
+            has = request.has_body()
+            ngx.say(has == nil and "pending" or tostring(has))
+        }
+    }
+
     location = /pending {
         content_by_lua_block {
             local request = require("resty.kong.request")
 
-            local function fmt(had)
-                return had == nil and "pending" or tostring(had)
+            local function fmt(has)
+                return has == nil and "pending" or tostring(has)
             end
 
             local before_read = request.has_body()
@@ -108,6 +121,7 @@ false:
 http v2 not supported yet
 
 
+
 === TEST 2: POST with a body and no content-length, body read
 --- http2
 --- more_headers
@@ -121,6 +135,7 @@ invali
 --- no_error_log
 [error]
 http v2 not supported yet
+
 
 
 === TEST 3: POST with a body and no content-length, body not read
@@ -141,6 +156,7 @@ pending
 http v2 not supported yet
 
 
+
 === TEST 4: GET, no body at all
 --- http2
 --- request
@@ -153,10 +169,9 @@ false
 http v2 not supported yet
 
 
+
 === TEST 5: POST with no content-length and no body, body not read
-# curl ends the request on the HEADERS frame (no DATA frame at all), so
-# has_body() is false; the pre-parse "DATA still allowed" window of the
-# hand-rolled variant is not reachable through curl.
+# curl ends the request on HEADERS, so the answer is false at once
 --- http2
 --- request
 POST /noread
@@ -166,6 +181,7 @@ false
 --- no_error_log
 [error]
 http v2 not supported yet
+
 
 
 === TEST 6: POST with no content-type, no content-length and no body
@@ -180,6 +196,7 @@ ok false
 http v2 not supported yet
 
 
+
 === TEST 7: PATCH with no content-length and no body
 --- http2
 --- request
@@ -192,6 +209,7 @@ ok false
 http v2 not supported yet
 
 
+
 === TEST 8: PUT with no content-length and no body
 --- http2
 --- request
@@ -202,6 +220,7 @@ ok false
 --- no_error_log
 [error]
 http v2 not supported yet
+
 
 
 === TEST 9: POST with a body and content-length, body read
@@ -219,13 +238,8 @@ http v2 not supported yet
 
 
 === TEST 10: pending stream ends with an empty DATA frame
-# /dev/null is a non-regular file, so curl starts an upload without a known
-# length. It sends HEADERS without END_STREAM, followed by a zero-length DATA
-# frame with END_STREAM. nginx runs the content phase between those frames.
-# Test::Nginx passes curl_options as one argv item. The full curl form is
-# "--upload-file /dev/null", so this test uses its compact -T/dev/null form.
-# Pending before read_body() (the empty DATA frame is not parsed yet),
-# false after it (the received-bytes count proves zero).
+# -T/dev/null: curl uploads an unknown length -- HEADERS without
+# END_STREAM, then an empty DATA with it.  Pending, then false.
 --- http2
 --- curl_options: -T/dev/null
 --- more_headers
@@ -241,11 +255,9 @@ pending:false:
 http v2 not supported yet
 
 
+
 === TEST 11: empty --data-binary ends a pending stream
-# Test::Nginx cannot pass the two argv items in "--data-binary ''". For an
-# empty payload, the compact -d@/dev/null form has the same wire behavior.
-# curl sends HEADERS without END_STREAM, then an empty DATA with END_STREAM.
-# Pending before read_body(), false after it.
+# -d@/dev/null: same wire shape as -T/dev/null.  Pending, then false.
 --- http2
 --- curl_options: -d@/dev/null
 --- more_headers
@@ -260,3 +272,37 @@ pending:false:
 [error]
 http v2 not supported yet
 
+
+
+=== TEST 12: set_body_data() does not hide the body the client sent
+# 5 bytes received: true after read_body(), still true after the rewrite
+# (rb->received beats content_length_n)
+--- http2
+--- more_headers
+Content-Length:
+--- request
+POST /rewrite?set=clear
+hello
+--- response_body
+true
+true
+--- error_code: 200
+--- no_error_log
+[error]
+
+
+
+=== TEST 13: set_body_data() does not fabricate a body
+# no client body (in_closed): false after read_body(), still false after
+# the rewrite (in_closed beats content_length_n)
+--- http2
+--- more_headers
+Content-Length:
+--- request
+POST /rewrite?set=add
+--- response_body
+false
+false
+--- error_code: 200
+--- no_error_log
+[error]
