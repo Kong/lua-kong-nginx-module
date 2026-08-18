@@ -44,7 +44,13 @@ function _M.had_body()
         error("had_body() does not support HTTP/3 yet")
     end
 
-    return C.ngx_http_lua_kong_ffi_req_had_body(r) == 1
+    local res = C.ngx_http_lua_kong_ffi_req_had_body(r)
+
+    if res < 0 then
+        return nil, "pending"
+    end
+
+    return res == 1
 end
 
 

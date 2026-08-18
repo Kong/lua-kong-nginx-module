@@ -1,8 +1,12 @@
 # vim:set ft= ts=4 sw=4 et:
 
 # HTTP/1.x coverage; the HTTP/2 cases live in 014-req-had-body-http2.t.
-# TEST 6/7: rb->received is maintained by the h2/h3 body filters only, so an
-# empty chunked request is still reported as having a body.
+# TEST 4/6: chunked + unread is pending (the h1 body filter has not parsed
+# any chunk yet).  TEST 5: once read, the h1 chunked filter accumulates the
+# parsed chunk sizes into content_length_n, so a non-empty body proves true.
+# TEST 7: an empty chunked body stays pending even after read_body() --
+# content_length_n ends at 0 and chunked stays set, so nothing proves the
+# answer either way.
 
 use Test::Nginx::Socket::Lua;
 
@@ -89,7 +93,8 @@ false
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            ngx.say(request.had_body())
+            local had = request.had_body()
+            ngx.say(had == nil and "pending" or tostring(had))
             ngx.say("content_length: ", ngx.var.content_length or "nil")
         }
     }
@@ -105,7 +110,7 @@ invalid\r
 \r
 "
 --- response_body
-true
+pending
 content_length: nil
 --- error_code: 200
 --- no_error_log
@@ -121,7 +126,8 @@ content_length: nil
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            ngx.say(request.had_body())
+            local had = request.had_body()
+            ngx.say(had == nil and "pending" or tostring(had))
             ngx.say("body: ", ngx.req.get_body_data() or "nil")
         }
     }
@@ -136,6 +142,8 @@ invalid\r
 0\r
 \r
 "
+# after read_body() the chunked filter has accumulated the parsed chunk
+# sizes into content_length_n (7 > 0), which proves a body arrived
 --- response_body
 true
 body: invalid
@@ -152,7 +160,8 @@ body: invalid
     location = /t {
         content_by_lua_block {
             local request = require("resty.kong.request")
-            ngx.say(request.had_body())
+            local had = request.had_body()
+            ngx.say(had == nil and "pending" or tostring(had))
         }
     }
 --- raw_request eval
@@ -165,7 +174,7 @@ Transfer-Encoding: chunked\r
 \r
 "
 --- response_body
-true
+pending
 --- error_code: 200
 --- no_error_log
 [error]
@@ -180,7 +189,8 @@ true
         content_by_lua_block {
             local request = require("resty.kong.request")
             ngx.req.read_body()
-            ngx.say(request.had_body())
+            local had = request.had_body()
+            ngx.say(had == nil and "pending" or tostring(had))
             ngx.say("body: ", ngx.req.get_body_data() or "nil")
         }
     }
@@ -194,7 +204,7 @@ Transfer-Encoding: chunked\r
 \r
 "
 --- response_body
-true
+pending
 body: nil
 --- error_code: 200
 --- no_error_log

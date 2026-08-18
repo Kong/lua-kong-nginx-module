@@ -23,11 +23,17 @@
  * Content-Length header being present.  A zero length body (e.g. an HTTP/2
  * zero length DATA frame with END_STREAM) is *not* a body.
  *
+ * Returns 1 when a body is proven, 0 when no body is proven, -1 (pending)
+ * when neither can be proven yet: chunked framing is declared but no body
+ * byte has been accounted.  Pending resolves for HTTP/2 once the DATA frame
+ * carrying END_STREAM has been parsed (call again, or after read_body());
+ * it never resolves for HTTP/1.x chunked requests, because nginx keeps no
+ * received-bytes count for HTTP/1.x.
+ *
  * Order: rb->received > 0 (exact counter, maintained by h2 only) /
  * h2 preread buffer non-empty / client done sending with zero bytes
- * (h2: stream->in_closed) / else the same
- * content_length_n/chunked test ngx_http_read_client_request_body() uses.
- * HTTP/3 is rejected by the Lua wrapper.
+ * (h2: stream->in_closed) / else content_length_n > 0 is proof of a body,
+ * chunked is pending.  HTTP/3 is rejected by the Lua wrapper.
  */
 ngx_int_t
 ngx_http_lua_kong_req_had_body(ngx_http_request_t *r)
@@ -71,8 +77,12 @@ ngx_http_lua_kong_req_had_body(ngx_http_request_t *r)
 #endif
 */
 
-    if (r->headers_in.content_length_n > 0 || r->headers_in.chunked) {
+    if (r->headers_in.content_length_n > 0) {
         return 1;
+    }
+
+    if (r->headers_in.chunked) {
+        return -1;   /* body framing declared, payload unknown yet */
     }
 
     return 0;
@@ -82,5 +92,5 @@ ngx_http_lua_kong_req_had_body(ngx_http_request_t *r)
 int
 ngx_http_lua_kong_ffi_req_had_body(ngx_http_request_t *r)
 {
-    return ngx_http_lua_kong_req_had_body(r) ? 1 : 0;
+    return ngx_http_lua_kong_req_had_body(r);
 }
