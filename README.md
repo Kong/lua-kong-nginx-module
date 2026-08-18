@@ -38,7 +38,6 @@ Table of Contents
     * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
     * [resty.kong.upstream.set\_next\_upstream](#restykongupstreamset_next_upstream)
     * [resty.kong.request.had\_body](#restykongrequesthas_body)
-    * [resty.kong.request.had\_body](#restykongrequesthas_body)
 * [License](#license)
 
 Description
