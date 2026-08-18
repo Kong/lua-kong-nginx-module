@@ -4,9 +4,9 @@
 # TEST 4/6: chunked + unread is pending (the h1 body filter has not parsed
 # any chunk yet).  TEST 5: once read, the h1 chunked filter accumulates the
 # parsed chunk sizes into content_length_n, so a non-empty body proves true.
-# TEST 7: an empty chunked body stays pending even after read_body() --
-# content_length_n ends at 0 and chunked stays set, so nothing proves the
-# answer either way.
+# TEST 7: an empty chunked body resolves to false after read_body() --
+# rb->rest == 0 and rb->last_saved prove the read completed with a final
+# content_length_n of zero.
 
 use Test::Nginx::Socket::Lua;
 
@@ -181,7 +181,7 @@ pending
 
 
 
-=== TEST 7: empty chunked body, body already read (HTTP/1.x cannot tell)
+=== TEST 7: empty chunked body, body already read
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 --- config
@@ -204,7 +204,7 @@ Transfer-Encoding: chunked\r
 \r
 "
 --- response_body
-pending
+false
 body: nil
 --- error_code: 200
 --- no_error_log

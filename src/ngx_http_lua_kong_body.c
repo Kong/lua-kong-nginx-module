@@ -25,15 +25,17 @@
  *
  * Returns 1 when a body is proven, 0 when no body is proven, -1 (pending)
  * when neither can be proven yet: chunked framing is declared but no body
- * byte has been accounted.  Pending resolves for HTTP/2 once the DATA frame
- * carrying END_STREAM has been parsed (call again, or after read_body());
- * it never resolves for HTTP/1.x chunked requests, because nginx keeps no
- * received-bytes count for HTTP/1.x.
+ * byte has been accounted.  Pending resolves once the body has been read
+ * to its end (rb->rest == 0 and rb->last_saved, the fields nginx itself
+ * uses for "read complete"): the final content_length_n then proves the
+ * answer -- the HTTP/1.x chunked filter accumulates the parsed chunk sizes
+ * into it, and an empty body leaves it at zero.
  *
  * Order: rb->received > 0 (exact counter, maintained by h2 only) /
  * h2 preread buffer non-empty / client done sending with zero bytes
- * (h2: stream->in_closed) / else content_length_n > 0 is proof of a body,
- * chunked is pending.  HTTP/3 is rejected by the Lua wrapper.
+ * (h2: stream->in_closed) / body read to its end: the final
+ * content_length_n decides / content_length_n > 0 declared is proof of a
+ * body / chunked is pending.  HTTP/3 is rejected by the Lua wrapper.
  */
 ngx_int_t
 ngx_http_lua_kong_req_has_body(ngx_http_request_t *r)
@@ -62,6 +64,12 @@ ngx_http_lua_kong_req_has_body(ngx_http_request_t *r)
         return 0;
     }
 #endif
+
+    if (rb != NULL && rb->rest == 0 && rb->last_saved) {
+        /* the body has been read to its end: the final
+         * content_length_n settles the answer */
+        return r->headers_in.content_length_n > 0 ? 1 : 0;
+    }
 
     if (r->headers_in.content_length_n > 0) {
         return 1;

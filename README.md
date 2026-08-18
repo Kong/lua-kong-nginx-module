@@ -683,7 +683,7 @@ maintains such a count, so how exact the answer is depends on the protocol:
 | --- | --- |
 | HTTP/2 | Resolves as soon as the `DATA` frame carrying `END_STREAM` has been parsed: a zero length one yields `false`, any payload yields `true` |
 | HTTP/1.x with `Content-Length` | Never pending: a positive length proves `true`, zero or absent proves `false` |
-| HTTP/1.x chunked | Pending until the body is read: once read, nginx accumulates the parsed chunk sizes into `content_length_n`, so a body of at least one byte proves `true`. A chunked body that carried nothing but the terminating chunk stays pending forever -- nothing distinguishes it from one that still has data coming |
+| HTTP/1.x chunked | Pending until the body has been read to its end: the chunked filter accumulates the parsed chunk sizes into `content_length_n`, so once the read completes a body of at least one byte proves `true` and a body that carried nothing but the terminating chunk proves `false` |
 
 For HTTP/2 there is one timing subtlety worth knowing: `ngx_http_v2_run_request`
 runs the request phases inline, right after the `HEADERS` frame, so a handler
