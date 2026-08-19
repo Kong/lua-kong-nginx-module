@@ -37,6 +37,7 @@ Table of Contents
     * [resty.kong.log.set\_log\_level](#restykonglogset_log_level)
     * [resty.kong.log.get\_log\_level](#restykonglogget_log_level)
     * [resty.kong.upstream.set\_next\_upstream](#restykongupstreamset_next_upstream)
+    * [resty.kong.request.has\_body](#restykongrequesthas_body)
 * [License](#license)
 
 Description
@@ -651,6 +652,64 @@ previous ones.
 
 [Back to TOC](#table-of-contents)
 
+resty.kong.request.has\_body
+----------------------------------
+
+**syntax:** *has_body = resty.kong.request.has_body()*
+
+**context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, log_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;*
+
+**subsystems:** *http*
+
+Returns `true` when the client provably sent a request body, `false` when the
+absence of a body is proven, and `nil, "pending"` when neither can be proven
+yet. Works without a `Content-Length` header, which makes it usable for HTTP/2
+requests whose body length is only delimited by the framing layer
+(`END_STREAM`). For such requests
+`ngx.var.content_length` stays `nil` and `ngx.var.http_transfer_encoding` is
+absent, so neither can answer this question.
+
+HTTP/3 is not supported: calling this function on an HTTP/3 request raises
+an error.
+
+A zero length body is not a body: a request whose `HEADERS` frame allowed a body
+but that only carried a zero length `DATA` frame with `END_STREAM` returns
+`false` once that frame has been parsed.
+
+The answer is based on the number of body bytes actually received. Only HTTP/2
+maintains such a count, so how exact the answer is depends on the protocol:
+
+| Protocol | Pending resolution |
+| --- | --- |
+| HTTP/2 | Resolves as soon as the `DATA` frame carrying `END_STREAM` has been parsed: a zero length one yields `false`, any payload yields `true` |
+| HTTP/1.x with `Content-Length` | Never pending: a positive length proves `true`, zero or absent proves `false` |
+| HTTP/1.x chunked | Pending until the body has been read to its end: the chunked filter accumulates the parsed chunk sizes into `content_length_n`, so once the read completes a body of at least one byte proves `true` and a body that carried nothing but the terminating chunk proves `false` |
+
+For HTTP/2 there is one timing subtlety worth knowing: `ngx_http_v2_run_request`
+runs the request phases inline, right after the `HEADERS` frame, so a handler
+that neither reads the body nor yields can run *before* the following `DATA`
+frame has been parsed. At that point all that is known is that the `HEADERS`
+frame allowed a body, and the answer is `nil, "pending"`. Calling
+[ngx.req.read_body](https://github.com/openresty/lua-nginx-module#ngxreqread_body)
+first, or calling from a phase that runs after the body was read, gives the
+byte-accurate answer.
+
+Two further notes:
+
+* The answer always describes the downstream client request. Inside a subrequest
+  (`ngx.location.capture`) it still reports the main request, not the body given
+  to the subrequest.
+* The answer always describes the body the client sent, never one set
+  from Lua.
+  [ngx.req.set_body_data](https://github.com/openresty/lua-nginx-module#ngxreqset_body_data)
+  rewrites the request buffers and `content_length_n`, but not the
+  received-byte counter or the HTTP/2 stream state this function relies on, so
+  after a rewrite the answer can still describe the original body. Call it
+  before any Lua request-body mutation; describing the effective body after a
+  rewrite is outside this API's contract.
+
+
+[Back to TOC](#table-of-contents)
 
 License
 =======
