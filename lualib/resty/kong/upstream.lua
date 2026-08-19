@@ -32,6 +32,9 @@ const uint32_t ngx_http_lua_kong_next_upstream_mask_http_504;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_http_403;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_http_404;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_http_429;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_400;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_401;
+const uint32_t ngx_http_lua_kong_next_upstream_mask_http_402;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_off;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_non_idempotent;
 ]])
@@ -54,6 +57,9 @@ local next_upstream_table = {
     http_403 = C.ngx_http_lua_kong_next_upstream_mask_http_403,
     http_404 = C.ngx_http_lua_kong_next_upstream_mask_http_404,
     http_429 = C.ngx_http_lua_kong_next_upstream_mask_http_429,
+    http_400 = C.ngx_http_lua_kong_next_upstream_mask_http_400,
+    http_401 = C.ngx_http_lua_kong_next_upstream_mask_http_401,
+    http_402 = C.ngx_http_lua_kong_next_upstream_mask_http_402,
     off = C.ngx_http_lua_kong_next_upstream_mask_off,
     non_idempotent = C.ngx_http_lua_kong_next_upstream_mask_non_idempotent,
 }
