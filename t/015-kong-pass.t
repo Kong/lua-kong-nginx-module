@@ -14,10 +14,12 @@ our $HttpConfig = <<'_EOC_';
         server unix:$TEST_NGINX_HTML_DIR/nginx.sock;
 
         # Stock nginx keys the upstream keepalive cache by address only, so a
-        # pooled HTTP/2 connection can be handed to an HTTP/1.1 request once
-        # both versions share one location. These tests cover dispatch, not
-        # pooling, so keep every request on a fresh connection.
-        keepalive 0;
+        # pooled HTTP/2 connection can go to an HTTP/1.1 request once both
+        # versions share one location. These tests cover dispatch, not pooling,
+        # so give every request its own connection. "keepalive_requests 1"
+        # does that on every nginx: 1.29.7 and later drop the connection after
+        # one request, and earlier versions cache nothing to begin with.
+        keepalive_requests 1;
     }
 
     server {
