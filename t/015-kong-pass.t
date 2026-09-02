@@ -98,6 +98,8 @@ protocol: HTTP/2.0
 --- no_error_log
 [error]
 [crit]
+--- skip_nginx
+3: < 1.29.4
 
 
 
@@ -118,6 +120,8 @@ protocol: HTTP/2.0
 --- no_error_log
 [error]
 [crit]
+--- skip_nginx
+3: < 1.29.4
 
 
 
