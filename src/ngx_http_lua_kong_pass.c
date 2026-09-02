@@ -16,7 +16,16 @@
 
 
 #include "ngx_http_lua_kong_directive.h"
+
+/*
+ * nginx added ngx_http_proxy_module.h, and the HTTP/2 upstream handler that it
+ * declares, in version 1.29.4. Older nginx has neither header nor handler, so
+ * kong_pass still works there, but it cannot select the upstream HTTP version.
+ */
+#if (NGX_HTTP_V2) && (nginx_version >= 1029004)
 #include <ngx_http_proxy_module.h>
+#define NGX_HTTP_LUA_KONG_HAVE_PROXY_V2  1
+#endif
 
 
 extern ngx_module_t  ngx_http_proxy_module;
@@ -99,7 +108,7 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
         return NGX_CONF_ERROR;
     }
 
-#if !(NGX_HTTP_V2)
+#if !(NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
 
     /*
      * the value is still compiled, so that one configuration works on both
@@ -107,8 +116,8 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
      */
 
     ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
-                       "\"version=\" has no effect, because nginx is built "
-                       "without the ngx_http_v2_module");
+                       "\"version=\" has no effect, because this nginx "
+                       "cannot proxy to an upstream server over HTTP/2");
 
 #endif
 
@@ -292,7 +301,7 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
         return klcf->proxy_handler(r);
     }
 
-#if (NGX_HTTP_V2)
+#if (NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
 
     if (ver.len == 1 && ver.data[0] == (u_char) '2') {
         return ngx_http_proxy_v2_handler(r);
