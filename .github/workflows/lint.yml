@@ -8,6 +8,7 @@ concurrency:
 
 jobs:
   tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Lint
     runs-on: ubuntu-22.04
 
