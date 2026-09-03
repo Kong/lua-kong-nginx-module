@@ -311,3 +311,66 @@ invalid parameter "alpn=h2"
 [crit]
 --- skip_nginx
 3: < 1.29.4
+
+
+
+=== TEST 14: kong_pass inherits into a limit_except block that does not repeat it
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        set $upstream_scheme  'http';
+        set $upstream_uri     '/t';
+        set $upstream_version $arg_version;
+
+        proxy_http_version 1.1;
+        kong_pass $upstream_scheme test_upstream $upstream_uri version=$upstream_version;
+
+        # "limit_except GET" runs every non-GET request, POST included, against
+        # a separate location config that nginx creates for it. Nothing here
+        # repeats kong_pass, so the mediator's selector, version and captured
+        # handlers must come from the merge, not from this block's own (empty)
+        # config.
+        limit_except GET {
+            allow all;
+        }
+    }
+--- request eval
+["POST /t?version=2", "POST /t?version="]
+--- response_body eval
+["protocol: HTTP/2.0\n", "protocol: HTTP/1.1\n"]
+--- no_error_log
+[error]
+[crit]
+--- skip_nginx
+3: < 1.29.4
+
+
+
+=== TEST 15: kong_pass inherits into an "if" block that does not repeat it
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        set $upstream_scheme  'http';
+        set $upstream_uri     '/t';
+        set $upstream_version $arg_version;
+
+        proxy_http_version 1.1;
+        kong_pass $upstream_scheme test_upstream $upstream_uri version=$upstream_version;
+
+        # A true "if" condition swaps to a separate location config for the
+        # rest of the request, same as limit_except above, but nginx already
+        # latches the content handler before that swap; only this module's
+        # own per-request state (read through the swapped config) needs the
+        # merge to have filled it in.
+        if ($request_method = 'POST') {
+        }
+    }
+--- request eval
+["GET /t?version=2", "POST /t?version=2", "POST /t?version="]
+--- response_body eval
+["protocol: HTTP/2.0\n", "protocol: HTTP/2.0\n", "protocol: HTTP/1.1\n"]
+--- no_error_log
+[error]
+[crit]
+--- skip_nginx
+3: < 1.29.4
