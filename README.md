@@ -13,6 +13,7 @@ Table of Contents
     * [lua\_kong\_load\_var\_index](#lua_kong_load_var_index)
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
+    * [kong\_pass](#kong_pass)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
@@ -52,6 +53,23 @@ are **required** for this module to compile successfully.
 You may use the [openresty-build-tools](https://github.com/Kong/kong-build-tools/tree/master/openresty-build-tools)
 script to automatically build an OpenResty binary with required patches as well as this module
 included.
+
+`kong_pass`'s `version=2` parameter additionally requires a patch that defines
+`NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH` and makes `ngx_http_upstream_t`'s
+`preserve_output` flag request-local. Without it, `ngx_http_proxy_v2_handler`
+writes that flag into the shared proxy location config instead, so this module
+does not call it dynamically; `version=2` falls back to `proxy_http_version`,
+the same as on an nginx older than 1.29.4.
+
+`kong_pass` also expects that idle upstream connections are not shared between
+the protocols it dispatches to. For the `keepalive` directive, that needs a
+patch that keys `ngx_http_upstream_keepalive_module`'s cache by
+`u->output.tag` as well as by the peer address, and that defines
+`NGX_HTTP_UPSTREAM_KEEPALIVE_PROTOCOL_PATCH`; `kong_pass` logs a warning at
+startup when that define is missing. See
+[Upstream connection reuse](#upstream-connection-reuse) for what the
+requirement is, and for the `balancer_keepalive` pool, which this module
+cannot check at all.
 
 Install
 =======
@@ -178,6 +196,169 @@ An error log line may look similar to the following:
 ```
 2023/09/06 11:33:36 [error] 94085#0: *6 [lua] content_by_lua(nginx.conf:27):7: hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", request_id: "cd7706e903db672ac5fac333bc8db5ed"
 ```
+
+[Back to TOC](#table-of-contents)
+
+kong\_pass
+-------------------------------------------
+**syntax:** *kong_pass $selector host path [version=$variable];*
+
+**context:** *location* *if in location* *limit_except*
+
+Mediates a single location between `proxy_pass` and `grpc_pass`, chosen per
+request from `$selector`, and, for `proxy_pass`, additionally selects the
+upstream HTTP version per request. It exists because both of those are
+static, per-location directives: neither can be told "use HTTP/2 for this
+request but HTTP/1.1 for the next one on the same location", and a location
+can only have one of them configured at a time.
+
+At configuration time, `kong_pass` builds a `<$selector>://<host><path>` URL
+and internally invokes `proxy_pass` with it (path included) and `grpc_pass`
+with it (path dropped, since gRPC carries the method in the `:path`
+pseudo-header and `grpc_pass` does not accept a URI part). `kong_pass` then
+installs its own request-time handler in place of whichever one of the two
+ran last. Because that URL always embeds `$selector`, `proxy_pass` and
+`grpc_pass` always take their own dynamic-URL code path (as they would for
+any `proxy_pass`/`grpc_pass` value containing a variable): `host` is not
+checked against known `upstream {}` blocks at configuration time, and, if it
+does not name one, nginx resolves it as a hostname at request time, which
+needs a [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
+configured.
+
+`$selector` must be a single variable, written either as `$name` or as
+`${name}`, and is evaluated fresh for every request:
+
+- a value starting with `grpc`, case-insensitive (`grpc` or `grpcs`, for
+  example) dispatches to `grpc_pass`; the `version=` parameter, if given,
+  is still parsed but has no effect, since gRPC always speaks HTTP/2
+- any other value dispatches to `proxy_pass`
+
+`host` and `path` are plain configuration tokens, not compiled separately:
+`kong_pass` concatenates `$selector`, `host` and `path` into that one URL
+string at configuration time and hands it, unchanged, to `proxy_pass` (and
+to `grpc_pass`, minus `path`, per above). Because `$selector` guarantees the
+string contains a variable reference, both directives compile it
+dynamically, so a `$variable` written inside `host` or `path` is honoured
+too, evaluated per request, the same as it would be in a literal
+`proxy_pass`/`grpc_pass` value. `host` must not be empty; `path` may be, in
+which case only `<$selector>://<host>` is passed to `proxy_pass`, leaving the
+client's URI to the upstream. A `path` written as a literal must start with
+`/`, because it is appended straight onto `host` with no separator; a `path`
+that starts with `$` is evaluated per request, and so cannot be checked at
+configuration time.
+
+Note what dropping `path` for `grpc_pass` means in practice: `path` decides
+the upstream URI only for requests `$selector` sends to `proxy_pass`. A
+request that goes to `grpc_pass` carries the client's own URI in the `:path`
+pseudo-header, because that is where nginx's gRPC module takes it from, so
+whatever rewriting `path` expresses does not reach it. A `path` of
+`$upstream_uri` holding a rewritten path, for instance, applies to the
+HTTP/1.x and HTTP/2 proxy dispatch and not to the gRPC one.
+
+`version=$variable` is optional and, when given, must be a single variable,
+in either spelling. It is evaluated per request, only when `$selector`
+selected `proxy_pass`:
+
+- an empty value, or `1.1`, uses whatever `proxy_http_version` is configured
+  for the location, same as not specifying `version=` at all
+- `2` proxies to the upstream over HTTP/2 for that request, regardless of
+  `proxy_http_version`
+- anything else is not supported; `kong_pass` logs a warning naming the
+  value and falls back to `proxy_http_version`, so an unrecognised value
+  does not silently look like it took effect
+
+`$selector`, `host` and `path` are always required, in that order, and
+`kong_pass` may only appear once per location: a second `kong_pass` in the
+same location, `if` block or `limit_except` block is a configuration error.
+Every argument after `path` must be `name=value`; `version=` is currently
+the only one `kong_pass` recognises, and it may only be given once.
+
+A `kong_pass` in a location also covers that location's `if` and
+`limit_except` blocks, which nginx runs against separate location configs of
+their own: the selector, the `version=` value and both captured handlers are
+inherited by such a block that does not set its own. For `limit_except`,
+`kong_pass` also becomes the block's content handler, so `$selector` decides
+which of `proxy_pass` and `grpc_pass` runs for the requests that block
+restricts, even where the block writes one of them itself. Such a directive
+still configures whichever handler ends up running — a `proxy_pass` written
+there is what a non-`grpc` selector proxies to — but a `grpc` selector sends
+those requests to `grpc_pass` regardless of it. Write `kong_pass` in the
+`limit_except` block itself to give it a dispatch of its own.
+
+Take care where the selector and `version=` variables come from in that
+case. A `limit_except` block runs against a location config that
+`ngx_http_rewrite_module` does not inherit into, and `set` is not allowed
+inside one either, so no `set` reaches the requests a `limit_except`
+restricts: a selector taken from `set $upstream_scheme` evaluates empty for
+them, and `proxy_pass` then rejects the URL. Use a variable that any
+location config can read, such as one from
+[`map`](https://nginx.org/en/docs/http/ngx_http_map_module.html#map), an
+`$arg_` variable, or one whose value is assigned at request time.
+
+`kong_pass` is only built when nginx builds both of the modules whose
+directives it invokes, `ngx_http_proxy_module` and `ngx_http_grpc_module`, and
+the latter needs `ngx_http_v2_module`, which `configure` leaves out unless
+`--with-http_v2_module` is given. A build missing any of the three has no
+`kong_pass` directive at all, and nginx rejects a configuration using it with
+"unknown directive"; the rest of this module is unaffected either way.
+
+Selecting HTTP/2 with `version=` additionally requires:
+
+- nginx 1.29.4 or later, which is when `ngx_http_proxy_module.h` and its
+  HTTP/2 upstream handler first shipped. On an older nginx, `kong_pass`
+  still works for HTTP/1.x, but `version=` has no effect: it is still
+  parsed (so the same configuration works unchanged across nginx versions),
+  but a warning is logged at startup, and, in the request path, `2` falls
+  back to `proxy_http_version`. It does so without a warning of its own,
+  since it is a value `kong_pass` recognises and the startup warning has
+  already reported that this build cannot honour it
+- the patch described under [Description](#description) that defines
+  `NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH`. Without it, `version=2` falls
+  back the same way, even on nginx 1.29.4 or later
+
+### Upstream connection reuse
+
+One `kong_pass` location can speak three different protocols to the same
+upstream peer: HTTP/1.x through `proxy_pass`, HTTP/2 through `proxy_pass` with
+`version=2`, and HTTP/2 through `grpc_pass`. Any cache of idle upstream
+connections must therefore be keyed by the protocol spoken on the connection,
+and not by the peer address alone, or a pooled connection can be handed to a
+request that speaks something else on it: an HTTP/1.x request written to a
+pooled HTTP/2 connection is answered with a protocol error, and an HTTP/2
+request that lands on a pooled HTTP/1.x connection fails outright with
+`no connection data found for keepalive http2 connection`.
+
+Nothing about this is specific to this module — two stock nginx locations, one
+with `proxy_http_version 2` and one without, sharing an `upstream {}` block
+that has a `keepalive` directive have the same problem — but `kong_pass` puts
+all three protocols on one location by design, so it is much easier to hit.
+There are two caches to think about:
+
+- `ngx_http_upstream_keepalive_module` caches idle connections for an
+  `upstream {}` block and matches one by peer address. Given an explicit
+  `keepalive` it compares nothing else; given the implicit default (nginx
+  1.29.7 and later cache idle upstream connections even with no `keepalive`
+  directive configured) it also requires the connection to have been created
+  through the same `ngx_http_upstream_conf_t`, which separates `grpc_pass`
+  from `proxy_pass`, but not `version=2` from HTTP/1.x, because both proxy
+  handlers share one. Separating those needs the patch described under
+  [Description](#description); without it, `kong_pass` warns at startup,
+  because this is the one cache it can say anything about
+- `balancer_by_lua_block` with `balancer_keepalive` keeps a pool of its own,
+  keyed by the peer address and by the pool name that
+  `balancer.set_current_peer()` was given. Note that on nginx 1.29.7 and
+  later the cache above is installed for such an upstream as well, wraps this
+  pool, and serves a cached connection before this pool is ever consulted, so
+  the pool name only decides reuse where that cache is not in play: on an
+  nginx older than 1.29.7, or in an upstream block that switches it off with
+  `keepalive 0`, which nginx accepts from 1.29.7 on and rejected before it.
+  Where the pool name does decide, either include the upstream scheme and the
+  value passed to `version=` in it, or use a lua-nginx-module that compares
+  `u->output.tag` there too; this module can detect neither, so it stays
+  quiet about both
+
+If neither cache is in play, and every request opens its own upstream
+connection, there is nothing to do.
 
 [Back to TOC](#table-of-contents)
 
