@@ -190,6 +190,23 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "host argument must not be empty";
     }
 
+    /*
+     * host and path are concatenated into one URL, so a literal path that does
+     * not start with "/" becomes part of the host instead, and the request
+     * then fails on a host nobody configured: "kong_pass $s upstream :8080"
+     * proxies to port 8080 of the *name* "upstream", which no longer matches
+     * an upstream block. A path written as a variable can only be judged per
+     * request, and is not.
+     */
+
+    if (path->len != 0
+        && path->data[0] != (u_char) '/'
+        && path->data[0] != (u_char) '$')
+    {
+        return "path argument must start with \"/\", be empty, "
+               "or be a $variable";
+    }
+
     for (i = 4; i < cf->args->nelts; i++) {
         if (ngx_strncmp(value[i].data, "version=", 8) == 0) {
             arg.len = value[i].len - 8;
