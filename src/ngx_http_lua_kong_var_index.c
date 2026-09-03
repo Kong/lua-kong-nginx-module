@@ -236,7 +236,19 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
         return NGX_ERROR;
     }
 
-    vv = ngx_http_get_indexed_variable(r, index);
+    /*
+     * ngx_http_get_flushed_variable(), not ngx_http_get_indexed_variable():
+     * the latter hands back whatever r->variables holds, cached value and
+     * cached not_found alike, even for a variable nginx marked
+     * NGX_HTTP_VAR_NOCACHEABLE. Reading $upstream_status before the upstream
+     * has answered would then keep answering nil for the rest of the
+     * request, and $args would keep answering the arguments the request
+     * arrived with. ngx.var itself does not behave that way, because
+     * ngx_http_get_variable() flushes a non-cacheable variable before
+     * reading it, and this is meant to be the same read, only by index.
+     */
+
+    vv = ngx_http_get_flushed_variable(r, index);
     if (vv == NULL || vv->not_found) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                 "variable value is not found by index %d", index);
