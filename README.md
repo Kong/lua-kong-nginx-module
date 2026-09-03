@@ -240,7 +240,19 @@ string contains a variable reference, both directives compile it
 dynamically, so a `$variable` written inside `host` or `path` is honoured
 too, evaluated per request, the same as it would be in a literal
 `proxy_pass`/`grpc_pass` value. `host` must not be empty; `path` may be, in
-which case only `<$selector>://<host>` is passed to `proxy_pass`.
+which case only `<$selector>://<host>` is passed to `proxy_pass`, leaving the
+client's URI to the upstream. A `path` written as a literal must start with
+`/`, because it is appended straight onto `host` with no separator; a `path`
+that starts with `$` is evaluated per request, and so cannot be checked at
+configuration time.
+
+Note what dropping `path` for `grpc_pass` means in practice: `path` decides
+the upstream URI only for requests `$selector` sends to `proxy_pass`. A
+request that goes to `grpc_pass` carries the client's own URI in the `:path`
+pseudo-header, because that is where nginx's gRPC module takes it from, so
+whatever rewriting `path` expresses does not reach it. A `path` of
+`$upstream_uri` holding a rewritten path, for instance, applies to the
+HTTP/1.x and HTTP/2 proxy dispatch and not to the gRPC one.
 
 `version=$variable` is optional and, when given, must be a variable. It is
 evaluated per request, only when `$selector` selected `proxy_pass`:
@@ -258,6 +270,28 @@ evaluated per request, only when `$selector` selected `proxy_pass`:
 same location, `if` block or `limit_except` block is a configuration error.
 Every argument after `path` must be `name=value`; `version=` is currently
 the only one `kong_pass` recognises, and it may only be given once.
+
+A `kong_pass` in a location also covers that location's `if` and
+`limit_except` blocks, which nginx runs against separate location configs of
+their own: the selector, the `version=` value and both captured handlers are
+inherited by such a block that does not set its own. For `limit_except`,
+`kong_pass` also becomes the block's content handler, so `$selector` decides
+which of `proxy_pass` and `grpc_pass` runs for the requests that block
+restricts, even where the block writes one of them itself. Such a directive
+still configures whichever handler ends up running — a `proxy_pass` written
+there is what a non-`grpc` selector proxies to — but a `grpc` selector sends
+those requests to `grpc_pass` regardless of it. Write `kong_pass` in the
+`limit_except` block itself to give it a dispatch of its own.
+
+Take care where the selector and `version=` variables come from in that
+case. A `limit_except` block runs against a location config that
+`ngx_http_rewrite_module` does not inherit into, and `set` is not allowed
+inside one either, so no `set` reaches the requests a `limit_except`
+restricts: a selector taken from `set $upstream_scheme` evaluates empty for
+them, and `proxy_pass` then rejects the URL. Use a variable that any
+location config can read, such as one from
+[`map`](https://nginx.org/en/docs/http/ngx_http_map_module.html#map), an
+`$arg_` variable, or one whose value is assigned at request time.
 
 `kong_pass` is only built when nginx builds both of the modules whose
 directives it invokes, `ngx_http_proxy_module` and `ngx_http_grpc_module`, and
