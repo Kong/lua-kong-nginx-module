@@ -13,6 +13,7 @@ Table of Contents
     * [lua\_kong\_load\_var\_index](#lua_kong_load_var_index)
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
+    * [kong\_pass](#kong_pass)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
@@ -185,6 +186,80 @@ An error log line may look similar to the following:
 ```
 2023/09/06 11:33:36 [error] 94085#0: *6 [lua] content_by_lua(nginx.conf:27):7: hello world, client: 127.0.0.1, server: , request: "GET /foo HTTP/1.1", host: "localhost:8080", request_id: "cd7706e903db672ac5fac333bc8db5ed"
 ```
+
+[Back to TOC](#table-of-contents)
+
+kong\_pass
+-------------------------------------------
+**syntax:** *kong_pass $selector host path [version=$variable];*
+
+**context:** *location* *if in location* *limit_except*
+
+Mediates a single location between `proxy_pass` and `grpc_pass`, chosen per
+request from `$selector`, and, for `proxy_pass`, additionally selects the
+upstream HTTP version per request. It exists because both of those are
+static, per-location directives: neither can be told "use HTTP/2 for this
+request but HTTP/1.1 for the next one on the same location", and a location
+can only have one of them configured at a time.
+
+At configuration time, `kong_pass` builds a `<$selector>://<host><path>` URL
+and internally invokes `proxy_pass` with it (path included) and `grpc_pass`
+with it (path dropped, since gRPC carries the method in the `:path`
+pseudo-header and `grpc_pass` does not accept a URI part). `kong_pass` then
+installs its own request-time handler in place of whichever one of the two
+ran last. Because that URL always embeds `$selector`, `proxy_pass` and
+`grpc_pass` always take their own dynamic-URL code path (as they would for
+any `proxy_pass`/`grpc_pass` value containing a variable): `host` is not
+checked against known `upstream {}` blocks at configuration time, and, if it
+does not name one, nginx resolves it as a hostname at request time, which
+needs a [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
+configured.
+
+`$selector` must be a variable, evaluated fresh for every request:
+
+- a value starting with `grpc`, case-insensitive (`grpc` or `grpcs`, for
+  example) dispatches to `grpc_pass`; the `version=` parameter, if given,
+  is still parsed but has no effect, since gRPC always speaks HTTP/2
+- any other value dispatches to `proxy_pass`
+
+`host` and `path` are plain configuration tokens, not compiled separately:
+`kong_pass` concatenates `$selector`, `host` and `path` into that one URL
+string at configuration time and hands it, unchanged, to `proxy_pass` (and
+to `grpc_pass`, minus `path`, per above). Because `$selector` guarantees the
+string contains a variable reference, both directives compile it
+dynamically, so a `$variable` written inside `host` or `path` is honoured
+too, evaluated per request, the same as it would be in a literal
+`proxy_pass`/`grpc_pass` value. `host` must not be empty; `path` may be, in
+which case only `<$selector>://<host>` is passed to `proxy_pass`.
+
+`version=$variable` is optional and, when given, must be a variable. It is
+evaluated per request, only when `$selector` selected `proxy_pass`:
+
+- an empty value, or `1.1`, uses whatever `proxy_http_version` is configured
+  for the location, same as not specifying `version=` at all
+- `2` proxies to the upstream over HTTP/2 for that request, regardless of
+  `proxy_http_version`
+- anything else is not supported; `kong_pass` logs a warning naming the
+  value and falls back to `proxy_http_version`, so an unrecognised value
+  does not silently look like it took effect
+
+`$selector`, `host` and `path` are always required, in that order, and
+`kong_pass` may only appear once per location: a second `kong_pass` in the
+same location, `if` block or `limit_except` block is a configuration error.
+Every argument after `path` must be `name=value`; `version=` is currently
+the only one `kong_pass` recognises, and it may only be given once.
+
+Selecting HTTP/2 with `version=` additionally requires:
+
+- nginx 1.29.4 or later, which is when `ngx_http_proxy_module.h` and its
+  HTTP/2 upstream handler first shipped. On an older nginx, `kong_pass`
+  still works for HTTP/1.x, but `version=` has no effect: it is still
+  parsed (so the same configuration works unchanged across nginx versions),
+  but a warning is logged at startup, and, in the request path, `2` falls
+  back to `proxy_http_version` exactly like an unsupported value would
+- the patch described under [Description](#description) that defines
+  `NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH`. Without it, `version=2` falls
+  back the same way, even on nginx 1.29.4 or later
 
 [Back to TOC](#table-of-contents)
 
