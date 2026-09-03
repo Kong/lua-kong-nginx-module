@@ -259,6 +259,13 @@ same location, `if` block or `limit_except` block is a configuration error.
 Every argument after `path` must be `name=value`; `version=` is currently
 the only one `kong_pass` recognises, and it may only be given once.
 
+`kong_pass` is only built when nginx builds both of the modules whose
+directives it invokes, `ngx_http_proxy_module` and `ngx_http_grpc_module`, and
+the latter needs `ngx_http_v2_module`, which `configure` leaves out unless
+`--with-http_v2_module` is given. A build missing any of the three has no
+`kong_pass` directive at all, and nginx rejects a configuration using it with
+"unknown directive"; the rest of this module is unaffected either way.
+
 Selecting HTTP/2 with `version=` additionally requires:
 
 - nginx 1.29.4 or later, which is when `ngx_http_proxy_module.h` and its
