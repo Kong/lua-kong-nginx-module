@@ -147,7 +147,16 @@ ngx_http_lua_kong_get_upstream_raw_certificate(ngx_http_request_t *r, ngx_http_v
 
 not_found:
 
+    /*
+     * there is no upstream connection to ask yet. That is not a fact worth
+     * remembering for the rest of the request: the handshake this reads from
+     * happens later, and a caller that asked too early would otherwise keep
+     * being told there is nothing, because nginx caches a not_found as
+     * readily as a value. A value, once there is one, still caches.
+     */
+
     v->not_found = 1;
+    v->no_cacheable = 1;
 
     return NGX_OK;
 }
@@ -204,7 +213,16 @@ ngx_http_lua_kong_get_upstream_tls_protocol(ngx_http_request_t *r, ngx_http_vari
 
 not_found:
 
+    /*
+     * there is no upstream connection to ask yet. That is not a fact worth
+     * remembering for the rest of the request: the handshake this reads from
+     * happens later, and a caller that asked too early would otherwise keep
+     * being told there is nothing, because nginx caches a not_found as
+     * readily as a value. A value, once there is one, still caches.
+     */
+
     v->not_found = 1;
+    v->no_cacheable = 1;
 
     return NGX_OK;
 }
