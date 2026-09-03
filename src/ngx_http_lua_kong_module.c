@@ -150,6 +150,8 @@ ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf)
     }
 
     conf->request_id_var_index = NGX_CONF_UNSET;
+    conf->pass_selector_index = NGX_CONF_UNSET;
+    conf->pass_version_index = NGX_CONF_UNSET;
 
     return conf;
 }

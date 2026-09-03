@@ -76,6 +76,13 @@ ngx_http_lua_kong_pass_invoke(ngx_conf_t *cf, ngx_module_t *module,
 
 found:
 
+    /*
+     * hand the set handler the two arguments it would have read from the
+     * configuration file. items is on the stack and args cannot grow, which
+     * holds for proxy_pass and grpc_pass, because they only read value[1]; a
+     * set handler that pushed onto cf->args would write past it.
+     */
+
     items[0] = cmd->name;
     items[1] = *url;
 
@@ -110,9 +117,7 @@ static char *
 ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
     ngx_http_lua_kong_loc_conf_t *klcf, ngx_str_t *value)
 {
-    ngx_http_compile_complex_value_t  ccv;
-
-    if (klcf->pass_version != NULL) {
+    if (klcf->pass_version_index != NGX_CONF_UNSET) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "duplicate \"version=\" parameter");
         return NGX_CONF_ERROR;
@@ -127,7 +132,7 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
 #if !(NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
 
     /*
-     * the value is still compiled, so that one configuration works on both
+     * the variable is still indexed, so that one configuration works on both
      * builds, but nothing can act on it here
      */
 
@@ -137,19 +142,11 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
 
 #endif
 
-    klcf->pass_version = ngx_palloc(cf->pool,
-                                    sizeof(ngx_http_complex_value_t));
-    if (klcf->pass_version == NULL) {
-        return NGX_CONF_ERROR;
-    }
+    value->len--;
+    value->data++;
 
-    ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
-
-    ccv.cf = cf;
-    ccv.value = value;
-    ccv.complex_value = klcf->pass_version;
-
-    if (ngx_http_compile_complex_value(&ccv) != NGX_OK) {
+    klcf->pass_version_index = ngx_http_get_variable_index(cf, value);
+    if (klcf->pass_version_index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
 
@@ -162,14 +159,13 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_lua_kong_loc_conf_t      *klcf = conf;
     ngx_http_core_loc_conf_t          *clcf;
-    ngx_str_t                         *value, *selector, *host, *path, arg;
-    ngx_str_t                          proxy_url, grpc_url;
+    ngx_str_t                         *value, *selector, *host, *path;
+    ngx_str_t                          proxy_url, grpc_url, name, arg;
     ngx_uint_t                         i;
     u_char                            *p;
-    ngx_http_compile_complex_value_t   ccv;
     char                              *rv;
 
-    if (klcf->pass_selector != NULL) {
+    if (klcf->pass_selector_index != NGX_CONF_UNSET) {
         return "is duplicate";
     }
 
@@ -225,19 +221,18 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    klcf->pass_selector = ngx_palloc(cf->pool,
-                                     sizeof(ngx_http_complex_value_t));
-    if (klcf->pass_selector == NULL) {
-        return NGX_CONF_ERROR;
-    }
+    /*
+     * index the selector by name, so that the request path reads it straight
+     * out of r->variables. The URLs below need the "$name" spelling, so take
+     * the name from a copy.
+     */
 
-    ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
+    name = *selector;
+    name.len--;
+    name.data++;
 
-    ccv.cf = cf;
-    ccv.value = selector;
-    ccv.complex_value = klcf->pass_selector;
-
-    if (ngx_http_compile_complex_value(&ccv) != NGX_OK) {
+    klcf->pass_selector_index = ngx_http_get_variable_index(cf, &name);
+    if (klcf->pass_selector_index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
 
@@ -334,43 +329,54 @@ static ngx_int_t
 ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
 {
     ngx_http_lua_kong_loc_conf_t   *klcf;
-    ngx_str_t                       sel, ver;
+    ngx_http_variable_value_t      *sel, *ver;
 
     klcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
 
     if (klcf == NULL
-        || klcf->pass_selector == NULL
+        || klcf->pass_selector_index == NGX_CONF_UNSET
         || klcf->proxy_handler == NULL
         || klcf->grpc_handler == NULL)
     {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    if (ngx_http_complex_value(r, klcf->pass_selector, &sel) != NGX_OK) {
+    sel = ngx_http_get_indexed_variable(r, klcf->pass_selector_index);
+    if (sel == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    /* gRPC always speaks HTTP/2, so the version selector does not apply */
+    /*
+     * gRPC always speaks HTTP/2, so the version selector does not apply. Match
+     * the two schemes exactly: anything else is for proxy_pass to reject, and
+     * would only look like a scheme this module knows.
+     */
 
-    if (sel.len >= 4 && ngx_strncasecmp(sel.data, (u_char *) "grpc", 4) == 0) {
+    if (!sel->not_found
+        && ((sel->len == 4
+             && ngx_strncasecmp(sel->data, (u_char *) "grpc", 4) == 0)
+            || (sel->len == 5
+                && ngx_strncasecmp(sel->data, (u_char *) "grpcs", 5) == 0)))
+    {
         return klcf->grpc_handler(r);
     }
 
-    if (klcf->pass_version == NULL) {
+    if (klcf->pass_version_index == NGX_CONF_UNSET) {
         return klcf->proxy_handler(r);
     }
 
-    if (ngx_http_complex_value(r, klcf->pass_version, &ver) != NGX_OK) {
+    ver = ngx_http_get_indexed_variable(r, klcf->pass_version_index);
+    if (ver == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    if (ver.len == 0) {
+    if (ver->not_found || ver->len == 0) {
         return klcf->proxy_handler(r);
     }
 
 #if (NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
 
-    if (ver.len == 1 && ver.data[0] == (u_char) '2') {
+    if (ver->len == 1 && ver->data[0] == (u_char) '2') {
         return ngx_http_proxy_v2_handler(r);
     }
 
@@ -384,11 +390,11 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
      * value we cannot honour does not look like it was applied.
      */
 
-    if (ver.len != 3 || ngx_strncmp(ver.data, "1.1", 3) != 0) {
+    if (ver->len != 3 || ngx_strncmp(ver->data, "1.1", 3) != 0) {
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0,
-                      "kong_pass ignores unsupported version \"%V\", "
+                      "kong_pass ignores unsupported version \"%v\", "
                       "falling back to the proxy_http_version directive",
-                      &ver);
+                      ver);
     }
 
     return klcf->proxy_handler(r);
@@ -431,14 +437,14 @@ ngx_http_lua_kong_pass_merge_loc_conf(ngx_conf_t *cf,
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 
-    if (clcf->noname && conf->pass_selector == NULL) {
-        conf->pass_selector = prev->pass_selector;
-        conf->pass_version  = prev->pass_version;
-        conf->proxy_handler = prev->proxy_handler;
-        conf->grpc_handler  = prev->grpc_handler;
+    if (clcf->noname && conf->pass_selector_index == NGX_CONF_UNSET) {
+        conf->pass_selector_index = prev->pass_selector_index;
+        conf->pass_version_index  = prev->pass_version_index;
+        conf->proxy_handler       = prev->proxy_handler;
+        conf->grpc_handler        = prev->grpc_handler;
     }
 
-    if (clcf->lmt_excpt && conf->pass_selector != NULL) {
+    if (clcf->lmt_excpt && conf->pass_selector_index != NGX_CONF_UNSET) {
         clcf->handler = ngx_http_lua_kong_pass_handler;
     }
 
