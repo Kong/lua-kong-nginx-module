@@ -21,10 +21,26 @@
  * nginx added ngx_http_proxy_module.h, and the HTTP/2 upstream handler that it
  * declares, in version 1.29.4. Older nginx has neither header nor handler, so
  * kong_pass still works there, but it cannot select the upstream HTTP version.
+ *
+ * ngx_http_proxy_v2_handler() writes its preserve_output flag into the
+ * *shared* proxy location config (plcf->upstream.preserve_output), not into
+ * the request. That is harmless in upstream nginx, where a location always
+ * proxies the same HTTP version, but kong_pass calls this handler only for
+ * selected requests: the first version=2 request on a location would then
+ * leave preserve_output set for every later HTTP/1.x request on it, for the
+ * life of the worker. Kong carries a core patch that moves the flag onto
+ * ngx_http_upstream_t, which is request-local, and marks it by defining
+ * NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH. Only enable the dynamic call to
+ * ngx_http_proxy_v2_handler() when that patch is present; otherwise version=2
+ * falls back to proxy_http_version, same as on nginx older than 1.29.4.
  */
 #if (NGX_HTTP_V2) && (nginx_version >= 1029004)
 #include <ngx_http_proxy_module.h>
+
+#if defined(NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH)
 #define NGX_HTTP_LUA_KONG_HAVE_PROXY_V2  1
+#endif
+
 #endif
 
 
