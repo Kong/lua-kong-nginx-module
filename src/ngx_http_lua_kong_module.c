@@ -73,12 +73,14 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       0,
       NULL },
 
+#if (NGX_HTTP_LUA_KONG_PASS)
     { ngx_string("kong_pass"),
       NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_2MORE,
       ngx_http_lua_kong_pass,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
+#endif
 
     ngx_null_command
 };
@@ -179,7 +181,11 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->request_id_var_index, prev->request_id_var_index, NGX_CONF_UNSET);
     ngx_conf_merge_str_value(conf->request_id_header, prev->request_id_header, "");
 
+#if (NGX_HTTP_LUA_KONG_PASS)
     return ngx_http_lua_kong_pass_merge_loc_conf(cf, prev, conf);
+#else
+    return NGX_CONF_OK;
+#endif
 }
 
 const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_error = NGX_HTTP_UPSTREAM_FT_ERROR;
