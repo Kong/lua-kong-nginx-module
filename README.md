@@ -53,6 +53,13 @@ You may use the [openresty-build-tools](https://github.com/Kong/kong-build-tools
 script to automatically build an OpenResty binary with required patches as well as this module
 included.
 
+`kong_pass`'s `version=2` parameter additionally requires a patch that defines
+`NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH` and makes `ngx_http_upstream_t`'s
+`preserve_output` flag request-local. Without it, `ngx_http_proxy_v2_handler`
+writes that flag into the shared proxy location config instead, so this module
+does not call it dynamically; `version=2` falls back to `proxy_http_version`,
+the same as on an nginx older than 1.29.4.
+
 Install
 =======
 This module can be installed just like any ordinary Nginx C module, using the
