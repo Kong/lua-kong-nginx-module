@@ -307,7 +307,9 @@ Selecting HTTP/2 with `version=` additionally requires:
   still works for HTTP/1.x, but `version=` has no effect: it is still
   parsed (so the same configuration works unchanged across nginx versions),
   but a warning is logged at startup, and, in the request path, `2` falls
-  back to `proxy_http_version` exactly like an unsupported value would
+  back to `proxy_http_version`. It does so without a warning of its own,
+  since it is a value `kong_pass` recognises and the startup warning has
+  already reported that this build cannot honour it
 - the patch described under [Description](#description) that defines
   `NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH`. Without it, `version=2` falls
   back the same way, even on nginx 1.29.4 or later

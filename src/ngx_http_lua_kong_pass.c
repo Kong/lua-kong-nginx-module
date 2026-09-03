@@ -380,6 +380,19 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
         return ngx_http_proxy_v2_handler(r);
     }
 
+#else
+
+    /*
+     * "2" is a value this module knows, and only this build cannot honour it,
+     * which ngx_http_lua_kong_pass_version() reports once at configuration
+     * time. Fall back quietly: it is the value a caller configures for an
+     * HTTP/2 upstream, so warning here would name every request.
+     */
+
+    if (ver->len == 1 && ver->data[0] == (u_char) '2') {
+        return klcf->proxy_handler(r);
+    }
+
 #endif
 
     /*
@@ -387,7 +400,11 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
      * Only "2" changes the handler; kong_pass cannot influence the HTTP/1.x
      * minor version, which ngx_http_proxy_create_request takes from the
      * proxy_http_version directive. Warn about everything else, so that a
-     * value we cannot honour does not look like it was applied.
+     * value we cannot honour does not look like it was applied. This is a
+     * misconfiguration and repeats for every request the location serves,
+     * which is how nginx reports the same class of thing: proxy_pass logs
+     * an invalid URL prefix, and an upstream logs a missing resolver, per
+     * request too.
      */
 
     if (ver->len != 3 || ngx_strncmp(ver->data, "1.1", 3) != 0) {
