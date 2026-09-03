@@ -32,6 +32,26 @@ our $HttpConfig = <<'_EOC_';
             more_clear_headers Date;
             echo "protocol: $server_protocol";
         }
+
+        location /body {
+            default_type 'text/plain';
+            more_clear_headers Date;
+            content_by_lua_block {
+                ngx.req.read_body()
+
+                local body = ngx.req.get_body_data()
+
+                if not body then
+                    local file = ngx.req.get_body_file()
+                    local f = assert(io.open(file, "rb"))
+                    body = f:read("*a")
+                    f:close()
+                end
+
+                ngx.say("protocol: ", ngx.var.server_protocol)
+                ngx.say("body: ", body)
+            }
+        }
     }
 _EOC_
 
@@ -256,3 +276,38 @@ duplicate "version=" parameter
 --- must_die
 --- error_log
 invalid parameter "alpn=h2"
+
+
+
+=== TEST 13: mixed version=2 and version=1.1 requests with bodies on the same location do not affect each other
+--- http_config eval: $::HttpConfig
+--- config
+    client_body_buffer_size 1;
+
+    location /t {
+        set $upstream_scheme  'http';
+        set $upstream_uri     '/body';
+        set $upstream_version $arg_version;
+
+        proxy_http_version 1.1;
+        kong_pass $upstream_scheme test_upstream $upstream_uri version=$upstream_version;
+    }
+--- request eval
+[
+    "POST /t?version=2\nfirst-v2-body",
+    "POST /t?version=\nsecond-v1-body",
+    "POST /t?version=2\nthird-v2-body",
+    "POST /t?version=\nfourth-v1-body",
+]
+--- response_body eval
+[
+    "protocol: HTTP/2.0\nbody: first-v2-body\n",
+    "protocol: HTTP/1.1\nbody: second-v1-body\n",
+    "protocol: HTTP/2.0\nbody: third-v2-body\n",
+    "protocol: HTTP/1.1\nbody: fourth-v1-body\n",
+]
+--- no_error_log
+[error]
+[crit]
+--- skip_nginx
+3: < 1.29.4
