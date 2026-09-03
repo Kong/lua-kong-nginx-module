@@ -22,6 +22,7 @@
 static ngx_str_t default_vars[] = {
     ngx_string("args"),
     ngx_string("is_args"),
+    ngx_string("uri"),
     ngx_string("bytes_sent"),
     ngx_string("content_type"),
     /* ngx_string("host"), */
