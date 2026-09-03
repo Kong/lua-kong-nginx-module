@@ -61,6 +61,16 @@ writes that flag into the shared proxy location config instead, so this module
 does not call it dynamically; `version=2` falls back to `proxy_http_version`,
 the same as on an nginx older than 1.29.4.
 
+`kong_pass` also expects that idle upstream connections are not shared between
+the protocols it dispatches to. For the `keepalive` directive, that needs a
+patch that keys `ngx_http_upstream_keepalive_module`'s cache by
+`u->output.tag` as well as by the peer address, and that defines
+`NGX_HTTP_UPSTREAM_KEEPALIVE_PROTOCOL_PATCH`; `kong_pass` logs a warning at
+startup when that define is missing. See
+[Upstream connection reuse](#upstream-connection-reuse) for what the
+requirement is, and for the `balancer_keepalive` pool, which this module
+cannot check at all.
+
 Install
 =======
 This module can be installed just like any ordinary Nginx C module, using the
@@ -260,6 +270,50 @@ Selecting HTTP/2 with `version=` additionally requires:
 - the patch described under [Description](#description) that defines
   `NGX_HTTP_UPSTREAM_PRESERVE_OUTPUT_PATCH`. Without it, `version=2` falls
   back the same way, even on nginx 1.29.4 or later
+
+### Upstream connection reuse
+
+One `kong_pass` location can speak three different protocols to the same
+upstream peer: HTTP/1.x through `proxy_pass`, HTTP/2 through `proxy_pass` with
+`version=2`, and HTTP/2 through `grpc_pass`. Any cache of idle upstream
+connections must therefore be keyed by the protocol spoken on the connection,
+and not by the peer address alone, or a pooled connection can be handed to a
+request that speaks something else on it: an HTTP/1.x request written to a
+pooled HTTP/2 connection is answered with a protocol error, and an HTTP/2
+request that lands on a pooled HTTP/1.x connection fails outright with
+`no connection data found for keepalive http2 connection`.
+
+Nothing about this is specific to this module — two stock nginx locations, one
+with `proxy_http_version 2` and one without, sharing an `upstream {}` block
+that has a `keepalive` directive have the same problem — but `kong_pass` puts
+all three protocols on one location by design, so it is much easier to hit.
+There are two caches to think about:
+
+- `ngx_http_upstream_keepalive_module` caches idle connections for an
+  `upstream {}` block and matches one by peer address. Given an explicit
+  `keepalive` it compares nothing else; given the implicit default (nginx
+  1.29.7 and later cache idle upstream connections even with no `keepalive`
+  directive configured) it also requires the connection to have been created
+  through the same `ngx_http_upstream_conf_t`, which separates `grpc_pass`
+  from `proxy_pass`, but not `version=2` from HTTP/1.x, because both proxy
+  handlers share one. Separating those needs the patch described under
+  [Description](#description); without it, `kong_pass` warns at startup,
+  because this is the one cache it can say anything about
+- `balancer_by_lua_block` with `balancer_keepalive` keeps a pool of its own,
+  keyed by the peer address and by the pool name that
+  `balancer.set_current_peer()` was given. Note that on nginx 1.29.7 and
+  later the cache above is installed for such an upstream as well, wraps this
+  pool, and serves a cached connection before this pool is ever consulted, so
+  the pool name only decides reuse where that cache is not in play: on an
+  nginx older than 1.29.7, or in an upstream block that switches it off with
+  `keepalive 0`, which nginx accepts from 1.29.7 on and rejected before it.
+  Where the pool name does decide, either include the upstream scheme and the
+  value passed to `version=` in it, or use a lua-nginx-module that compares
+  `u->output.tag` there too; this module can detect neither, so it stays
+  quiet about both
+
+If neither cache is in play, and every request opens its own upstream
+connection, there is nothing to do.
 
 [Back to TOC](#table-of-contents)
 

@@ -272,6 +272,40 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return rv;
     }
 
+#if !defined(NGX_HTTP_UPSTREAM_KEEPALIVE_PROTOCOL_PATCH)
+
+    /*
+     * this location can now speak HTTP/1.x through ngx_http_proxy_module,
+     * HTTP/2 through ngx_http_proxy_v2_module and HTTP/2 through
+     * ngx_http_grpc_module, all to the same peer, so a cache of idle upstream
+     * connections that is keyed by the peer address alone will hand a pooled
+     * connection to a request that speaks another protocol on it.
+     *
+     * ngx_http_upstream_keepalive_module is such a cache: it compares the
+     * peer address, and, only for a "keepalive" that defaults to (or asks
+     * for) "local", the ngx_http_upstream_conf_t the connection was created
+     * through. The HTTP/1.x and HTTP/2 proxy handlers share one of those
+     * (&plcf->upstream), so that comparison never separates version=2 from
+     * HTTP/1.x. Kong carries a patch that compares u->output.tag as well,
+     * which identifies the handler and therefore the protocol; it marks
+     * itself by defining NGX_HTTP_UPSTREAM_KEEPALIVE_PROTOCOL_PATCH.
+     *
+     * Warn, rather than refuse to configure, because the cache only matters
+     * once an upstream this location resolves to actually caches connections,
+     * and "host" is only known per request. Nothing is said about
+     * balancer_keepalive, whose pool key is a string chosen at request time
+     * and cannot be checked here at all.
+     */
+
+    ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
+                       "this nginx does not separate cached idle upstream "
+                       "connections by the protocol spoken on them, so a "
+                       "\"keepalive\" upstream used by this location can hand "
+                       "a pooled connection to a \"kong_pass\" request that "
+                       "speaks another one");
+
+#endif
+
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
     clcf->handler = ngx_http_lua_kong_pass_handler;
 
