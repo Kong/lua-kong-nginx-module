@@ -22,6 +22,27 @@ our $HttpConfig = <<'_EOC_';
         keepalive_requests 1;
     }
 
+    # nginx counts requests per connection, so anything past the first one
+    # arrived on a connection that was pooled and reused.
+    map $connection_requests $connection_reuse {
+        1       new;
+        default reused;
+    }
+
+    upstream test_pooled_upstream {
+        server unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+
+        # Deliberately no "keepalive_requests 1": nginx 1.29.7 and later cache
+        # idle upstream connections for an upstream block even with no
+        # "keepalive" directive configured, so requests through this one reach
+        # the upstream over a connection that kong_pass already used, possibly
+        # for another protocol. That cache keys connections by peer address,
+        # plus, for the implicit default, the ngx_http_upstream_conf_t they
+        # were created through, which the HTTP/1.x and HTTP/2 proxy handlers
+        # share; keeping the protocols apart is what the patch this module
+        # warns about at startup adds.
+    }
+
     server {
         listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
         http2 on;
@@ -31,6 +52,12 @@ our $HttpConfig = <<'_EOC_';
             default_type 'text/plain';
             more_clear_headers Date;
             echo "protocol: $server_protocol";
+        }
+
+        location /reuse {
+            default_type 'text/plain';
+            more_clear_headers Date;
+            echo "protocol: $server_protocol, connection: $connection_reuse";
         }
 
         location /body {
@@ -318,12 +345,14 @@ invalid parameter "alpn=h2"
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
-        set $upstream_scheme  'http';
-        set $upstream_uri     '/t';
-        set $upstream_version $arg_version;
-
         proxy_http_version 1.1;
-        kong_pass $upstream_scheme test_upstream $upstream_uri version=$upstream_version;
+
+        # The selector and the version come from $arg_ variables rather than
+        # from "set", because no "set" can reach the requests below: "set" is
+        # not allowed inside "limit_except", and ngx_http_rewrite_module does
+        # not inherit the enclosing location's codes into that child config
+        # either, so a "set" written here would never run for them.
+        kong_pass $arg_scheme test_upstream /t version=$arg_version;
 
         # "limit_except GET" runs every non-GET request, POST included, against
         # a separate location config that nginx creates for it. Nothing here
@@ -335,7 +364,7 @@ invalid parameter "alpn=h2"
         }
     }
 --- request eval
-["POST /t?version=2", "POST /t?version="]
+["POST /t?scheme=http&version=2", "POST /t?scheme=http&version="]
 --- response_body eval
 ["protocol: HTTP/2.0\n", "protocol: HTTP/1.1\n"]
 --- no_error_log
@@ -374,3 +403,36 @@ invalid parameter "alpn=h2"
 [crit]
 --- skip_nginx
 3: < 1.29.4
+
+
+
+=== TEST 16: dispatch stays per request over reused upstream connections
+--- http_config eval: $::HttpConfig
+--- config
+    location /reuse {
+        proxy_http_version 1.1;
+        kong_pass $arg_scheme test_pooled_upstream /reuse version=$arg_version;
+    }
+--- request eval
+[
+    "GET /reuse?scheme=http&version=2",
+    "GET /reuse?scheme=http&version=",
+    "GET /reuse?scheme=grpc",
+    "GET /reuse?scheme=http&version=2",
+    "GET /reuse?scheme=http&version=",
+    "GET /reuse?scheme=grpc",
+]
+--- response_body_like eval
+[
+    qr/^protocol: HTTP\/2\.0, connection: (?:new|reused)$/,
+    qr/^protocol: HTTP\/1\.1, connection: (?:new|reused)$/,
+    qr/^protocol: HTTP\/2\.0, connection: (?:new|reused)$/,
+    qr/^protocol: HTTP\/2\.0, connection: reused$/,
+    qr/^protocol: HTTP\/1\.1, connection: reused$/,
+    qr/^protocol: HTTP\/2\.0, connection: reused$/,
+]
+--- no_error_log
+[error]
+[crit]
+--- skip_nginx
+3: < 1.29.7
