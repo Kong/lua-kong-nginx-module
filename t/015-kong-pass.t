@@ -547,3 +547,48 @@ protocol: HTTP/1.1
 --- no_error_log
 [error]
 [crit]
+
+
+
+=== TEST 20: the selector must be a single variable
+--- config
+    location /t {
+        set $a 'ht';
+        set $b 'tp';
+
+        kong_pass $a$b test_upstream /t;
+    }
+--- must_die
+--- error_log
+unknown "a$b" variable
+
+
+
+=== TEST 21: version= must be a single variable
+--- config
+    location /t {
+        set $upstream_scheme 'http';
+        set $a '1';
+        set $b '.1';
+
+        kong_pass $upstream_scheme test_upstream /t version=$a$b;
+    }
+--- must_die
+--- error_log
+unknown "a$b" variable
+
+
+
+=== TEST 22: a scheme that only starts with grpc goes to proxy_pass
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        set $upstream_scheme 'grpcfoo';
+
+        kong_pass $upstream_scheme test_upstream /t;
+    }
+--- request
+GET /t
+--- error_code: 500
+--- error_log
+invalid URL prefix in "grpcfoo://test_upstream/t"
