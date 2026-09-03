@@ -370,7 +370,33 @@ invalid parameter "alpn=h2"
 
 
 
-=== TEST 13: mixed version=2 and version=1.1 requests with bodies on the same location do not affect each other
+=== TEST 13: a literal path must start with a slash
+--- config
+    location /t {
+        set $upstream_scheme 'http';
+
+        kong_pass $upstream_scheme test_upstream t;
+    }
+--- must_die
+--- error_log
+path argument must start with "/", be empty, or be a $variable
+
+
+
+=== TEST 14: a literal path that looks like a port is rejected
+--- config
+    location /t {
+        set $upstream_scheme 'http';
+
+        kong_pass $upstream_scheme test_upstream :8080;
+    }
+--- must_die
+--- error_log
+path argument must start with "/", be empty, or be a $variable
+
+
+
+=== TEST 15: mixed version=2 and version=1.1 requests with bodies on the same location do not affect each other
 --- http_config eval: $::HttpConfig
 --- config
     client_body_buffer_size 1;
@@ -405,7 +431,7 @@ invalid parameter "alpn=h2"
 
 
 
-=== TEST 14: kong_pass inherits into a limit_except block that does not repeat it
+=== TEST 16: kong_pass inherits into a limit_except block that does not repeat it
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -439,7 +465,7 @@ invalid parameter "alpn=h2"
 
 
 
-=== TEST 15: kong_pass inherits into an "if" block that does not repeat it
+=== TEST 17: kong_pass inherits into an "if" block that does not repeat it
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -470,7 +496,7 @@ invalid parameter "alpn=h2"
 
 
 
-=== TEST 16: dispatch stays per request over reused upstream connections
+=== TEST 18: dispatch stays per request over reused upstream connections
 --- http_config eval: $::HttpConfig
 --- config
     location /reuse {
@@ -502,3 +528,22 @@ invalid parameter "alpn=h2"
 3: $::NoUpstreamHttp2
 --- skip_nginx
 3: < 1.29.7
+
+
+
+=== TEST 19: an empty path leaves the client's URI to the upstream
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        set $upstream_scheme 'http';
+
+        proxy_http_version 1.1;
+        kong_pass $upstream_scheme test_upstream '';
+    }
+--- request
+GET /t
+--- response_body
+protocol: HTTP/1.1
+--- no_error_log
+[error]
+[crit]
