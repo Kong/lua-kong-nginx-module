@@ -1,13 +1,77 @@
 # vim:set ft= ts=4 sw=4 et:
 
-use Test::Nginx::Socket::Lua 'no_plan';
+use Test::Nginx::Socket::Lua;
 use Cwd qw(cwd);
+use File::Temp qw(tempdir);
 
 repeat_each(2);
 
 my $pwd = cwd();
 
 $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
+
+# What this build can do with kong_pass does not follow from the nginx version
+# alone: the directive is only compiled when ngx_http_proxy_module and
+# ngx_http_grpc_module are, and selecting HTTP/2 for a request additionally
+# needs nginx 1.29.4 or later and the request-local preserve_output patch. The
+# module reports both at configuration time, so ask it once with "nginx -t"
+# instead of guessing, and let the tests that cannot hold on this build skip.
+#
+# Only these two answers make a test skip. Anything else, a probe that could
+# not run included, counts as fully supported, so that a broken probe leaves
+# the tests failing loudly rather than passing silently.
+sub probe_build {
+    my $nginx = $ENV{TEST_NGINX_BINARY} || 'nginx';
+    my $dir = tempdir(CLEANUP => 1);
+
+    mkdir "$dir/logs";
+
+    my $conf = "$dir/nginx.conf";
+
+    open my $fh, '>', $conf or return (0, 0);
+
+    print $fh <<'_EOC_';
+error_log stderr warn;
+
+events {
+    worker_connections 64;
+}
+
+http {
+    access_log off;
+
+    server {
+        listen 127.0.0.1:65535;
+
+        location / {
+            set $probe_version '';
+            kong_pass $probe_version probe.test / version=$probe_version;
+        }
+    }
+}
+_EOC_
+
+    close $fh;
+
+    my $out = `$nginx -t -p $dir -c $conf 2>&1`;
+
+    return (1, 1) if $out =~ /unknown directive "kong_pass"/;
+    return (0, 1) if $out =~ /"version=" has no effect/;
+
+    return (0, 0);
+}
+
+our ($NoKongPass, $NoUpstreamHttp2) = probe_build();
+
+# every block here configures kong_pass, so there is nothing left to run
+plan(skip_all => "this nginx has no kong_pass directive") if $NoKongPass;
+
+plan('no_plan');
+
+if ($NoUpstreamHttp2) {
+    diag("skipping the version=2 tests: this nginx cannot proxy to an "
+         . "upstream server over HTTP/2");
+}
 
 our $HttpConfig = <<'_EOC_';
     upstream test_upstream {
@@ -147,8 +211,8 @@ protocol: HTTP/2.0
 --- no_error_log
 [error]
 [crit]
---- skip_nginx
-3: < 1.29.4
+--- skip_eval
+3: $::NoUpstreamHttp2
 
 
 
@@ -169,8 +233,8 @@ protocol: HTTP/2.0
 --- no_error_log
 [error]
 [crit]
---- skip_nginx
-3: < 1.29.4
+--- skip_eval
+3: $::NoUpstreamHttp2
 
 
 
@@ -336,8 +400,8 @@ invalid parameter "alpn=h2"
 --- no_error_log
 [error]
 [crit]
---- skip_nginx
-3: < 1.29.4
+--- skip_eval
+3: $::NoUpstreamHttp2
 
 
 
@@ -370,8 +434,8 @@ invalid parameter "alpn=h2"
 --- no_error_log
 [error]
 [crit]
---- skip_nginx
-3: < 1.29.4
+--- skip_eval
+3: $::NoUpstreamHttp2
 
 
 
@@ -401,8 +465,8 @@ invalid parameter "alpn=h2"
 --- no_error_log
 [error]
 [crit]
---- skip_nginx
-3: < 1.29.4
+--- skip_eval
+3: $::NoUpstreamHttp2
 
 
 
@@ -434,5 +498,7 @@ invalid parameter "alpn=h2"
 --- no_error_log
 [error]
 [crit]
+--- skip_eval
+3: $::NoUpstreamHttp2
 --- skip_nginx
 3: < 1.29.7
