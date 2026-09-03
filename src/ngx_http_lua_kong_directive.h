@@ -22,6 +22,9 @@
 #include "ngx_http_lua_kong_common.h"
 
 
+ngx_int_t
+ngx_http_lua_kong_variable_index(ngx_conf_t *cf, ngx_str_t *value);
+
 char *
 ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);

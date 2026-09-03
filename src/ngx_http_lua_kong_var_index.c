@@ -15,7 +15,7 @@
  */
 
 
-#include "ngx_http_lua_kong_common.h"
+#include "ngx_http_lua_kong_directive.h"
 
 
 /* default variable indexes will be loaded */
@@ -109,6 +109,38 @@ static ngx_str_t default_vars[] = {
 };
 
 
+/*
+ * index the variable that "value" names, written either as "$name" or as
+ * "${name}", the two spellings nginx accepts anywhere a variable appears.
+ * Returns NGX_DECLINED when the argument is not a variable at all, leaving
+ * the caller to say so about the argument it was reading.
+ */
+
+ngx_int_t
+ngx_http_lua_kong_variable_index(ngx_conf_t *cf, ngx_str_t *value)
+{
+    ngx_str_t  name;
+
+    if (value->len < 2 || value->data[0] != (u_char) '$') {
+        return NGX_DECLINED;
+    }
+
+    name.len = value->len - 1;
+    name.data = value->data + 1;
+
+    if (name.data[0] == (u_char) '{') {
+        if (name.len < 3 || name.data[name.len - 1] != (u_char) '}') {
+            return NGX_DECLINED;
+        }
+
+        name.len -= 2;
+        name.data++;
+    }
+
+    return ngx_http_get_variable_index(cf, &name);
+}
+
+
 static char *
 ngx_http_lua_kong_load_default_var_indexes(ngx_conf_t *cf)
 {
@@ -142,16 +174,13 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return ngx_http_lua_kong_load_default_var_indexes(cf);
     }
 
-    if (value[1].data[0] != '$') {
+    index = ngx_http_lua_kong_variable_index(cf, &value[1]);
+
+    if (index == NGX_DECLINED) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "invalid variable name \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
     }
-
-    value[1].len--;
-    value[1].data++;
-
-    index = ngx_http_get_variable_index(cf, &value[1]);
 
     if (index == NGX_ERROR) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

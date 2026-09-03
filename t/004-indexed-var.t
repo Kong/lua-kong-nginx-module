@@ -153,3 +153,30 @@ get variable value 'value4_2' by index
 [error]
 [crit]
 [alert]
+
+
+
+=== TEST 5: lua_kong_load_var_index accepts a ${name} variable
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index ${realip_remote_addr};
+
+--- config
+    set $variable_braced 'braced';
+
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.variable_braced)
+        }
+    }
+
+--- request
+GET /t
+--- response_body_like
+braced
+
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]

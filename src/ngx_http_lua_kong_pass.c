@@ -51,38 +51,6 @@ extern ngx_module_t  ngx_http_grpc_module;
 static ngx_int_t ngx_http_lua_kong_pass_handler(ngx_http_request_t *r);
 
 
-/*
- * index the variable that "value" names, written either as "$name" or as
- * "${name}", the two spellings nginx accepts anywhere a variable appears.
- * Returns NGX_DECLINED when the argument is not a variable at all, leaving
- * the caller to say so about the argument it was reading.
- */
-
-static ngx_int_t
-ngx_http_lua_kong_pass_variable_index(ngx_conf_t *cf, ngx_str_t *value)
-{
-    ngx_str_t  name;
-
-    if (value->len < 2 || value->data[0] != (u_char) '$') {
-        return NGX_DECLINED;
-    }
-
-    name.len = value->len - 1;
-    name.data = value->data + 1;
-
-    if (name.data[0] == (u_char) '{') {
-        if (name.len < 3 || name.data[name.len - 1] != (u_char) '}') {
-            return NGX_DECLINED;
-        }
-
-        name.len -= 2;
-        name.data++;
-    }
-
-    return ngx_http_get_variable_index(cf, &name);
-}
-
-
 static char *
 ngx_http_lua_kong_pass_invoke(ngx_conf_t *cf, ngx_module_t *module,
     const char *cmd_name, size_t cmd_name_len, ngx_str_t *url,
@@ -170,7 +138,7 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
         return NGX_CONF_ERROR;
     }
 
-    klcf->pass_version_index = ngx_http_lua_kong_pass_variable_index(cf, value);
+    klcf->pass_version_index = ngx_http_lua_kong_variable_index(cf, value);
 
     if (klcf->pass_version_index == NGX_DECLINED) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -224,7 +192,7 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     path = &value[3];
 
     klcf->pass_selector_index =
-        ngx_http_lua_kong_pass_variable_index(cf, selector);
+        ngx_http_lua_kong_variable_index(cf, selector);
 
     if (klcf->pass_selector_index == NGX_DECLINED) {
         return "first argument must be a $variable";
