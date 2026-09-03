@@ -162,7 +162,7 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     /* conf->tag is NGX_HTTP_LOC_CONF only */
     ngx_conf_merge_value(conf->request_id_var_index, prev->request_id_var_index, NGX_CONF_UNSET);
 
-    return NGX_CONF_OK;
+    return ngx_http_lua_kong_pass_merge_loc_conf(cf, prev, conf);
 }
 
 const ngx_uint_t ngx_http_lua_kong_next_upstream_mask_error = NGX_HTTP_UPSTREAM_FT_ERROR;
