@@ -592,3 +592,51 @@ GET /t
 --- error_code: 500
 --- error_log
 invalid URL prefix in "grpcfoo://test_upstream/t"
+
+
+
+=== TEST 23: a ${name} selector and version are accepted
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        set $upstream_scheme  'http';
+        set $upstream_uri     '/t';
+        set $upstream_version '';
+
+        proxy_http_version 1.1;
+        kong_pass ${upstream_scheme} test_upstream ${upstream_uri} version=${upstream_version};
+    }
+--- request
+GET /t
+--- response_body
+protocol: HTTP/1.1
+--- no_error_log
+[error]
+[crit]
+
+
+
+=== TEST 24: an unterminated ${name is not a variable
+--- config
+    location /t {
+        set $upstream_scheme 'http';
+
+        kong_pass ${upstream_scheme test_upstream /t;
+    }
+--- must_die
+--- error_log
+"kong_pass" directive first argument must be a $variable
+
+
+
+=== TEST 25: a location that already proxies names the directive that clashes
+--- config
+    location /t {
+        set $upstream_scheme 'http';
+
+        proxy_pass http://test_upstream;
+        kong_pass $upstream_scheme test_upstream /t;
+    }
+--- must_die
+--- error_log
+"kong_pass" cannot use "proxy_pass": is duplicate
