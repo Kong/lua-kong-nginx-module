@@ -257,3 +257,24 @@ qr/log_msg.*request_id: "[0-9a-f]{32}"$/
 [alert]
 
 
+
+=== TEST 10: the request id variable may be written as ${name}
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+--- config
+    location = /test {
+        set $my_var "braced!";
+        lua_kong_error_log_request_id ${my_var};
+        content_by_lua_block {
+            ngx.log(ngx.INFO, "log_msg")
+            ngx.exit(200)
+        }
+    }
+--- request
+GET /test
+--- error_log eval
+qr/log_msg.*request_id: "braced!"$/
+--- no_error_log
+[error]
+[crit]
+[alert]
