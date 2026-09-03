@@ -377,3 +377,47 @@ nomem:
     *err = "no memory";
     return NGX_ERROR;
 }
+
+
+/*
+ * nginx caches a variable it did not mark NGX_HTTP_VAR_NOCACHEABLE, on the
+ * grounds that what it reads does not change during a request. A request
+ * header does change, when Lua rewrites it, and the variables fed by that
+ * header then keep answering with what they cached beforehand. ngx.var stays
+ * right about this only by accident: a variable nginx never put in
+ * variables_hash is read through a prefix lookup that caches nothing.
+ * Reading by index caches, so give the caller a way to say that a header it
+ * just rewrote has made one of these stale, for this request alone.
+ */
+
+int
+ngx_http_lua_kong_ffi_var_invalidate_by_index(ngx_http_request_t *r,
+    ngx_uint_t index, char **err)
+{
+    ngx_http_core_main_conf_t   *cmcf;
+
+    if (r == NULL) {
+        *err = "no request object found";
+        return NGX_ERROR;
+    }
+
+    if ((r)->connection->fd == (ngx_socket_t) -1) {
+        *err = "API disabled in the current context";
+        return NGX_ERROR;
+    }
+
+    cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+
+    if (index >= cmcf->variables.nelts) {
+        *err = "invalid variable index";
+        return NGX_ERROR;
+    }
+
+    r->variables[index].valid = 0;
+    r->variables[index].not_found = 0;
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "invalidated variable value by index %ui", index);
+
+    return NGX_OK;
+}
