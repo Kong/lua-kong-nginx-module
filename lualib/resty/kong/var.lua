@@ -23,9 +23,12 @@ local NGX_DECLINED = ngx.DECLINED
 
 
 local variable_index = {}
+local cookie_indexes = {}
 local metatable_patched
 local str_replace_char
 local replace_dashes_lower
+
+local find = string.find
 
 local HTTP_PREFIX = "http_"
 
@@ -44,6 +47,9 @@ if subsystem == "http" then
     int ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r,
         unsigned int index, const unsigned char *value, size_t value_len,
         char **err);
+
+    int ngx_http_lua_kong_ffi_var_invalidate_by_index(ngx_http_request_t *r,
+        unsigned int index, char **err);
 
     unsigned int ngx_http_lua_kong_ffi_var_load_indexes(ngx_str_t **names);
     ]]
@@ -100,6 +106,16 @@ local function load_indexes()
         end
     end
 
+    -- one Cookie header feeds every $cookie_* variable, so rewriting it
+    -- makes all of them stale at once
+    cookie_indexes = {}
+
+    for name, index in pairs(variable_index) do
+        if find(name, "cookie_", 1, true) == 1 then
+            cookie_indexes[#cookie_indexes + 1] = index
+        end
+    end
+
     return variable_index
 end
 
@@ -122,6 +138,20 @@ local function var_get_by_index(index)
 
     if rc == NGX_DECLINED then
         return nil
+    end
+
+    assert(rc == NGX_ERROR)
+    error(ffi_str(errmsg[0]), 2)
+end
+
+
+local function var_invalidate_by_index(index)
+    local r = get_request()
+
+    local rc = C.ngx_http_lua_kong_ffi_var_invalidate_by_index(r, index,
+                                                               errmsg)
+    if rc == NGX_OK then
+        return
     end
 
     assert(rc == NGX_ERROR)
@@ -160,23 +190,52 @@ local function var_set_by_index(index, value)
 end
 
 
+-- Rewriting a request header leaves the variables fed by it holding the
+-- value they cached before the rewrite, so drop those cached values. Only
+-- for this request: dropping the index instead, as this once did, would send
+-- every later request in the worker down the slower unindexed read as well.
+--
+-- $args and its relatives need nothing here, even though set_uri_args
+-- changes them: nginx marks them non-cacheable, so an indexed read of one
+-- re-reads it anyway. $host needs nothing either, because lua-nginx-module
+-- invalidates that one itself whenever the Host header is written.
+local function invalidate_request_header_vars(name)
+    name = replace_dashes_lower(name)
+
+    local index = variable_index[HTTP_PREFIX .. name]
+    if index then
+        var_invalidate_by_index(index)
+    end
+
+    if name == "content_type" or name == "content_length" then
+        -- a variable of its own, named exactly like the header
+        index = variable_index[name]
+        if index then
+            var_invalidate_by_index(index)
+        end
+
+    elseif name == "cookie" then
+        for i = 1, #cookie_indexes do
+            var_invalidate_by_index(cookie_indexes[i])
+        end
+    end
+end
+
+
 local function patch_functions()
-  local orig_set_uri_args = req.set_uri_args
+    local orig_set_header = req.set_header
 
-  req.set_uri_args = function(...)
-    variable_index.args = nil
-    return orig_set_uri_args(...)
-  end
-  
-  local orig_set_header = req.set_header
+    req.set_header = function(name, value)
+        invalidate_request_header_vars(name)
+        return orig_set_header(name, value)
+    end
 
-  req.set_header = function(name, value)
-    local normalized_header = replace_dashes_lower(name)
-    normalized_header = HTTP_PREFIX .. normalized_header
-    variable_index[normalized_header] = nil
+    local orig_clear_header = req.clear_header
 
-    return orig_set_header(name, value)
-  end
+    req.clear_header = function(name)
+        invalidate_request_header_vars(name)
+        return orig_clear_header(name)
+    end
 end
 
 
