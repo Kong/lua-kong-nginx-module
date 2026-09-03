@@ -3,6 +3,8 @@ name: Tests
 on: 
   pull_request:
   push:
+    branches:
+    - master
 
 env:
   KONG_VERSION: master
@@ -16,6 +18,8 @@ jobs:
   build:
     name: Build dependencies
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write # required to create branch
 
     steps:
     - name: Checkout source code
@@ -31,13 +35,9 @@ jobs:
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
         cd kong
-        branch=""
-
-        if [ ${{ github.event_name }} == 'pull_request' ]; then
-          branch=${GITHUB_HEAD_REF}
-        else
-          branch=${GITHUB_REF}
-        fi
+        # always use the commit ID, even if it's a PR merge; we will push the commit to temporary branch
+        # so that we can cache by commit ID instead of literal PR branch name
+        branch=${GITHUB_REF}
 
         branch=$(echo "$branch" | sed 's/\//\\\//g')
         sed -i "s/LUA_KONG_NGINX_MODULE=.\+/LUA_KONG_NGINX_MODULE=${branch}/" .requirements
@@ -50,6 +50,12 @@ jobs:
         path: |
           ${{ env.BUILD_ROOT }}
         key: ${{ hashFiles('src/**', 'lualib/**', '.github/workflows/tests.yml', 'kong/.requirements') }}
+
+    - name: Push PR merge to a temporary branch
+      # Push the temporary commit to a branch so that we can reference in build kong
+      if: github.event_name == 'pull_request' && steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git HEAD:refs/heads/${{ github.head_ref }}-merge
 
     - name: Install packages
       if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -71,6 +77,11 @@ jobs:
         nginx -V
         ldd $(which nginx)
         luarocks
+
+    - name: Delete temporary branch
+      if: always() && github.event_name == 'pull_request' && steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        git push https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git --delete refs/heads/${{ github.head_ref }}-merge
 
   test:
     name: Test
