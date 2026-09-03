@@ -342,3 +342,54 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
 
     return klcf->proxy_handler(r);
 }
+
+
+/*
+ * "if" and "limit_except" run their body against a *separate*, freshly
+ * created location config, not the enclosing location's: ngx_http_script.c
+ * swaps r->loc_conf to it for "if" whenever the condition is true, and
+ * ngx_http_update_location_config does the same for "limit_except" whenever
+ * the request method is one of the ones it restricts. That child config
+ * only receives kong_pass's selector, version and captured handlers if this
+ * function, called from ngx_http_lua_kong_merge_loc_conf(), copies them
+ * over; nginx never does it on this module's behalf.
+ *
+ * ngx_http_proxy_module and ngx_http_grpc_module face the same problem, and
+ * ngx_http_proxy_merge_loc_conf()/ngx_http_grpc_merge_loc_conf() solve it
+ * the same way: propagate the captured state into a "noname" (if/
+ * limit_except) child that has none of its own, and, for "limit_except"
+ * specifically, (re)install the content handler, because
+ * ngx_http_update_location_config's swap only takes effect for it, unlike
+ * a plain nested location, whose handler is only ever set by a directive
+ * appearing directly inside it.
+ *
+ * This module's merge_loc_conf() runs after theirs, because "--add-module"
+ * modules are always ordered after the modules nginx builds in by default
+ * (confirmed by inspecting objs/ngx_modules.c: proxy and grpc precede
+ * lua_kong there). So when a plain proxy_pass/grpc_pass in the parent
+ * location leaked its own handler into this "limit_except" child, this
+ * function overwrites it with the mediator handler again, unconditionally,
+ * whenever this module's own state is present.
+ */
+
+char *
+ngx_http_lua_kong_pass_merge_loc_conf(ngx_conf_t *cf,
+    ngx_http_lua_kong_loc_conf_t *prev, ngx_http_lua_kong_loc_conf_t *conf)
+{
+    ngx_http_core_loc_conf_t  *clcf;
+
+    clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+
+    if (clcf->noname && conf->pass_selector == NULL) {
+        conf->pass_selector = prev->pass_selector;
+        conf->pass_version  = prev->pass_version;
+        conf->proxy_handler = prev->proxy_handler;
+        conf->grpc_handler  = prev->grpc_handler;
+    }
+
+    if (clcf->lmt_excpt && conf->pass_selector != NULL) {
+        clcf->handler = ngx_http_lua_kong_pass_handler;
+    }
+
+    return NGX_CONF_OK;
+}
