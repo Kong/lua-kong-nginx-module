@@ -225,7 +225,8 @@ does not name one, nginx resolves it as a hostname at request time, which
 needs a [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
 configured.
 
-`$selector` must be a variable, evaluated fresh for every request:
+`$selector` must be a single variable, written either as `$name` or as
+`${name}`, and is evaluated fresh for every request:
 
 - a value starting with `grpc`, case-insensitive (`grpc` or `grpcs`, for
   example) dispatches to `grpc_pass`; the `version=` parameter, if given,
@@ -254,8 +255,9 @@ whatever rewriting `path` expresses does not reach it. A `path` of
 `$upstream_uri` holding a rewritten path, for instance, applies to the
 HTTP/1.x and HTTP/2 proxy dispatch and not to the gRPC one.
 
-`version=$variable` is optional and, when given, must be a variable. It is
-evaluated per request, only when `$selector` selected `proxy_pass`:
+`version=$variable` is optional and, when given, must be a single variable,
+in either spelling. It is evaluated per request, only when `$selector`
+selected `proxy_pass`:
 
 - an empty value, or `1.1`, uses whatever `proxy_http_version` is configured
   for the location, same as not specifying `version=` at all

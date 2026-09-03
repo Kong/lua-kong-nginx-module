@@ -51,6 +51,38 @@ extern ngx_module_t  ngx_http_grpc_module;
 static ngx_int_t ngx_http_lua_kong_pass_handler(ngx_http_request_t *r);
 
 
+/*
+ * index the variable that "value" names, written either as "$name" or as
+ * "${name}", the two spellings nginx accepts anywhere a variable appears.
+ * Returns NGX_DECLINED when the argument is not a variable at all, leaving
+ * the caller to say so about the argument it was reading.
+ */
+
+static ngx_int_t
+ngx_http_lua_kong_pass_variable_index(ngx_conf_t *cf, ngx_str_t *value)
+{
+    ngx_str_t  name;
+
+    if (value->len < 2 || value->data[0] != (u_char) '$') {
+        return NGX_DECLINED;
+    }
+
+    name.len = value->len - 1;
+    name.data = value->data + 1;
+
+    if (name.data[0] == (u_char) '{') {
+        if (name.len < 3 || name.data[name.len - 1] != (u_char) '}') {
+            return NGX_DECLINED;
+        }
+
+        name.len -= 2;
+        name.data++;
+    }
+
+    return ngx_http_get_variable_index(cf, &name);
+}
+
+
 static char *
 ngx_http_lua_kong_pass_invoke(ngx_conf_t *cf, ngx_module_t *module,
     const char *cmd_name, size_t cmd_name_len, ngx_str_t *url,
@@ -102,8 +134,23 @@ found:
 
     cf->args = saved_args;
 
+    if (rv == NGX_CONF_ERROR) {
+        return NGX_CONF_ERROR;
+    }
+
+    /*
+     * report the set handler's own message against the directive that
+     * produced it. Returning it would attribute it to kong_pass, which reads
+     * as nonsense for the case this catches: a location that already has a
+     * proxy_pass or a grpc_pass of its own answers "is duplicate", and
+     * nothing about kong_pass is duplicated.
+     */
+
     if (rv != NGX_CONF_OK) {
-        return rv;
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "\"kong_pass\" cannot use \"%V\": %s",
+                           &cmd->name, rv);
+        return NGX_CONF_ERROR;
     }
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
@@ -123,17 +170,23 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
         return NGX_CONF_ERROR;
     }
 
-    if (value->len < 2 || value->data[0] != (u_char) '$') {
+    klcf->pass_version_index = ngx_http_lua_kong_pass_variable_index(cf, value);
+
+    if (klcf->pass_version_index == NGX_DECLINED) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "\"version=\" must be a $variable");
+        return NGX_CONF_ERROR;
+    }
+
+    if (klcf->pass_version_index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
 
 #if !(NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
 
     /*
-     * the variable is still indexed, so that one configuration works on both
-     * builds, but nothing can act on it here
+     * the variable is indexed above either way, so that one configuration
+     * works on both builds, but nothing can act on it here
      */
 
     ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
@@ -141,14 +194,6 @@ ngx_http_lua_kong_pass_version(ngx_conf_t *cf,
                        "cannot proxy to an upstream server over HTTP/2");
 
 #endif
-
-    value->len--;
-    value->data++;
-
-    klcf->pass_version_index = ngx_http_get_variable_index(cf, value);
-    if (klcf->pass_version_index == NGX_ERROR) {
-        return NGX_CONF_ERROR;
-    }
 
     return NGX_CONF_OK;
 }
@@ -160,7 +205,7 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_lua_kong_loc_conf_t      *klcf = conf;
     ngx_http_core_loc_conf_t          *clcf;
     ngx_str_t                         *value, *selector, *host, *path;
-    ngx_str_t                          proxy_url, grpc_url, name, arg;
+    ngx_str_t                          proxy_url, grpc_url, arg;
     ngx_uint_t                         i;
     u_char                            *p;
     char                              *rv;
@@ -178,8 +223,15 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     host = &value[2];
     path = &value[3];
 
-    if (selector->len < 2 || selector->data[0] != (u_char) '$') {
+    klcf->pass_selector_index =
+        ngx_http_lua_kong_pass_variable_index(cf, selector);
+
+    if (klcf->pass_selector_index == NGX_DECLINED) {
         return "first argument must be a $variable";
+    }
+
+    if (klcf->pass_selector_index == NGX_ERROR) {
+        return NGX_CONF_ERROR;
     }
 
     if (host->len == 0) {
@@ -218,21 +270,6 @@ ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[i]);
-        return NGX_CONF_ERROR;
-    }
-
-    /*
-     * index the selector by name, so that the request path reads it straight
-     * out of r->variables. The URLs below need the "$name" spelling, so take
-     * the name from a copy.
-     */
-
-    name = *selector;
-    name.len--;
-    name.data++;
-
-    klcf->pass_selector_index = ngx_http_get_variable_index(cf, &name);
-    if (klcf->pass_selector_index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
 
