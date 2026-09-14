@@ -15,13 +15,14 @@
  */
 
 
-#include "ngx_http_lua_kong_common.h"
+#include "ngx_http_lua_kong_directive.h"
 
 
 /* default variable indexes will be loaded */
 static ngx_str_t default_vars[] = {
     ngx_string("args"),
     ngx_string("is_args"),
+    ngx_string("uri"),
     ngx_string("bytes_sent"),
     ngx_string("content_type"),
     /* ngx_string("host"), */
@@ -109,6 +110,38 @@ static ngx_str_t default_vars[] = {
 };
 
 
+/*
+ * index the variable that "value" names, written either as "$name" or as
+ * "${name}", the two spellings nginx accepts anywhere a variable appears.
+ * Returns NGX_DECLINED when the argument is not a variable at all, leaving
+ * the caller to say so about the argument it was reading.
+ */
+
+ngx_int_t
+ngx_http_lua_kong_variable_index(ngx_conf_t *cf, ngx_str_t *value)
+{
+    ngx_str_t  name;
+
+    if (value->len < 2 || value->data[0] != (u_char) '$') {
+        return NGX_DECLINED;
+    }
+
+    name.len = value->len - 1;
+    name.data = value->data + 1;
+
+    if (name.data[0] == (u_char) '{') {
+        if (name.len < 3 || name.data[name.len - 1] != (u_char) '}') {
+            return NGX_DECLINED;
+        }
+
+        name.len -= 2;
+        name.data++;
+    }
+
+    return ngx_http_get_variable_index(cf, &name);
+}
+
+
 static char *
 ngx_http_lua_kong_load_default_var_indexes(ngx_conf_t *cf)
 {
@@ -142,16 +175,13 @@ ngx_http_lua_kong_load_var_index(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return ngx_http_lua_kong_load_default_var_indexes(cf);
     }
 
-    if (value[1].data[0] != '$') {
+    index = ngx_http_lua_kong_variable_index(cf, &value[1]);
+
+    if (index == NGX_DECLINED) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "invalid variable name \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
     }
-
-    value[1].len--;
-    value[1].data++;
-
-    index = ngx_http_get_variable_index(cf, &value[1]);
 
     if (index == NGX_ERROR) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -207,7 +237,19 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
         return NGX_ERROR;
     }
 
-    vv = ngx_http_get_indexed_variable(r, index);
+    /*
+     * ngx_http_get_flushed_variable(), not ngx_http_get_indexed_variable():
+     * the latter hands back whatever r->variables holds, cached value and
+     * cached not_found alike, even for a variable nginx marked
+     * NGX_HTTP_VAR_NOCACHEABLE. Reading $upstream_status before the upstream
+     * has answered would then keep answering nil for the rest of the
+     * request, and $args would keep answering the arguments the request
+     * arrived with. ngx.var itself does not behave that way, because
+     * ngx_http_get_variable() flushes a non-cacheable variable before
+     * reading it, and this is meant to be the same read, only by index.
+     */
+
+    vv = ngx_http_get_flushed_variable(r, index);
     if (vv == NULL || vv->not_found) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                 "variable value is not found by index %d", index);
@@ -335,4 +377,48 @@ nomem:
 
     *err = "no memory";
     return NGX_ERROR;
+}
+
+
+/*
+ * nginx caches a variable it did not mark NGX_HTTP_VAR_NOCACHEABLE, on the
+ * grounds that what it reads does not change during a request. A request
+ * header does change, when Lua rewrites it, and the variables fed by that
+ * header then keep answering with what they cached beforehand. ngx.var stays
+ * right about this only by accident: a variable nginx never put in
+ * variables_hash is read through a prefix lookup that caches nothing.
+ * Reading by index caches, so give the caller a way to say that a header it
+ * just rewrote has made one of these stale, for this request alone.
+ */
+
+int
+ngx_http_lua_kong_ffi_var_invalidate_by_index(ngx_http_request_t *r,
+    ngx_uint_t index, char **err)
+{
+    ngx_http_core_main_conf_t   *cmcf;
+
+    if (r == NULL) {
+        *err = "no request object found";
+        return NGX_ERROR;
+    }
+
+    if ((r)->connection->fd == (ngx_socket_t) -1) {
+        *err = "API disabled in the current context";
+        return NGX_ERROR;
+    }
+
+    cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+
+    if (index >= cmcf->variables.nelts) {
+        *err = "invalid variable index";
+        return NGX_ERROR;
+    }
+
+    r->variables[index].valid = 0;
+    r->variables[index].not_found = 0;
+
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "invalidated variable value by index %ui", index);
+
+    return NGX_OK;
 }
