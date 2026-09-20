@@ -29,6 +29,7 @@ typedef struct {
     ngx_str_t                grpc_authority;
     ngx_http_log_handler_pt  orig_log_handler;
     ngx_uint_t               next_upstream;
+    u_char                   next_upstream_statuses[25]; /* HTTP 400..599 */
 } ngx_http_lua_kong_ctx_t;
 
 
