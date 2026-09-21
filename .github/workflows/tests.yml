@@ -28,6 +28,11 @@ jobs:
         ref: ${{ env.KONG_VERSION }}
         path: kong
 
+    # Keep the nginx integration patch paired with the module until it lands
+    # in Kong. Both jobs must use the same patch set and cache key.
+    - name: Install companion nginx patches
+      run: cp .github/patches/*.patch kong/build/openresty/patches/
+
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
         cd kong
@@ -49,7 +54,7 @@ jobs:
       with:
         path: |
           ${{ env.BUILD_ROOT }}
-        key: ${{ hashFiles('src/**', 'lualib/**', '.github/workflows/tests.yml', 'kong/.requirements') }}
+        key: ${{ hashFiles('src/**', 'lualib/**', '.github/patches/**', '.github/workflows/tests.yml', 'kong/.requirements') }}
 
     - name: Install packages
       if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -88,6 +93,11 @@ jobs:
         ref: ${{ env.KONG_VERSION }}
         path: kong
 
+    # Keep the nginx integration patch paired with the module until it lands
+    # in Kong. Both jobs must use the same patch set and cache key.
+    - name: Install companion nginx patches
+      run: cp .github/patches/*.patch kong/build/openresty/patches/
+
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
         cd kong
@@ -109,7 +119,7 @@ jobs:
       with:
         path: |
           ${{ env.BUILD_ROOT }}
-        key: ${{ hashFiles('src/**', 'lualib/**', '.github/workflows/tests.yml', 'kong/.requirements') }}
+        key: ${{ hashFiles('src/**', 'lualib/**', '.github/patches/**', '.github/workflows/tests.yml', 'kong/.requirements') }}
 
     - name: Install packages
       run: |
