@@ -218,9 +218,9 @@ configured.
 `$selector` must be a single variable, written either as `$name` or as
 `${name}`, and is evaluated fresh for every request:
 
-- a value starting with `grpc`, case-insensitive (`grpc` or `grpcs`, for
-  example) dispatches to `grpc_pass`; the `version=` parameter, if given,
-  is still parsed but has no effect, since gRPC always speaks HTTP/2
+- a value of exactly `grpc` or `grpcs`, case-insensitive, dispatches to
+  `grpc_pass`; the `version=` parameter, if given, is still parsed but has
+  no effect, since gRPC always speaks HTTP/2
 - any other value dispatches to `proxy_pass`
 
 `host` and `path` are plain configuration tokens, not compiled separately:
