@@ -367,26 +367,23 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
         return klcf->proxy_handler(r);
     }
 
-#if (NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
-
     if (ver->len == 1 && ver->data[0] == (u_char) '2') {
-        return ngx_http_proxy_v2_handler(r);
-    }
 
+#if (NGX_HTTP_LUA_KONG_HAVE_PROXY_V2)
+        return ngx_http_proxy_v2_handler(r);
 #else
 
-    /*
-     * "2" is a value this module knows, and only this build cannot honour it,
-     * which ngx_http_lua_kong_pass_version() reports once at configuration
-     * time. Fall back quietly: it is the value a caller configures for an
-     * HTTP/2 upstream, so warning here would name every request.
-     */
+        /*
+         * "2" is a value this module knows, and only this build cannot
+         * honour it, which ngx_http_lua_kong_pass_version() reports once
+         * at configuration time. Fall back quietly: it is the value a
+         * caller configures for an HTTP/2 upstream, so warning here would
+         * name every request.
+         */
 
-    if (ver->len == 1 && ver->data[0] == (u_char) '2') {
         return klcf->proxy_handler(r);
-    }
-
 #endif
+    }
 
     /*
      * "1.1" is accepted so that the caller can name the default explicitly.
