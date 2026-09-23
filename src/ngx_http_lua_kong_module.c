@@ -199,7 +199,10 @@ ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, ngx_uint_t next_upstre
     }
 
     ctx->next_upstream = next_upstream;
-    ngx_memzero(ctx->next_upstream_statuses, sizeof(ctx->next_upstream_statuses));
+    if (ctx->next_upstream_statuses != NULL) {
+        ngx_memzero(ctx->next_upstream_statuses,
+                    NGX_HTTP_LUA_KONG_NEXT_UPSTREAM_BITMAP_SIZE);
+    }
     return NGX_OK;
 }
 
@@ -215,7 +218,9 @@ ngx_http_lua_kong_next_upstream_status(ngx_http_request_t *r, ngx_uint_t status)
     }
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
-    if (ctx == NULL || (ctx->next_upstream & NGX_HTTP_UPSTREAM_FT_OFF)) {
+    if (ctx == NULL || ctx->next_upstream_statuses == NULL
+        || (ctx->next_upstream & NGX_HTTP_UPSTREAM_FT_OFF))
+    {
         return 0;
     }
 
@@ -229,7 +234,7 @@ ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r,
     uint32_t next_upstream, const uint16_t *statuses, size_t count, char **err)
 {
     ngx_http_lua_kong_ctx_t  *ctx;
-    u_char                  bitmap[25];
+    u_char                  bitmap[NGX_HTTP_LUA_KONG_NEXT_UPSTREAM_BITMAP_SIZE];
     size_t                  i;
     ngx_uint_t              status;
 
@@ -255,10 +260,20 @@ ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r,
         ngx_memzero(bitmap, sizeof(bitmap));
 
     } else if (count) {
+        if (ctx->next_upstream_statuses == NULL) {
+            ctx->next_upstream_statuses = ngx_palloc(r->pool, sizeof(bitmap));
+            if (ctx->next_upstream_statuses == NULL) {
+                *err = "failed to allocate HTTP status bitmap";
+                return NGX_ERROR;
+            }
+        }
+
         next_upstream |= NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM;
     }
 
+    if (ctx->next_upstream_statuses != NULL) {
+        ngx_memcpy(ctx->next_upstream_statuses, bitmap, sizeof(bitmap));
+    }
     ctx->next_upstream = next_upstream;
-    ngx_memcpy(ctx->next_upstream_statuses, bitmap, sizeof(bitmap));
     return NGX_OK;
 }
