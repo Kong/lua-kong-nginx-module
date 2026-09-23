@@ -653,7 +653,9 @@ Native statuses retain nginx's failure accounting. Custom 4xx statuses advance
 to the next peer without marking the peer failed; custom 5xx statuses mark it
 failed. The real upstream status is retained in retry history. Retry limits,
 timeouts, request-body buffering and `non_idempotent` restrictions still apply.
-This requires the companion nginx dynamic next-upstream status patch.
+This requires the companion nginx dynamic next-upstream status patch. Without
+that patch, native retry options remain available; setting custom statuses
+returns an error and preserves the previous criteria, unless `off` is specified.
 
 On success, this function returns `nil`. On failure, it returns a string
 describing the error and leaves the previous criteria unchanged.

@@ -249,6 +249,13 @@ ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r,
         bitmap[status / 8] |= (u_char) (1 << (status % 8));
     }
 
+#ifndef NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM
+    if (count && !(next_upstream & NGX_HTTP_UPSTREAM_FT_OFF)) {
+        *err = "custom HTTP retry statuses require the nginx dynamic next-upstream status patch";
+        return NGX_ERROR;
+    }
+#endif
+
     ctx = ngx_http_lua_kong_get_module_ctx(r);
     if (ctx == NULL) {
         *err = "failed to allocate request context";
@@ -260,6 +267,7 @@ ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r,
         ngx_memzero(bitmap, sizeof(bitmap));
 
     } else if (count) {
+#ifdef NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM
         if (ctx->next_upstream_statuses == NULL) {
             ctx->next_upstream_statuses = ngx_palloc(r->pool, sizeof(bitmap));
             if (ctx->next_upstream_statuses == NULL) {
@@ -269,6 +277,7 @@ ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r,
         }
 
         next_upstream |= NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM;
+#endif
     }
 
     if (ctx->next_upstream_statuses != NULL) {
