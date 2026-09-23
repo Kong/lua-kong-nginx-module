@@ -81,7 +81,20 @@ found:
      * configuration file. items is on the stack and args cannot grow, which
      * holds for proxy_pass and grpc_pass, because they only read value[1]; a
      * set handler that pushed onto cf->args would write past it.
+     *
+     * that only holds while cmd->type says the directive takes exactly one
+     * argument, same as items provides. Nothing else enforces that here,
+     * unlike a directive read from the configuration file, whose argument
+     * count the core config parser itself checks against cmd->type before
+     * ever calling set(). Reject anything else, so a future nginx that
+     * changes proxy_pass's or grpc_pass's arity fails loudly here instead
+     * of letting its set handler read or write past items.
      */
+
+    if (!(cmd->type & NGX_CONF_TAKE1)) {
+        return "internal error: pass slot does not take exactly one "
+               "argument";
+    }
 
     items[0] = cmd->name;
     items[1] = *url;
