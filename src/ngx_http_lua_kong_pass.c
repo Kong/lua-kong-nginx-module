@@ -312,7 +312,16 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    sel = ngx_http_get_indexed_variable(r, klcf->pass_selector_index);
+    /*
+     * ngx_http_get_flushed_variable(), not ngx_http_get_indexed_variable():
+     * the selector and version= are commonly a $arg_ variable or similar,
+     * which nginx marks NGX_HTTP_VAR_NOCACHEABLE. The indexed accessor would
+     * hand back a value already cached by an earlier read elsewhere in the
+     * request (a plugin, a rewrite, ...), instead of the fresh, per-request
+     * value this directive documents.
+     */
+
+    sel = ngx_http_get_flushed_variable(r, klcf->pass_selector_index);
     if (sel == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -336,7 +345,7 @@ ngx_http_lua_kong_pass_handler(ngx_http_request_t *r)
         return klcf->proxy_handler(r);
     }
 
-    ver = ngx_http_get_indexed_variable(r, klcf->pass_version_index);
+    ver = ngx_http_get_flushed_variable(r, klcf->pass_version_index);
     if (ver == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
