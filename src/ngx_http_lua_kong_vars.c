@@ -189,6 +189,24 @@ failed:
 }
 
 
+/*
+ * there is no upstream connection to ask yet. That is not a fact worth
+ * remembering for the rest of the request: the handshake this reads from
+ * happens later, and a caller that asked too early would otherwise keep
+ * being told there is nothing, because nginx caches a not_found as
+ * readily as a value. A value, once there is one, still caches.
+ */
+
+static ngx_int_t
+ngx_http_lua_kong_upstream_tls_not_found(ngx_http_variable_value_t *v)
+{
+    v->not_found = 1;
+    v->no_cacheable = 1;
+
+    return NGX_OK;
+}
+
+
 static ngx_int_t
 ngx_http_lua_kong_get_upstream_raw_certificate(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     uintptr_t data)
@@ -201,17 +219,17 @@ ngx_http_lua_kong_get_upstream_raw_certificate(ngx_http_request_t *r, ngx_http_v
 
     u = r->upstream;
     if (u == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     peer = &(u->peer);
     if (peer == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     uc = peer->connection;
     if (uc == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     if (uc->ssl) {
@@ -231,20 +249,7 @@ ngx_http_lua_kong_get_upstream_raw_certificate(ngx_http_request_t *r, ngx_http_v
         }
     }
 
-not_found:
-
-    /*
-     * there is no upstream connection to ask yet. That is not a fact worth
-     * remembering for the rest of the request: the handshake this reads from
-     * happens later, and a caller that asked too early would otherwise keep
-     * being told there is nothing, because nginx caches a not_found as
-     * readily as a value. A value, once there is one, still caches.
-     */
-
-    v->not_found = 1;
-    v->no_cacheable = 1;
-
-    return NGX_OK;
+    return ngx_http_lua_kong_upstream_tls_not_found(v);
 }
 
 
@@ -269,17 +274,17 @@ ngx_http_lua_kong_get_upstream_tls_protocol(ngx_http_request_t *r, ngx_http_vari
 
     u = r->upstream;
     if (u == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     peer = &(u->peer);
     if (peer == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     uc = peer->connection;
     if (uc == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     if (uc->ssl) {
@@ -297,20 +302,7 @@ ngx_http_lua_kong_get_upstream_tls_protocol(ngx_http_request_t *r, ngx_http_vari
         return NGX_OK;
     }
 
-not_found:
-
-    /*
-     * there is no upstream connection to ask yet. That is not a fact worth
-     * remembering for the rest of the request: the handshake this reads from
-     * happens later, and a caller that asked too early would otherwise keep
-     * being told there is nothing, because nginx caches a not_found as
-     * readily as a value. A value, once there is one, still caches.
-     */
-
-    v->not_found = 1;
-    v->no_cacheable = 1;
-
-    return NGX_OK;
+    return ngx_http_lua_kong_upstream_tls_not_found(v);
 }
 
 
@@ -335,13 +327,13 @@ ngx_http_lua_kong_get_upstream_tls_curve(ngx_http_request_t *r,
 
     u = r->upstream;
     if (u == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     /* u->peer is a struct member, so its address is never NULL */
     uc = u->peer.connection;
     if (uc == NULL) {
-        goto not_found;
+        return ngx_http_lua_kong_upstream_tls_not_found(v);
     }
 
     if (uc->ssl) {
@@ -370,16 +362,14 @@ ngx_http_lua_kong_get_upstream_tls_curve(ngx_http_request_t *r,
         }
     }
 
-not_found:
-
     /*
-     * not_found here means two different things. "The upstream connection
-     * does not exist yet" is true only until the upstream module connects,
-     * while "this connection carries no TLS" and "the handshake named no
-     * group" hold for the whole request. Only the first kind can change, and
-     * caching it is what breaks: a read in the access phase would otherwise
-     * settle the answer, and header_filter_by_lua* would get nil for a
-     * connection that did establish.
+     * "The upstream connection does not exist yet" is true only until the
+     * upstream module connects, while "this connection carries no TLS" and
+     * "the handshake named no group" hold for the whole request. Only the
+     * first kind can change, and caching it is what breaks: a read in the
+     * access phase would otherwise settle the answer, and
+     * header_filter_by_lua* would get nil for a connection that did
+     * establish.
      *
      * The value found above stays cacheable, because it cannot change once
      * the handshake is done. That is also what the log phase relies on: the
@@ -387,10 +377,7 @@ not_found:
      * earlier read. Declaring the whole variable NGX_HTTP_VAR_NOCACHEABLE
      * would lose that, since it re-evaluates a value that was already found.
      */
-    v->no_cacheable = 1;
-    v->not_found = 1;
-
-    return NGX_OK;
+    return ngx_http_lua_kong_upstream_tls_not_found(v);
 }
 #endif /* NGX_SSL */
 
