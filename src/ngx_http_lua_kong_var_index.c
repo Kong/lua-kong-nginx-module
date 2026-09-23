@@ -226,6 +226,7 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
     u_char **value, size_t *value_len, char **err)
 {
     ngx_http_variable_value_t   *vv;
+    ngx_http_core_main_conf_t   *cmcf;
 
     if (r == NULL) {
         *err = "no request object found";
@@ -234,6 +235,13 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
 
     if ((r)->connection->fd == (ngx_socket_t) -1) {
         *err = "API disabled in the current context";
+        return NGX_ERROR;
+    }
+
+    cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+
+    if (index >= cmcf->variables.nelts) {
+        *err = "invalid variable index";
         return NGX_ERROR;
     }
 
