@@ -35,18 +35,10 @@ jobs:
 
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
-        cd kong
-        branch=""
-
-        if [ ${{ github.event_name }} == 'pull_request' ]; then
-          branch=${GITHUB_HEAD_REF}
-        else
-          branch=${GITHUB_REF}
-        fi
-
-        branch=$(echo "$branch" | sed 's/\//\\\//g')
-        sed -i "s/LUA_KONG_NGINX_MODULE=.\+/LUA_KONG_NGINX_MODULE=${branch}/" .requirements
-        cat .requirements
+        # Build the exact checkout tested below, including the PR merge commit.
+        module_sha=$(git rev-parse HEAD)
+        sed -i "s/^LUA_KONG_NGINX_MODULE=.*/LUA_KONG_NGINX_MODULE=${module_sha}/" kong/.requirements
+        cat kong/.requirements
 
     - name: Lookup build cache
       id: cache-deps
@@ -100,18 +92,10 @@ jobs:
 
     - name: Set the LUA_KONG_NGINX_MODULE in kong/.requirements
       run: |
-        cd kong
-        branch=""
-
-        if [ ${{ github.event_name }} == 'pull_request' ]; then
-          branch=${GITHUB_HEAD_REF}
-        else
-          branch=${GITHUB_REF}
-        fi
-
-        branch=$(echo "$branch" | sed 's/\//\\\//g')
-        sed -i "s/LUA_KONG_NGINX_MODULE=.\+/LUA_KONG_NGINX_MODULE=${branch}/" .requirements
-        cat .requirements
+        # Build the exact checkout tested below, including the PR merge commit.
+        module_sha=$(git rev-parse HEAD)
+        sed -i "s/^LUA_KONG_NGINX_MODULE=.*/LUA_KONG_NGINX_MODULE=${module_sha}/" kong/.requirements
+        cat kong/.requirements
 
     - name: Load build cache
       id: cache-deps
@@ -157,5 +141,9 @@ jobs:
         luarocks --version
         openssl version
 
-        # fail if definite leak found
-        prove -r t 2>&1 | tee /dev/stderr | grep -q "match-leak-kinds: definite" && exit 1 || exit 0
+        # Preserve test failures as well as definite leak failures.
+        set -o pipefail
+        prove -r t 2>&1 | tee valgrind.log
+        if grep -q "match-leak-kinds: definite" valgrind.log; then
+          exit 1
+        fi
