@@ -19,7 +19,7 @@ ngx_module_srcs=" \
 # ngx_http_v2_module, which configure leaves out unless --with-http_v2_module
 # is given, so a default build has no kong_pass and no reference to either
 # module.
-if [ $HTTP_PROXY = YES -a $HTTP_GRPC = YES -a $HTTP_V2 = YES ]; then
+if [ "$HTTP_PROXY" = YES -a "$HTTP_GRPC" = YES -a "$HTTP_V2" = YES ]; then
     ngx_module_srcs="$ngx_module_srcs $ngx_addon_dir/src/ngx_http_lua_kong_pass.c"
     have=NGX_HTTP_LUA_KONG_PASS . auto/have
 fi
