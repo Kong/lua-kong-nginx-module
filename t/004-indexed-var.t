@@ -153,3 +153,82 @@ get variable value 'value4_2' by index
 [error]
 [crit]
 [alert]
+
+
+
+=== TEST 5: lua_kong_load_var_index accepts a ${name} variable
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index ${realip_remote_addr};
+
+--- config
+    set $variable_braced 'braced';
+
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.variable_braced)
+        }
+    }
+
+--- request
+GET /t
+--- response_body_like
+braced
+
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 6: a non-cacheable variable is re-read, not served from the cache
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index default;
+
+    init_by_lua_block {
+        require("resty.kong.var").load_indexes()
+    }
+
+    upstream test_upstream {
+        server unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+    }
+
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock;
+        server_tokens off;
+
+        location / {
+            return 200 "ok";
+        }
+    }
+
+--- config
+    location /t {
+        # $upstream_status is NGX_HTTP_VAR_NOCACHEABLE, and nothing has
+        # proxied yet, so this read caches a not_found for the request
+        access_by_lua_block {
+            local kvar = require "resty.kong.var"
+            ngx.log(ngx.WARN, "early=", tostring(kvar.get("upstream_status")))
+        }
+
+        proxy_pass http://test_upstream;
+
+        log_by_lua_block {
+            local kvar = require "resty.kong.var"
+            ngx.log(ngx.WARN, "late=", tostring(kvar.get("upstream_status")))
+        }
+    }
+
+--- request
+GET /t
+--- response_body chomp
+ok
+--- error_code: 200
+--- error_log
+early=nil
+late=200
+--- no_error_log
+[crit]
