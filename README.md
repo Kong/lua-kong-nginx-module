@@ -627,8 +627,8 @@ resty.kong.upstream.set\_next\_upstream
 
 **subsystems:** *http*
 
-Set upstream next enablement of current request to the given string of table
-argument . Global setting set by [`proxy_next_upstream`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream) will be overwritten.
+Set the retry criteria for the current request. This overrides the settings
+from [`proxy_next_upstream`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream).
 
 The `set_next_upstream` function supports variable length of arguments, and each argument must be one of the following strings (also defined in [`proxy_next_upstream`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream)):
 - `error`
@@ -644,8 +644,22 @@ The `set_next_upstream` function supports variable length of arguments, and each
 - `non_idempotent`
 - `off`
 
-On success, this function returns `nil`. Otherwise throw a string
-describing the error will be returned.
+In addition to the options above, `http_<status>` accepts any three-digit HTTP
+error status from `400` through `599`. Custom statuses are stored per request;
+no reload or per-status nginx constant is needed. Calling this function again
+replaces both the previous options and the custom status set. `off` disables all
+retries, including when combined with other options.
+
+Native statuses retain nginx's failure accounting. Custom 4xx statuses advance
+to the next peer without marking the peer failed; custom 5xx statuses mark it
+failed. The real upstream status is retained in retry history. Retry limits,
+timeouts, request-body buffering and `non_idempotent` restrictions still apply.
+Custom status retries require the companion nginx dynamic next-upstream status
+patch. The module can build without it, but setting custom statuses alone does
+not enable those retries in an unpatched nginx.
+
+On success, this function returns `nil`. On failure, it returns a string
+describing the error and leaves the previous criteria unchanged.
 
 This function can be called multiple times in the same request. Later calls override
 previous ones.

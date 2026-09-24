@@ -18,6 +18,11 @@
 #include "ngx_http_lua_kong_directive.h"
 #include "ngx_http_upstream.h"
 
+/* Keep in sync with the companion nginx dynamic next-upstream status patch. */
+#ifndef NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM
+#define NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM  0x00008000
+#endif
+
 static ngx_int_t ngx_http_lua_kong_init(ngx_conf_t *cf);
 static void* ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf);
 static char* ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
@@ -198,6 +203,82 @@ ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, ngx_uint_t next_upstre
         return NGX_ERROR;
     }
 
+    ctx->next_upstream = next_upstream;
+    if (ctx->next_upstream_statuses != NULL) {
+        ngx_memzero(ctx->next_upstream_statuses,
+                    NGX_HTTP_LUA_KONG_NEXT_UPSTREAM_BITMAP_SIZE);
+    }
+    return NGX_OK;
+}
+
+
+/* Read-only: do not allocate a module context on the normal proxy path. */
+ngx_flag_t
+ngx_http_lua_kong_next_upstream_status(ngx_http_request_t *r, ngx_uint_t status)
+{
+    ngx_http_lua_kong_ctx_t  *ctx;
+
+    if (status < 400 || status > 599) {
+        return 0;
+    }
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_lua_kong_module);
+    if (ctx == NULL || ctx->next_upstream_statuses == NULL
+        || (ctx->next_upstream & NGX_HTTP_UPSTREAM_FT_OFF))
+    {
+        return 0;
+    }
+
+    status -= 400;
+    return (ctx->next_upstream_statuses[status / 8] >> (status % 8)) & 1;
+}
+
+
+int
+ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r,
+    uint32_t next_upstream, const uint16_t *statuses, size_t count, char **err)
+{
+    ngx_http_lua_kong_ctx_t  *ctx;
+    u_char                  bitmap[NGX_HTTP_LUA_KONG_NEXT_UPSTREAM_BITMAP_SIZE];
+    size_t                  i;
+    ngx_uint_t              status;
+
+    ngx_memzero(bitmap, sizeof(bitmap));
+    for (i = 0; i < count; i++) {
+        if (statuses[i] < 400 || statuses[i] > 599) {
+            *err = "HTTP status must be between 400 and 599";
+            return NGX_ERROR;
+        }
+
+        status = statuses[i] - 400;
+        bitmap[status / 8] |= (u_char) (1 << (status % 8));
+    }
+
+    ctx = ngx_http_lua_kong_get_module_ctx(r);
+    if (ctx == NULL) {
+        *err = "failed to allocate request context";
+        return NGX_ERROR;
+    }
+
+    if (next_upstream & NGX_HTTP_UPSTREAM_FT_OFF) {
+        next_upstream = NGX_HTTP_UPSTREAM_FT_OFF;
+        ngx_memzero(bitmap, sizeof(bitmap));
+
+    } else if (count) {
+        if (ctx->next_upstream_statuses == NULL) {
+            ctx->next_upstream_statuses = ngx_palloc(r->pool, sizeof(bitmap));
+            if (ctx->next_upstream_statuses == NULL) {
+                *err = "failed to allocate HTTP status bitmap";
+                return NGX_ERROR;
+            }
+        }
+
+        next_upstream |= NGX_HTTP_UPSTREAM_FT_HTTP_CUSTOM;
+    }
+
+    if (ctx->next_upstream_statuses != NULL) {
+        ngx_memcpy(ctx->next_upstream_statuses, bitmap, sizeof(bitmap));
+    }
     ctx->next_upstream = next_upstream;
     return NGX_OK;
 }

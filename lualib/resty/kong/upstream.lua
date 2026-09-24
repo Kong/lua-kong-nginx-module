@@ -21,7 +21,8 @@ base.allows_subsystem("http")
 
 ffi.cdef([[
 int
-ngx_http_lua_ffi_set_next_upstream(ngx_http_request_t *r, uint32_t next_upstream, char **err);
+ngx_http_lua_ffi_set_next_upstream_statuses(ngx_http_request_t *r, uint32_t next_upstream,
+    const uint16_t *statuses, size_t count, char **err);
 const uint32_t ngx_http_lua_kong_next_upstream_mask_error;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_timeout;
 const uint32_t ngx_http_lua_kong_next_upstream_mask_invalid_header;
@@ -71,6 +72,8 @@ function _M.set_next_upstream(...)
 
     local arg_table = { ... }
     local next_upstream = 0
+    local statuses = ffi.new("uint16_t[?]", nargs)
+    local count = 0
     for i = 1, nargs do
         local v = arg_table[i]
         if type(v) ~= "string" then
@@ -78,15 +81,21 @@ function _M.set_next_upstream(...)
         end
 
         local next_upstream_value = next_upstream_table[v]
-        if not next_upstream_value then
-            return "argument #" .. i .. " is not a valid argument"
-        end
+        if next_upstream_value then
+            next_upstream = bit.bor(next_upstream, next_upstream_value)
+        else
+            local status = tonumber(v:match("^http_([45]%d%d)$"))
+            if not status then
+                return "argument #" .. i .. " is not a valid argument"
+            end
 
-        next_upstream = bit.bor(next_upstream, next_upstream_value)
+            statuses[count] = status
+            count = count + 1
+        end
     end
 
     local err = ffi.new("char *[1]")
-    local rc = C.ngx_http_lua_ffi_set_next_upstream(r, next_upstream, err)
+    local rc = C.ngx_http_lua_ffi_set_next_upstream_statuses(r, next_upstream, statuses, count, err)
 
     if rc ~= NGX_OK then
         return "failed to set upstream next: " .. ffi_str(err[0])

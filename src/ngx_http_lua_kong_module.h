@@ -40,6 +40,9 @@ ngx_flag_t
 ngx_http_lua_kong_get_next_upstream_mask(ngx_http_request_t *r,
     ngx_flag_t upstream_next);
 
+ngx_flag_t
+ngx_http_lua_kong_next_upstream_status(ngx_http_request_t *r, ngx_uint_t status);
+
 ngx_str_t *
 ngx_http_lua_kong_ssl_get_upstream_ssl_sans_dnsnames(ngx_http_request_t *r);
 
