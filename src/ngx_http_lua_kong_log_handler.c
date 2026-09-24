@@ -21,7 +21,7 @@
  * This function contains the logic to append the Request ID to
  * the error log line when being called
  */
-static u_char *
+u_char *
 ngx_http_lua_kong_error_log_handler(ngx_http_request_t *r, u_char *buf, size_t len)
 {
     ngx_http_variable_value_t    *value;
