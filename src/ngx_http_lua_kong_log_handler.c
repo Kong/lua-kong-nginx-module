@@ -24,6 +24,7 @@
 u_char *
 ngx_http_lua_kong_error_log_handler(ngx_http_request_t *r, u_char *buf, size_t len)
 {
+    static const u_char          prefix[] = ", request_id: \"";
     ngx_http_variable_value_t    *value;
     ngx_http_lua_kong_loc_conf_t *lcf;
 
@@ -37,7 +38,16 @@ ngx_http_lua_kong_error_log_handler(ngx_http_request_t *r, u_char *buf, size_t l
         return buf;
     }
 
-    buf = ngx_snprintf(buf, len, ", request_id: \"%v\"", value);
+    /* Truncate the suffix when the buffer has insufficient space. */
+    if (len < sizeof(prefix) + value->len) {
+        return ngx_snprintf(buf, len, ", request_id: \"%v\"", value);
+    }
+
+    buf = ngx_cpymem(buf, prefix, sizeof(prefix) - 1);
+    if (value->len != 0) {
+        buf = ngx_cpymem(buf, value->data, value->len);
+    }
+    *buf++ = '"';
 
     return buf;
 }
