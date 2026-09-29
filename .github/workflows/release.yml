@@ -1,0 +1,88 @@
+name: Release
+
+# Tags the head of master and publishes a GitHub release for it, with the
+# release notes GitHub generates from the pull requests since the last tag.
+#
+# Releasing by hand is easy to get wrong in ways nobody notices until a
+# consumer pins the result: a tag on the wrong commit, a tag that skips a
+# version, or a tag on a commit whose tests never passed. The checks below
+# cover those three.
+#
+# There is nothing to build. The module is source only: Kong builds it from
+# this repository at the commit its .requirements pins.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, for example 0.24.0. No "v" prefix.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and publish
+    runs-on: ubuntu-22.04
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      SHA: ${{ github.sha }}
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Release from master only
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::Run this workflow on master. It was run on ${{ github.ref }}."
+          exit 1
+
+      - name: Check the version
+        run: |
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::The version must read MAJOR.MINOR.PATCH, and carry no 'v' prefix. It reads '$VERSION'."
+            exit 1
+          fi
+
+          if gh api "repos/$REPO/git/ref/tags/$VERSION" >/dev/null 2>&1; then
+            echo "::error::The tag $VERSION already exists."
+            exit 1
+          fi
+
+      - name: Check that the tests passed on this commit
+        run: |
+          # The push to master runs the tests. Read their result instead of
+          # running them again, and stop when they did not pass: a consumer
+          # pins the tag, and an untested tag reaches every one of them.
+          runs=$(gh api "repos/$REPO/commits/$SHA/check-runs" --paginate \
+                   --jq '.check_runs[] | select(.name == "Test") | "\(.status):\(.conclusion // "none")"')
+
+          if [ -z "$runs" ]; then
+            echo "::error::No Test check ran on $SHA. Wait for the tests of the push to master."
+            exit 1
+          fi
+
+          if printf '%s\n' "$runs" | grep -qv '^completed:success$'; then
+            echo "::error::The tests did not pass on $SHA:"
+            printf '%s\n' "$runs"
+            echo "::error::Wait for them to finish, or fix them, and run this workflow again."
+            exit 1
+          fi
+
+          printf 'Test checks on %s:\n%s\n' "$SHA" "$runs"
+
+      - name: Tag and publish
+        run: |
+          # gh creates the tag on --target, so this one step both tags the
+          # commit and publishes the release for it.
+          gh release create "$VERSION" \
+            --repo "$REPO" \
+            --target "$SHA" \
+            --title "$VERSION" \
+            --generate-notes
+
+          echo "Released $VERSION at $SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/$REPO/releases/tag/$VERSION" >> "$GITHUB_STEP_SUMMARY"
