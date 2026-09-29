@@ -406,3 +406,34 @@ void **ssl_conn)
     return NGX_ABORT;
 #endif
 }
+
+
+/*
+ * retrieves the SSL* of the downstream connection of the current session,
+ * the stream counterpart of ngx_http_lua_kong_ffi_get_request_ssl
+ */
+
+int
+ngx_stream_lua_kong_ffi_get_request_ssl(ngx_stream_lua_request_t *r,
+    void **ssl_conn)
+{
+#if (NGX_SSL)
+    ngx_connection_t    *c;
+
+    if (ssl_conn == NULL) {
+        return NGX_ABORT;
+    }
+
+    c = r->connection;
+
+    if (c && (c->ssl) && (c->ssl->connection)) {
+        *ssl_conn = c->ssl->connection;
+        return NGX_OK;
+    }
+
+    return NGX_ERROR;
+
+#else
+    return NGX_ABORT;
+#endif
+}

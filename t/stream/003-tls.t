@@ -6,7 +6,7 @@ use Cwd qw(cwd);
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 7 - 4);
+plan tests => repeat_each() * (blocks() * 7 - 7);
 
 my $pwd = cwd();
 
@@ -431,6 +431,60 @@ nil, connection is not TLS or TLS support for Nginx not enabled
         else
           ngx.say("ok")
         end
+    }
+
+--- response_body
+ok
+--- no_error_log
+[error]
+[emerg]
+--- skip_nginx
+7: < 1.21.4
+
+
+
+=== TEST 8: ssl.get_request_ssl_pointer works well
+--- stream_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/nginx.sock ssl;
+        ssl_certificate ../../cert/example.com.crt;
+        ssl_certificate_key ../../cert/example.com.key;
+        ssl_session_cache off;
+        ssl_session_tickets on;
+
+        content_by_lua_block {
+            local ssl = require "resty.kong.tls"
+            local ffi = require "ffi"
+
+            -- resty.kong.tls declares the SSL type above
+            ffi.cdef[[ const char *SSL_get_version(const SSL *s); ]]
+
+            local ssl_ptr, err = ssl.get_request_ssl_pointer()
+            if ssl_ptr == nil then
+                ngx.say("cannot get the request ssl pointer: ", err)
+                return
+            end
+
+            -- a pointer that is not nil proves little on its own, so read the
+            -- protocol back through it
+            local version = ffi.string(ffi.C.SSL_get_version(ssl_ptr))
+            if version:sub(1, 3) ~= "TLS" then
+                ngx.say("unexpected protocol: ", version)
+                return
+            end
+
+            ngx.say("ok")
+        }
+    }
+
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        assert(sock:connect("unix:$TEST_NGINX_HTML_DIR/nginx.sock"))
+        assert(sock:sslhandshake(nil, "example.com"))
+        ngx.say(assert(sock:receive()))
     }
 
 --- response_body
