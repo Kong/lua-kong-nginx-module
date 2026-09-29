@@ -104,6 +104,8 @@ elseif subsystem == 'stream' then
         const char *input, size_t input_len);
     int ngx_stream_lua_kong_get_socket_ssl(ngx_stream_lua_socket_tcp_upstream_t *u,
         void **ssl_conn);
+    int ngx_stream_lua_kong_ffi_get_request_ssl(ngx_stream_lua_request_t *r,
+        void **ssl_conn);
     ]])
 
     kong_lua_kong_ffi_get_full_client_certificate_chain = C.ngx_stream_lua_kong_ffi_get_full_client_certificate_chain
@@ -115,9 +117,7 @@ elseif subsystem == 'stream' then
     kong_lua_kong_ffi_set_upstream_ssl_sans_dnsnames = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_dnsnames
     kong_lua_kong_ffi_set_upstream_ssl_sans_uris = C.ngx_stream_lua_kong_ffi_set_upstream_ssl_sans_uris
     kong_lua_kong_ffi_get_socket_ssl = C.ngx_stream_lua_kong_get_socket_ssl
-    kong_lua_kong_ffi_get_request_ssl = function()
-        error("API not available for the current subsystem")
-    end
+    kong_lua_kong_ffi_get_request_ssl = C.ngx_stream_lua_kong_ffi_get_request_ssl
 else
     error("unknown subsystem: " .. subsystem)
 end
