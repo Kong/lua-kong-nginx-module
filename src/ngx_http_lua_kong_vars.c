@@ -208,6 +208,72 @@ not_found:
 
     return NGX_OK;
 }
+
+
+/*
+ * The key-exchange group of an established upstream SSL connection, under the
+ * name nginx gives it for the downstream $ssl_curve.
+ *
+ * ngx_ssl_get_curve() is nginx's own, so the two sides always spell a group
+ * the same way. That matters for a hybrid post-quantum group: X25519MLKEM768
+ * carries no NID, so OBJ_nid2sn() cannot name it and nginx falls back to
+ * SSL_group_to_name(), and to the IANA code point when even that is
+ * unavailable. A copy of the lookup here would drift from it.
+ */
+static ngx_int_t
+ngx_http_lua_kong_get_upstream_tls_curve(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    ngx_str_t  s;
+
+    ngx_connection_t *uc;
+    ngx_http_upstream_t *u;
+    ngx_peer_connection_t *peer;
+
+    u = r->upstream;
+    if (u == NULL) {
+        goto not_found;
+    }
+
+    peer = &(u->peer);
+    if (peer == NULL) {
+        goto not_found;
+    }
+
+    uc = peer->connection;
+    if (uc == NULL) {
+        goto not_found;
+    }
+
+    if (uc->ssl) {
+        if (ngx_ssl_get_curve(uc, r->pool, &s) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        /*
+         * A handshake that negotiated no group leaves the length at zero: a
+         * resumed session and a TLS 1.2 RSA key exchange both do. Report the
+         * variable as absent, the same way the downstream $ssl_curve does,
+         * so that a consumer never has to tell an empty value from a missing
+         * one.
+         */
+        if (s.len) {
+            v->len = s.len;
+            v->data = s.data;
+            v->valid = 1;
+            v->no_cacheable = 0;
+            v->not_found = 0;
+
+            return NGX_OK;
+        }
+    }
+
+not_found:
+
+    v->not_found = 1;
+
+    return NGX_OK;
+}
 #endif /* NGX_SSL */
 
 
@@ -265,6 +331,10 @@ static ngx_http_variable_t  ngx_http_lua_kong_variables[] = {
       NGX_HTTP_VAR_CHANGEABLE, 0 },
     { ngx_string("kong_upstream_ssl_protocol"), NULL,
       ngx_http_lua_kong_get_upstream_tls_protocol,
+      0,
+      NGX_HTTP_VAR_CHANGEABLE, 0 },
+    { ngx_string("kong_upstream_ssl_curve"), NULL,
+      ngx_http_lua_kong_get_upstream_tls_curve,
       0,
       NGX_HTTP_VAR_CHANGEABLE, 0 },
 #endif

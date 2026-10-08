@@ -86,6 +86,7 @@ static ngx_str_t default_vars[] = {
     ngx_string("ssl_server_name"),
     ngx_string("kong_upstream_ssl_server_raw_cert"),
     ngx_string("kong_upstream_ssl_protocol"),
+    ngx_string("kong_upstream_ssl_curve"),
 #endif
 
     ngx_string("upstream_http_connection"),

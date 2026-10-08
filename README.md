@@ -17,6 +17,7 @@ Table of Contents
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
     * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
+    * [$kong\_upstream\_ssl\_curve](#kong_upstream_ssl_curve)
     * [$kong\_worker\_connections\_total](#kong_worker_connections_total)
     * [$kong\_worker\_connections\_free](#kong_worker_connections_free)
 * [Methods](#methods)
@@ -203,6 +204,34 @@ $kong\_upstream\_ssl\_protocol
 
 Returns the protocol of an established SSL connection for an upstream
 HTTP request.
+
+[Back to TOC](#table-of-contents)
+
+$kong\_upstream\_ssl\_curve
+----------------------------------------------------
+
+Returns the negotiated key-exchange group of an established SSL connection
+for an upstream HTTP request, for example `X25519`, `prime256v1` or the
+hybrid post-quantum `X25519MLKEM768`.
+
+The name is the one nginx gives the group for the downstream `$ssl_curve`,
+so both sides of a proxied request spell a group the same way. A group that
+carries no NID, which every hybrid post-quantum group does, is named through
+`SSL_group_to_name()`, and falls back to its IANA code point (`0x11ec`) when
+the linked OpenSSL cannot name it.
+
+The variable is absent when the handshake negotiated no group at all. A
+resumed session and a TLS 1.2 RSA key exchange both do that.
+
+Like `$kong_upstream_ssl_protocol`, the upstream connection must still be
+open when this is read. Read it in `header_filter_by_lua*` to reach it from
+the log phase, or add it to
+[lua\_kong\_load\_var\_index](#lua_kong_load_var_index).
+
+Example:
+```lua
+local curve = ngx.var.kong_upstream_ssl_curve
+```
 
 [Back to TOC](#table-of-contents)
 
