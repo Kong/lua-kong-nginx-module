@@ -243,7 +243,7 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
     u_char *value, size_t value_len, char **err)
 {
     u_char                      *p;
-    ngx_http_variable_t         *v;
+    ngx_http_variable_t         *v, *av;
     ngx_http_variable_value_t   *vv;
     ngx_http_core_main_conf_t   *cmcf;
 
@@ -273,7 +273,16 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
         return NGX_ERROR;
     }
 
-    if (v->set_handler) {
+    /*
+     * An indexed variable carries no set_handler (ngx_http_variables_init_vars()
+     * copies get_handler, data and flags only), so reach the variable itself
+     * through the hash: $args keeps its value in r->args, not in the slot.
+     */
+    av = ngx_hash_find(&cmcf->variables_hash,
+                       ngx_hash_key(v->name.data, v->name.len),
+                       v->name.data, v->name.len);
+
+    if (av != NULL && av->set_handler) {
         if (value != NULL && value_len) {
             vv = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t)
                             + value_len);
@@ -308,7 +317,11 @@ ngx_http_lua_kong_ffi_var_set_by_index(ngx_http_request_t *r, ngx_uint_t index,
             vv->len = value_len;
         }
 
-        v->set_handler(r, vv, v->data);
+        av->set_handler(r, vv, av->data);
+
+        /* the value lives in the variable itself now, not in an index cache */
+        r->variables[index].valid = 0;
+        r->variables[index].not_found = 0;
 
         return NGX_OK;
     }
