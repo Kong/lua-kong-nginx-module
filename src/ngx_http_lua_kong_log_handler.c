@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ngx_http_lua_kong_common.h"
+#include "ngx_http_lua_kong_directive.h"
 
 
 /*
@@ -127,16 +127,14 @@ ngx_http_lua_kong_error_log_request_id(ngx_conf_t *cf, ngx_command_t *cmd, void 
 
     value = cf->args->elts;
 
-    if (value[1].data[0] != '$') {
+    lcf->request_id_var_index = ngx_http_lua_kong_variable_index(cf, &value[1]);
+
+    if (lcf->request_id_var_index == NGX_DECLINED) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid variable name \"%V\"", &value[1]);
         return NGX_CONF_ERROR;
     }
 
-    value[1].len--;
-    value[1].data++;
-
-    lcf->request_id_var_index = ngx_http_get_variable_index(cf, &value[1]);
     if (lcf->request_id_var_index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
