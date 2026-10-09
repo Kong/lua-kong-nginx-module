@@ -17,6 +17,7 @@ Table of Contents
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
     * [$kong\_upstream\_ssl\_protocol](#kong_upstream_ssl_protocol)
+    * [$kong\_upstream\_ssl\_curve](#kong_upstream_ssl_curve)
     * [$kong\_worker\_connections\_total](#kong_worker_connections_total)
     * [$kong\_worker\_connections\_free](#kong_worker_connections_free)
 * [Methods](#methods)
@@ -140,6 +141,11 @@ index *commonly used variables* as follows:
 - `$upstream_header_timestamp_us`
 - `$upstream_response_timestamp_us`
 - `$kong_request_id`
+- `$kong_upstream_ssl_server_raw_cert`
+- `$kong_upstream_ssl_protocol`
+- `$kong_upstream_ssl_curve`
+- `$kong_worker_connections_total`
+- `$kong_worker_connections_free`
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
@@ -203,6 +209,43 @@ $kong\_upstream\_ssl\_protocol
 
 Returns the protocol of an established SSL connection for an upstream
 HTTP request.
+
+[Back to TOC](#table-of-contents)
+
+$kong\_upstream\_ssl\_curve
+----------------------------------------------------
+
+Returns the negotiated key-exchange group of an established SSL connection
+for an upstream HTTP request, for example `X25519`, `prime256v1` or the
+hybrid post-quantum `X25519MLKEM768`.
+
+The name is the one nginx gives the group for the downstream `$ssl_curve`,
+so both sides of a proxied request spell a group the same way. A group that
+carries no NID, which every hybrid post-quantum group does, is named through
+`SSL_group_to_name()`, and falls back to its IANA code point (`0x11ec`) when
+the linked OpenSSL cannot name it.
+
+The variable is absent when the handshake negotiated no group at all. A
+TLS 1.2 RSA key exchange does that, and so does a TLS 1.3 session resumed
+with `psk_ke`. Note that `psk_dhe_ke`, the resumption mode OpenSSL uses by
+default, still performs an (EC)DHE exchange, so a resumed TLS 1.3 session
+normally does name a group.
+
+Like `$kong_upstream_ssl_protocol`, the upstream connection must still be
+open when this is read, so read it no later than `header_filter_by_lua*`.
+The connection is gone by the log phase, and the value a log consumer sees
+is the one an earlier read cached. Indexing the variable with
+[lua\_kong\_load\_var\_index](#lua_kong_load_var_index) does not change this:
+it assigns an index, it does not evaluate the variable.
+
+Reading it earlier than that is safe. The variable is absent until the
+upstream connection exists, and that absence is not cached, so a later read
+still returns the group.
+
+Example:
+```lua
+local curve = ngx.var.kong_upstream_ssl_curve
+```
 
 [Back to TOC](#table-of-contents)
 
