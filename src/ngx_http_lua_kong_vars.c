@@ -228,19 +228,14 @@ ngx_http_lua_kong_get_upstream_tls_curve(ngx_http_request_t *r,
 
     ngx_connection_t *uc;
     ngx_http_upstream_t *u;
-    ngx_peer_connection_t *peer;
 
     u = r->upstream;
     if (u == NULL) {
         goto not_found;
     }
 
-    peer = &(u->peer);
-    if (peer == NULL) {
-        goto not_found;
-    }
-
-    uc = peer->connection;
+    /* u->peer is a struct member, so its address is never NULL */
+    uc = u->peer.connection;
     if (uc == NULL) {
         goto not_found;
     }
@@ -251,11 +246,14 @@ ngx_http_lua_kong_get_upstream_tls_curve(ngx_http_request_t *r,
         }
 
         /*
-         * A handshake that negotiated no group leaves the length at zero: a
-         * resumed session and a TLS 1.2 RSA key exchange both do. Report the
-         * variable as absent, the same way the downstream $ssl_curve does,
-         * so that a consumer never has to tell an empty value from a missing
-         * one.
+         * A handshake that negotiated no group leaves the length at zero. A
+         * TLS 1.2 RSA key exchange does that, and so does a TLS 1.3 session
+         * resumed with psk_ke. Note that psk_dhe_ke, the mode OpenSSL uses by
+         * default, still performs an (EC)DHE exchange and does name a group.
+         *
+         * Report the variable as absent, the same way the downstream
+         * $ssl_curve does, so that a consumer never has to tell an empty value
+         * from a missing one.
          */
         if (s.len) {
             v->len = s.len;
@@ -270,6 +268,22 @@ ngx_http_lua_kong_get_upstream_tls_curve(ngx_http_request_t *r,
 
 not_found:
 
+    /*
+     * not_found here means two different things. "The upstream connection
+     * does not exist yet" is true only until the upstream module connects,
+     * while "this connection carries no TLS" and "the handshake named no
+     * group" hold for the whole request. Only the first kind can change, and
+     * caching it is what breaks: a read in the access phase would otherwise
+     * settle the answer, and header_filter_by_lua* would get nil for a
+     * connection that did establish.
+     *
+     * The value found above stays cacheable, because it cannot change once
+     * the handshake is done. That is also what the log phase relies on: the
+     * upstream connection is gone by then, so the answer has to come from the
+     * earlier read. Declaring the whole variable NGX_HTTP_VAR_NOCACHEABLE
+     * would lose that, since it re-evaluates a value that was already found.
+     */
+    v->no_cacheable = 1;
     v->not_found = 1;
 
     return NGX_OK;

@@ -208,7 +208,19 @@ ngx_http_lua_kong_ffi_var_get_by_index(ngx_http_request_t *r, ngx_uint_t index,
         return NGX_ERROR;
     }
 
-    vv = ngx_http_get_indexed_variable(r, index);
+    /*
+     * Flushed and not indexed: ngx_http_get_indexed_variable() returns a
+     * cached value whenever one is marked valid or not_found, whatever the
+     * handler said about caching it. A variable whose answer can still change
+     * is then stuck on the first read for the whole request.
+     *
+     * ngx_http_get_flushed_variable() re-evaluates only the values a handler
+     * marked no_cacheable, and returns the cached one for everything else, so
+     * nothing that was cacheable is computed twice. This is what ngx.var
+     * itself does: ngx_http_get_variable() routes an indexed variable through
+     * the flushed accessor.
+     */
+    vv = ngx_http_get_flushed_variable(r, index);
     if (vv == NULL || vv->not_found) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                 "variable value is not found by index %d", index);

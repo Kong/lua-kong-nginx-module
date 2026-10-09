@@ -141,6 +141,11 @@ index *commonly used variables* as follows:
 - `$upstream_header_timestamp_us`
 - `$upstream_response_timestamp_us`
 - `$kong_request_id`
+- `$kong_upstream_ssl_server_raw_cert`
+- `$kong_upstream_ssl_protocol`
+- `$kong_upstream_ssl_curve`
+- `$kong_worker_connections_total`
+- `$kong_worker_connections_free`
 
 See [resty.kong.var.patch\_metatable](#restykongvarpatch_metatable) on how to enable
 indexed variable access.
@@ -221,12 +226,21 @@ carries no NID, which every hybrid post-quantum group does, is named through
 the linked OpenSSL cannot name it.
 
 The variable is absent when the handshake negotiated no group at all. A
-resumed session and a TLS 1.2 RSA key exchange both do that.
+TLS 1.2 RSA key exchange does that, and so does a TLS 1.3 session resumed
+with `psk_ke`. Note that `psk_dhe_ke`, the resumption mode OpenSSL uses by
+default, still performs an (EC)DHE exchange, so a resumed TLS 1.3 session
+normally does name a group.
 
 Like `$kong_upstream_ssl_protocol`, the upstream connection must still be
-open when this is read. Read it in `header_filter_by_lua*` to reach it from
-the log phase, or add it to
-[lua\_kong\_load\_var\_index](#lua_kong_load_var_index).
+open when this is read, so read it no later than `header_filter_by_lua*`.
+The connection is gone by the log phase, and the value a log consumer sees
+is the one an earlier read cached. Indexing the variable with
+[lua\_kong\_load\_var\_index](#lua_kong_load_var_index) does not change this:
+it assigns an index, it does not evaluate the variable.
+
+Reading it earlier than that is safe. The variable is absent until the
+upstream connection exists, and that absence is not cached, so a later read
+still returns the group.
 
 Example:
 ```lua

@@ -158,7 +158,7 @@ X-Upstream-Curve: none
 
 
 
-=== TEST 4: absent in the access phase, before the upstream connection exists
+=== TEST 4: an access-phase read does not settle the answer for the request
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
 
@@ -186,23 +186,29 @@ X-Upstream-Curve: none
         proxy_ssl_session_reuse off;
         proxy_ssl_conf_command Groups X25519;
 
+        # The upstream connection does not exist yet in the access phase, so
+        # the variable is absent there. It must not stay absent: nginx caches
+        # a not_found answer for the whole request unless the handler marks it
+        # non-cacheable. The value is stored rather than written out, because
+        # ngx.say here would answer the request and nothing would ever
+        # connect upstream.
         access_by_lua_block {
-            ngx.say(ngx.var.kong_upstream_ssl_curve
-                    or "no upstream curve in the access phase")
+            ngx.ctx.early = ngx.var.kong_upstream_ssl_curve or "nil"
         }
 
         header_filter_by_lua_block {
-            ngx.header["X-Upstream-Curve"] = ngx.var.kong_upstream_ssl_curve
-                                             or "none"
+            ngx.header["X-Upstream-Curve"] =
+                ngx.ctx.early .. "|" ..
+                (ngx.var.kong_upstream_ssl_curve or "nil")
         }
     }
 
 --- request
 GET /t
 --- response_body
-no upstream curve in the access phase
+ok
 --- response_headers
-X-Upstream-Curve: none
+X-Upstream-Curve: nil|X25519
 --- no_error_log
 [error]
 [crit]
@@ -211,7 +217,67 @@ X-Upstream-Curve: none
 
 
 
-=== TEST 5: readable in the log phase with lua_kong_load_var_index default
+=== TEST 5: the same, through the indexed variable API
+--- http_config
+    lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
+    lua_kong_load_var_index default;
+    init_by_lua_block {
+        require("resty.kong.var").patch_metatable()
+    }
+
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/upstream.sock ssl;
+        server_name   upstream.example.com;
+        ssl_certificate ../../cert/upstream.crt;
+        ssl_certificate_key ../../cert/upstream.key;
+        ssl_session_cache off;
+        server_tokens off;
+
+        location / {
+            content_by_lua_block {
+                ngx.say("ok")
+            }
+        }
+    }
+
+--- config
+    server_tokens off;
+    location /t {
+        proxy_pass https://unix:$TEST_NGINX_HTML_DIR/upstream.sock;
+        proxy_ssl_server_name on;
+        proxy_ssl_name upstream.example.com;
+        proxy_ssl_session_reuse off;
+        proxy_ssl_conf_command Groups X25519;
+
+        # The indexed API reads the variable through its own accessor, so it
+        # needs its own case: the cached not_found has to be re-evaluated
+        # there too.
+        access_by_lua_block {
+            ngx.ctx.early = ngx.var.kong_upstream_ssl_curve or "nil"
+        }
+
+        header_filter_by_lua_block {
+            ngx.header["X-Upstream-Curve"] =
+                ngx.ctx.early .. "|" ..
+                (ngx.var.kong_upstream_ssl_curve or "nil")
+        }
+    }
+
+--- request
+GET /t
+--- response_body
+ok
+--- response_headers
+X-Upstream-Curve: nil|X25519
+--- no_error_log
+[error]
+[crit]
+[alert]
+[emerg]
+
+
+
+=== TEST 6: readable in the log phase with lua_kong_load_var_index default
 --- http_config
     lua_package_path "../lua-resty-core/lib/?.lua;lualib/?.lua;;";
     lua_kong_load_var_index default;
@@ -240,10 +306,9 @@ X-Upstream-Curve: none
         proxy_ssl_session_reuse off;
         proxy_ssl_conf_command Groups X25519;
 
-        # The upstream connection goes back to the keepalive pool before the
-        # log phase runs, so the value has to be read while it is still up.
-        # Reading it in header_filter caches it in the variable index, which
-        # is what a logging consumer relies on.
+        # The upstream connection is gone by the log phase, so the value has
+        # to be read while it is still up. Reading it in header_filter caches
+        # it, which is what a logging consumer relies on.
         header_filter_by_lua_block {
             local _ = ngx.var.kong_upstream_ssl_curve
         }
