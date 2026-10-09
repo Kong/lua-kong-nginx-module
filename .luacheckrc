@@ -13,17 +13,3 @@ not_globals = {
 ignore = {
     "6.", -- ignore whitespace warnings
 }
-
-
-globals = {
-    ngx = {
-        req = {
-            set_uri_args = {
-                read_only = false
-            },
-            set_header = {
-                read_only = false
-            }
-        }
-    }
-}
