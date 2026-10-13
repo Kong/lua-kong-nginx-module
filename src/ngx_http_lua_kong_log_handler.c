@@ -18,6 +18,14 @@
 
 
 /*
+ * Reading the variable can log a line of its own, and that line is written
+ * through this handler: without this flag the two reads call each other until
+ * the stack is gone.
+ */
+static ngx_uint_t  ngx_http_lua_kong_error_log_entered;
+
+
+/*
  * This function contains the logic to append the Request ID to
  * the error log line when being called
  */
@@ -32,7 +40,16 @@ ngx_http_lua_kong_error_log_handler(ngx_http_request_t *r, u_char *buf, size_t l
         return buf;
     }
 
+    if (ngx_http_lua_kong_error_log_entered) {
+        return buf;
+    }
+
+    ngx_http_lua_kong_error_log_entered = 1;
+
     value = ngx_http_get_indexed_variable(r, lcf->request_id_var_index);
+
+    ngx_http_lua_kong_error_log_entered = 0;
+
     if (value == NULL || value->not_found) {
         return buf;
     }
