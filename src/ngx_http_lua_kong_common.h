@@ -38,6 +38,7 @@ typedef struct {
 typedef struct {
     ngx_str_t                tag;
     ngx_int_t                request_id_var_index;
+    ngx_str_t                request_id_header;
 } ngx_http_lua_kong_loc_conf_t;
 
 
@@ -58,6 +59,12 @@ char *ngx_http_lua_kong_error_log_init(
 
 ngx_int_t
 ngx_http_lua_kong_add_vars(ngx_conf_t *cf);
+
+ngx_int_t
+ngx_http_lua_kong_request_id_init(ngx_conf_t *cf);
+
+ngx_flag_t
+ngx_http_lua_kong_request_id_pending(ngx_http_request_t *r, ngx_int_t index);
 
 ngx_int_t
 ngx_http_lua_kong_req_has_body(ngx_http_request_t *r);

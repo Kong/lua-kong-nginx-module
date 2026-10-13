@@ -13,6 +13,7 @@ Table of Contents
     * [lua\_kong\_load\_var\_index](#lua_kong_load_var_index)
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
+    * [lua\_kong\_request\_id\_header](#lua_kong_request_id_header)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
@@ -187,12 +188,55 @@ An error log line may look similar to the following:
 
 [Back to TOC](#table-of-contents)
 
+lua\_kong\_request\_id\_header
+-------------------------------------------
+**syntax:** *lua_kong_request_id_header header_name;*
+
+**default:** *none*
+
+**context:** *http* *server*
+
+Use the value of the request header `header_name` as [`$kong_request_id`](#kong_request_id).
+The name is matched without regard to case.
+
+The value is valid when all of these conditions are true:
+
+- The request has exactly one header with this name.
+- The value has 1 to 128 characters.
+- Each character is an ASCII letter, an ASCII digit, or one of `+`, `/`, `=` and `-`.
+
+When the value is not valid, or when the header is absent, `$kong_request_id` is generated as usual.
+The request is never rejected.
+
+Nginx reads the header once, at the start of the request. A later change to the header, for example
+from Lua code, does not change `$kong_request_id`.
+
+When [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id) uses `$kong_request_id`,
+log lines that nginx writes before it has read the request headers have no ID.
+
+A client controls the value of the header. Use a header that your trust boundary sets.
+Nginx does not check that the values are unique.
+
+For example, with this configuration:
+```
+server {
+    lua_kong_request_id_header x-message-id;
+    lua_kong_error_log_request_id $kong_request_id;
+}
+```
+A request with the header `x-message-id: abc123` gives `$kong_request_id` the value `abc123`,
+and its error log lines end with `request_id: "abc123"`.
+
+[Back to TOC](#table-of-contents)
+
 Variables
 =========
 
 $kong\_request\_id
 ------------------
 Unique request identifier generated from 16 pseudo-random bytes, in hexadecimal.
+When [lua\_kong\_request\_id\_header](#lua_kong_request_id_header) is set and the request has a
+valid value in that header, the variable has that value instead.
 This variable is indexed.
 
 [Back to TOC](#table-of-contents)
