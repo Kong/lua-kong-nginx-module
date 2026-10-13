@@ -160,6 +160,12 @@ verify:1, error:0, depth:0, subject:"/C=US/ST=California/O=Kong Testing/CN=foo@e
     upstream foo {
         server unix:$TEST_NGINX_HTML_DIR/nginx.sock;
 
+        # nginx caches upstream connections by default since 1.29.7, and
+        # earlier versions reject "keepalive 0". This test reads the
+        # verification line that the upstream logs during the TLS handshake,
+        # so every request needs its own connection.
+        keepalive_requests 1;
+
         balancer_by_lua_block {
             collectgarbage() -- to make leak check mode pass
 
