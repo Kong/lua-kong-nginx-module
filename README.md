@@ -198,10 +198,12 @@ lua\_kong\_request\_id\_header
 
 Use the value of the request header `header_name` as [`$kong_request_id`](#kong_request_id).
 The name is matched without regard to case.
+A hyphen and an underscore in the name are the same character, as in the `$http_*` variables.
+A header with an underscore in its name reaches nginx only when `underscores_in_headers on` is set.
 
 The value is valid when all of these conditions are true:
 
-- The request has exactly one header with this name.
+- The request has exactly one header with this name. The spellings `x-message-id` and `x_message_id` count as the same header.
 - The value has 1 to 128 characters.
 - Each character is an ASCII letter, an ASCII digit, or one of `+`, `/`, `=` and `-`.
 

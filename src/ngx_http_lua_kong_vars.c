@@ -47,82 +47,49 @@ ngx_http_lua_kong_header_name_char(u_char c)
 }
 
 
-static ngx_table_elt_t *
-ngx_http_lua_kong_find_request_id_header(ngx_http_request_t *r,
-    ngx_str_t *name)
-{
-    ngx_uint_t        i;
-    ngx_list_part_t  *part;
-    ngx_table_elt_t  *h, *found;
-
-    found = NULL;
-    part = &r->headers_in.headers.part;
-    h = part->elts;
-
-    for (i = 0; ; i++) {
-
-        if (i >= part->nelts) {
-            if (part->next == NULL) {
-                break;
-            }
-
-            part = part->next;
-            h = part->elts;
-            i = 0;
-        }
-
-        if (h[i].hash == 0
-            || h[i].key.len != name->len
-            || ngx_strncasecmp(h[i].key.data, name->data, name->len) != 0)
-        {
-            continue;
-        }
-
-        if (found != NULL) {
-            return NULL;
-        }
-
-        found = &h[i];
-    }
-
-    return found;
-}
-
-
 static ngx_int_t
 ngx_http_lua_kong_request_id_from_header(ngx_http_request_t *r,
     ngx_str_t *name, ngx_http_variable_value_t *v)
 {
-    size_t            i;
-    u_char           *id;
-    ngx_table_elt_t  *h;
+    size_t                      i;
+    u_char                     *id;
+    ngx_int_t                   rc;
+    ngx_http_variable_value_t   hv;
 
-    h = ngx_http_lua_kong_find_request_id_header(r, name);
-    if (h == NULL
-        || h->value.len == 0
-        || h->value.len > NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN)
+    ngx_memzero(&hv, sizeof(ngx_http_variable_value_t));
+
+    rc = ngx_http_variable_unknown_header(r, &hv, name,
+                                          &r->headers_in.headers.part,
+                                          sizeof("http_") - 1);
+    if (rc != NGX_OK) {
+        return rc;
+    }
+
+    if (hv.not_found
+        || hv.len == 0
+        || hv.len > NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN)
     {
         return NGX_DECLINED;
     }
 
-    for (i = 0; i < h->value.len; i++) {
-        if (!ngx_http_lua_kong_request_id_char(h->value.data[i])) {
+    for (i = 0; i < hv.len; i++) {
+        if (!ngx_http_lua_kong_request_id_char(hv.data[i])) {
             return NGX_DECLINED;
         }
     }
 
-    id = ngx_pnalloc(r->pool, h->value.len);
+    id = ngx_pnalloc(r->pool, hv.len);
     if (id == NULL) {
         return NGX_ERROR;
     }
 
-    ngx_memcpy(id, h->value.data, h->value.len);
+    ngx_memcpy(id, hv.data, hv.len);
 
     v->valid = 1;
     v->no_cacheable = 0;
     v->not_found = 0;
 
-    v->len = h->value.len;
+    v->len = hv.len;
     v->data = id;
 
     return NGX_OK;
@@ -505,6 +472,7 @@ char *
 ngx_http_lua_kong_request_id_header(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf)
 {
+    u_char                        *p;
     size_t                         i;
     ngx_str_t                     *value;
     ngx_http_lua_kong_loc_conf_t  *lcf = conf;
@@ -525,7 +493,23 @@ ngx_http_lua_kong_request_id_header(ngx_conf_t *cf, ngx_command_t *cmd,
         }
     }
 
-    lcf->request_id_header = value[1];
+    p = ngx_pnalloc(cf->pool, sizeof("http_") - 1 + value[1].len);
+    if (p == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_memcpy(p, "http_", sizeof("http_") - 1);
+    ngx_strlow(p + sizeof("http_") - 1, value[1].data, value[1].len);
+
+    for (i = 0; i < value[1].len; i++) {
+        if (p[sizeof("http_") - 1 + i] == '-') {
+            p[sizeof("http_") - 1 + i] = '_';
+        }
+    }
+
+    lcf->request_id_header.data = p;
+    lcf->request_id_header.len = sizeof("http_") - 1 + value[1].len;
+
     ngx_http_lua_kong_request_id_header_used = 1;
 
     return NGX_CONF_OK;

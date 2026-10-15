@@ -786,7 +786,7 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 37: an underscore in the configured name does not match a hyphen in the header
+=== TEST 37: an underscore in the configured name matches a hyphen in the header
 --- config
     underscores_in_headers on;
     lua_kong_request_id_header x_message_id;
@@ -799,6 +799,53 @@ qr/\A[0-9a-f]{32}\n\z/
 GET /t
 --- more_headers
 x-message-id: hyphen-37
+--- response_body
+hyphen-37
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 38: a hyphen in the configured name matches an underscore in the header
+--- config
+    underscores_in_headers on;
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x_message_id: underscore-38
+--- response_body
+underscore-38
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 39: the hyphen and underscore spellings together generate an identifier
+--- config
+    underscores_in_headers on;
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: trusted-39
+x_message_id: injected-39
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
