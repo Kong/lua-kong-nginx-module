@@ -20,14 +20,100 @@
 
 #define NGX_HTTP_LUA_KONG_RANDOM_COUNT         4
 #define NGX_HTTP_LUA_KONG_UINT32_HEX_LEN       sizeof(uint32_t) * 2
+#define NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN   128
+
+
+static ngx_int_t   ngx_http_lua_kong_request_id_index = NGX_ERROR;
+static ngx_flag_t  ngx_http_lua_kong_request_id_header_used;
+
+
+static ngx_inline ngx_flag_t
+ngx_http_lua_kong_request_id_char(u_char c)
+{
+    return (c >= 'a' && c <= 'z')
+           || (c >= 'A' && c <= 'Z')
+           || (c >= '0' && c <= '9')
+           || c == '+' || c == '/' || c == '=' || c == '-';
+}
+
+
+static ngx_inline ngx_flag_t
+ngx_http_lua_kong_header_name_char(u_char c)
+{
+    return (c >= 'a' && c <= 'z')
+           || (c >= 'A' && c <= 'Z')
+           || (c >= '0' && c <= '9')
+           || ngx_strchr("!#$%&'*+-.^_`|~", c) != NULL;
+}
+
+
+static ngx_int_t
+ngx_http_lua_kong_request_id_from_header(ngx_http_request_t *r,
+    ngx_str_t *name, ngx_http_variable_value_t *v)
+{
+    size_t                      i;
+    u_char                     *id;
+    ngx_int_t                   rc;
+    ngx_http_variable_value_t   hv;
+
+    ngx_memzero(&hv, sizeof(ngx_http_variable_value_t));
+
+    rc = ngx_http_variable_unknown_header(r, &hv, name,
+                                          &r->headers_in.headers.part,
+                                          sizeof("http_") - 1);
+    if (rc != NGX_OK) {
+        return rc;
+    }
+
+    if (hv.not_found
+        || hv.len == 0
+        || hv.len > NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN)
+    {
+        return NGX_DECLINED;
+    }
+
+    for (i = 0; i < hv.len; i++) {
+        if (!ngx_http_lua_kong_request_id_char(hv.data[i])) {
+            return NGX_DECLINED;
+        }
+    }
+
+    id = ngx_pnalloc(r->pool, hv.len);
+    if (id == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_memcpy(id, hv.data, hv.len);
+
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+
+    v->len = hv.len;
+    v->data = id;
+
+    return NGX_OK;
+}
 
 
 static ngx_int_t
 ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-    u_char     *id;
-    uint32_t    i, rnd;
+    u_char                        *id;
+    uint32_t                       i, rnd;
+    ngx_int_t                      rc;
+    ngx_http_lua_kong_loc_conf_t  *lcf;
+
+    lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
+    if (lcf->request_id_header.len != 0) {
+        rc = ngx_http_lua_kong_request_id_from_header(r,
+                                                      &lcf->request_id_header,
+                                                      v);
+        if (rc != NGX_DECLINED) {
+            return rc;
+        }
+    }
 
     id = ngx_pnalloc(r->pool,
                      NGX_HTTP_LUA_KONG_RANDOM_COUNT *
@@ -367,6 +453,8 @@ ngx_http_lua_kong_add_vars(ngx_conf_t *cf)
 {
     ngx_http_variable_t        *cv, *v;
 
+    ngx_http_lua_kong_request_id_header_used = 0;
+
     for (cv = ngx_http_lua_kong_variables; cv->name.len; cv++) {
         v = ngx_http_add_variable(cf, &cv->name, cv->flags);
         if (v == NULL) {
@@ -375,6 +463,112 @@ ngx_http_lua_kong_add_vars(ngx_conf_t *cf)
 
         *v = *cv;
     }
+
+    return NGX_OK;
+}
+
+
+char *
+ngx_http_lua_kong_request_id_header(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf)
+{
+    u_char                        *p;
+    size_t                         i;
+    ngx_str_t                     *value;
+    ngx_http_lua_kong_loc_conf_t  *lcf = conf;
+
+    if (lcf->request_id_header.data != NULL) {
+        return "is duplicate";
+    }
+
+    value = cf->args->elts;
+
+    if (value[1].len == 0) {
+        goto invalid;
+    }
+
+    for (i = 0; i < value[1].len; i++) {
+        if (!ngx_http_lua_kong_header_name_char(value[1].data[i])) {
+            goto invalid;
+        }
+    }
+
+    p = ngx_pnalloc(cf->pool, sizeof("http_") - 1 + value[1].len);
+    if (p == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_memcpy(p, "http_", sizeof("http_") - 1);
+    ngx_strlow(p + sizeof("http_") - 1, value[1].data, value[1].len);
+
+    for (i = 0; i < value[1].len; i++) {
+        if (p[sizeof("http_") - 1 + i] == '-') {
+            p[sizeof("http_") - 1 + i] = '_';
+        }
+    }
+
+    lcf->request_id_header.data = p;
+    lcf->request_id_header.len = sizeof("http_") - 1 + value[1].len;
+
+    ngx_http_lua_kong_request_id_header_used = 1;
+
+    return NGX_CONF_OK;
+
+invalid:
+
+    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                       "invalid header name \"%V\"", &value[1]);
+
+    return NGX_CONF_ERROR;
+}
+
+
+ngx_flag_t
+ngx_http_lua_kong_request_id_pending(ngx_http_request_t *r, ngx_int_t index)
+{
+    if (!ngx_http_lua_kong_request_id_header_used
+        || index != ngx_http_lua_kong_request_id_index)
+    {
+        return 0;
+    }
+
+    return !(r->variables[index].valid || r->variables[index].not_found);
+}
+
+
+static ngx_int_t
+ngx_http_lua_kong_pin_request_id(ngx_http_request_t *r)
+{
+    (void) ngx_http_get_indexed_variable(r, ngx_http_lua_kong_request_id_index);
+
+    return NGX_DECLINED;
+}
+
+
+ngx_int_t
+ngx_http_lua_kong_request_id_init(ngx_conf_t *cf)
+{
+    ngx_str_t                   name = ngx_string("kong_request_id");
+    ngx_http_handler_pt        *h;
+    ngx_http_core_main_conf_t  *cmcf;
+
+    if (!ngx_http_lua_kong_request_id_header_used) {
+        return NGX_OK;
+    }
+
+    ngx_http_lua_kong_request_id_index = ngx_http_get_variable_index(cf, &name);
+    if (ngx_http_lua_kong_request_id_index == NGX_ERROR) {
+        return NGX_ERROR;
+    }
+
+    cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+
+    h = ngx_array_push(&cmcf->phases[NGX_HTTP_POST_READ_PHASE].handlers);
+    if (h == NULL) {
+        return NGX_ERROR;
+    }
+
+    *h = ngx_http_lua_kong_pin_request_id;
 
     return NGX_OK;
 }
