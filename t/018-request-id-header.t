@@ -1,6 +1,8 @@
-use Test::Nginx::Socket::Lua 'no_plan';
+use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
+
+plan tests => repeat_each() * (blocks() * 5 - 17);
 
 no_long_string();
 
@@ -552,6 +554,7 @@ upstream-24
 === TEST 25: the identifier survives an internal redirect
 --- config
     lua_kong_request_id_header x-message-id;
+    lua_kong_error_log_request_id $kong_request_id;
     error_page 404 /err;
     location = /err {
         internal;
@@ -560,7 +563,10 @@ upstream-24
         }
     }
     location /t {
-        return 404;
+        content_by_lua_block {
+            ngx.log(ngx.WARN, "before redirect")
+            ngx.exit(404)
+        }
     }
 --- request
 GET /t
@@ -569,6 +575,8 @@ x-message-id: redirect-25
 --- response_body
 redirect-25
 --- error_code: 404
+--- error_log eval
+qr/before redirect.*request_id: "redirect-25"/
 --- no_error_log
 [error]
 [crit]
@@ -730,3 +738,71 @@ is duplicate
 --- must_die
 --- error_log
 directive is not allowed here
+
+
+
+=== TEST 35: a header name with underscores matches when underscores are allowed
+--- config
+    underscores_in_headers on;
+    lua_kong_request_id_header x_message_id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x_message_id: underscore-35
+--- response_body
+underscore-35
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 36: a header name with underscores generates an identifier when underscores are not allowed
+--- config
+    lua_kong_request_id_header x_message_id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x_message_id: underscore-36
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 37: an underscore in the configured name does not match a hyphen in the header
+--- config
+    underscores_in_headers on;
+    lua_kong_request_id_header x_message_id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: hyphen-37
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
