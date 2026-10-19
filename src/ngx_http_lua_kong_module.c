@@ -66,6 +66,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       offsetof(ngx_http_lua_kong_loc_conf_t, request_id_var_index),
       NULL },
 
+    { ngx_string("lua_kong_request_id_header"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_http_lua_kong_request_id_header,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
     ngx_null_command
 };
 
@@ -90,6 +97,10 @@ static ngx_int_t
 ngx_http_lua_kong_init(ngx_conf_t *cf)
 {
     if (ngx_http_lua_kong_error_log_init(cf) != NGX_CONF_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_lua_kong_request_id_init(cf) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -159,6 +170,7 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     /* conf->tag is NGX_HTTP_LOC_CONF only */
     ngx_conf_merge_value(conf->request_id_var_index, prev->request_id_var_index, NGX_CONF_UNSET);
+    ngx_conf_merge_str_value(conf->request_id_header, prev->request_id_header, "");
 
     return NGX_CONF_OK;
 }

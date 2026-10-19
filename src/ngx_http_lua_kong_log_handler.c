@@ -40,6 +40,10 @@ ngx_http_lua_kong_error_log_handler(ngx_http_request_t *r, u_char *buf, size_t l
         return buf;
     }
 
+    if (ngx_http_lua_kong_request_id_pending(r, lcf->request_id_var_index)) {
+        return buf;
+    }
+
     if (ngx_http_lua_kong_error_log_entered) {
         return buf;
     }
