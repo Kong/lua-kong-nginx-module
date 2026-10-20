@@ -91,6 +91,12 @@ Common variables defined by other modules that are already indexed:
 - `$http_user_agent`
 - `$host`
 
+Note that `$remote_user` is derived from the `Authorization` request header,
+and nginx caches the first parse in `r->headers_in.user`. Rewriting
+`Authorization` afterwards does not refresh it, so `$remote_user` (and thus an
+access log that records it) can disagree with `$http_authorization` within the
+same request. This holds whether or not the variable is indexed.
+
 Specially, use `lua_kong_load_var_index default` to
 index *commonly used variables* as follows:
 
