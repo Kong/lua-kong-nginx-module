@@ -21,9 +21,9 @@ __DATA__
 --- request
 GET /t
 --- more_headers
-x-message-id: abc123
+x-message-id: message-id-abc123
 --- response_body
-abc123
+message-id-abc123
 --- error_code: 200
 --- no_error_log
 [error]
@@ -62,7 +62,7 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: abc123
+x-message-id: message-id-abc123
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -84,9 +84,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: AZaz09+/=-
+x-message-id: AZaz09._:+=/-xyz789
 --- response_body
-AZaz09+/=-
+AZaz09._:+=/-xyz789
 --- error_code: 200
 --- no_error_log
 [error]
@@ -117,7 +117,7 @@ x-message-id: 123e4567-e89b-12d3-a456-426614174000
 
 
 
-=== TEST 6: a one character value is accepted
+=== TEST 6: a value of 16 characters is accepted
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -127,10 +127,10 @@ x-message-id: 123e4567-e89b-12d3-a456-426614174000
     }
 --- request
 GET /t
---- more_headers
-x-message-id: a
---- response_body
-a
+--- more_headers eval
+"x-message-id: " . ("a" x 16) . "\n"
+--- response_body eval
+("a" x 16) . "\n"
 --- error_code: 200
 --- no_error_log
 [error]
@@ -216,7 +216,7 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: abc 123
+x-message-id: abcdefgh ijklmnop
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -227,7 +227,7 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 11: a value with an underscore generates an identifier
+=== TEST 11: a value with an underscore is accepted
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -238,9 +238,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: abc_123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
+x-message-id: underscore_value_11
+--- response_body
+underscore_value_11
 --- error_code: 200
 --- no_error_log
 [error]
@@ -249,7 +249,7 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 12: a value with a dot generates an identifier
+=== TEST 12: a value with a dot is accepted
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -260,9 +260,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: abc.123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
+x-message-id: dotted.value.id.12
+--- response_body
+dotted.value.id.12
 --- error_code: 200
 --- no_error_log
 [error]
@@ -271,7 +271,7 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 13: a value with a colon generates an identifier
+=== TEST 13: a value with a colon is accepted
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -282,9 +282,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: abc:123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
+x-message-id: namespace:value:id-13
+--- response_body
+namespace:value:id-13
 --- error_code: 200
 --- no_error_log
 [error]
@@ -304,7 +304,7 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: abc,123
+x-message-id: abcdefgh,ijklmnop12
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -326,9 +326,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-MESSAGE-id: mixed-case-1
+x-MESSAGE-id: mixed-case-value-15
 --- response_body
-mixed-case-1
+mixed-case-value-15
 --- error_code: 200
 --- no_error_log
 [error]
@@ -348,8 +348,8 @@ mixed-case-1
 --- request
 GET /t
 --- more_headers
-x-message-id: first
-X-Message-Id: second
+x-message-id: first-value-16-aaaa
+X-Message-Id: second-value-16-bbbb
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -373,9 +373,9 @@ GET /t
 --- more_headers
 x-message-id-other: wrong
 x-trace-id: wrong
-x-message-id: right
+x-message-id: right-value-17-abcd
 --- response_body
-right
+right-value-17-abcd
 --- error_code: 200
 --- no_error_log
 [error]
@@ -398,9 +398,9 @@ right
 --- request
 GET /t
 --- more_headers
-x-message-id: pinned-1
+x-message-id: pinned-by-clear-18
 --- response_body
-pinned-1
+pinned-by-clear-18
 --- error_code: 200
 --- no_error_log
 [error]
@@ -423,9 +423,9 @@ pinned-1
 --- request
 GET /t
 --- more_headers
-x-message-id: pinned-2
+x-message-id: pinned-by-replace-19
 --- response_body
-pinned-2
+pinned-by-replace-19
 --- error_code: 200
 --- no_error_log
 [error]
@@ -492,12 +492,12 @@ true
 --- request
 GET /t
 --- more_headers
-x-message-id: trace-22
+x-message-id: trace-value-for-22
 --- response_body
 ok
 --- error_code: 200
 --- error_log eval
-qr/boom.*request_id: "trace-22"/
+qr/boom.*request_id: "trace-value-for-22"/
 --- no_error_log eval
 qr/http request line: "GET \/t HTTP\/1\.1", request_id:/
 
@@ -516,7 +516,7 @@ qr/http request line: "GET \/t HTTP\/1\.1", request_id:/
 --- request
 GET /t
 --- more_headers
-x-message-id: not valid
+x-message-id: not valid but long
 --- response_body
 ok
 --- error_code: 200
@@ -540,9 +540,9 @@ qr/boom.*request_id: "[0-9a-f]{32}"/
 --- request
 GET /t
 --- more_headers
-x-message-id: upstream-24
+x-message-id: upstream-value-24
 --- response_body
-upstream-24
+upstream-value-24
 --- error_code: 200
 --- no_error_log
 [error]
@@ -571,12 +571,12 @@ upstream-24
 --- request
 GET /t
 --- more_headers
-x-message-id: redirect-25
+x-message-id: redirect-value-25
 --- response_body
-redirect-25
+redirect-value-25
 --- error_code: 404
 --- error_log eval
-qr/before redirect.*request_id: "redirect-25"/
+qr/before redirect.*request_id: "redirect-value-25"/
 --- no_error_log
 [error]
 [crit]
@@ -606,7 +606,7 @@ qr/before redirect.*request_id: "redirect-25"/
 GET /t
 --- more_headers
 Host: other.test
-x-message-id: scoped-26
+x-message-id: scoped-value-for-26
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -629,9 +629,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: http-27
+x-message-id: http-level-value-27
 --- response_body
-http-27
+http-level-value-27
 --- error_code: 200
 --- no_error_log
 [error]
@@ -653,10 +653,10 @@ http-27
 --- request
 GET /t
 --- more_headers
-x-message-id: wrong
-x-trace-id: right-28
+x-message-id: wrong-value-28-aaa
+x-trace-id: right-value-28-bbb
 --- response_body
-right-28
+right-value-28-bbb
 --- error_code: 200
 --- no_error_log
 [error]
@@ -682,9 +682,9 @@ right-28
 --- request
 GET /t
 --- more_headers
-x-message-id: indexed-29
+x-message-id: indexed-value-for-29
 --- response_body
-indexed-29
+indexed-value-for-29
 --- error_code: 200
 --- no_error_log
 [error]
@@ -753,9 +753,9 @@ directive is not allowed here
 --- request
 GET /t
 --- more_headers
-x_message_id: underscore-35
+x_message_id: underscore-name-35
 --- response_body
-underscore-35
+underscore-name-35
 --- error_code: 200
 --- no_error_log
 [error]
@@ -775,7 +775,7 @@ underscore-35
 --- request
 GET /t
 --- more_headers
-x_message_id: underscore-36
+x_message_id: underscore-name-36
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -798,9 +798,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: hyphen-37
+x-message-id: hyphen-name-for-37
 --- response_body
-hyphen-37
+hyphen-name-for-37
 --- error_code: 200
 --- no_error_log
 [error]
@@ -821,9 +821,9 @@ hyphen-37
 --- request
 GET /t
 --- more_headers
-x_message_id: underscore-38
+x_message_id: underscore-name-38
 --- response_body
-underscore-38
+underscore-name-38
 --- error_code: 200
 --- no_error_log
 [error]
@@ -844,8 +844,184 @@ underscore-38
 --- request
 GET /t
 --- more_headers
-x-message-id: trusted-39
-x_message_id: injected-39
+x-message-id: trusted-value-for-39
+x_message_id: injected-value-for-39
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 40: a value of 15 characters generates an identifier
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers eval
+"x-message-id: " . ("a" x 15) . "\n"
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 41: a base64url value is accepted
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: abc-DEF_ghi-123_xyz
+--- response_body
+abc-DEF_ghi-123_xyz
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 42: a urn value is accepted
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: urn:uuid:123e4567-e89b-12d3-a456-426614174000
+--- response_body
+urn:uuid:123e4567-e89b-12d3-a456-426614174000
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 43: a value with a tilde generates an identifier
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: tilde~in~the~value~43
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 44: a value with a double quote generates an identifier
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: quote"in-the-value-44
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 45: a value with an angle bracket generates an identifier
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: angle<in-the-value-45
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 46: a value with a backslash generates an identifier
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: back\slash-in-value-46
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 47: a value with a semicolon generates an identifier
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: semi;colon-in-value-47
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
