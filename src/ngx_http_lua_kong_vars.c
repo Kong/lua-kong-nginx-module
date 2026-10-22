@@ -20,6 +20,7 @@
 
 #define NGX_HTTP_LUA_KONG_RANDOM_COUNT         4
 #define NGX_HTTP_LUA_KONG_UINT32_HEX_LEN       sizeof(uint32_t) * 2
+#define NGX_HTTP_LUA_KONG_REQUEST_ID_MIN_LEN   16
 #define NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN   128
 
 
@@ -33,7 +34,8 @@ ngx_http_lua_kong_request_id_char(u_char c)
     return (c >= 'a' && c <= 'z')
            || (c >= 'A' && c <= 'Z')
            || (c >= '0' && c <= '9')
-           || c == '+' || c == '/' || c == '=' || c == '-';
+           || c == '+' || c == '/' || c == '=' || c == '-'
+           || c == '.' || c == '_' || c == ':';
 }
 
 
@@ -66,7 +68,7 @@ ngx_http_lua_kong_request_id_from_header(ngx_http_request_t *r,
     }
 
     if (hv.not_found
-        || hv.len == 0
+        || hv.len < NGX_HTTP_LUA_KONG_REQUEST_ID_MIN_LEN
         || hv.len > NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN)
     {
         return NGX_DECLINED;

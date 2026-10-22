@@ -210,8 +210,8 @@ A header with an underscore in its name reaches nginx only when `underscores_in_
 The value is valid when all of these conditions are true:
 
 - The request has exactly one header with this name. The spellings `x-message-id` and `x_message_id` count as the same header.
-- The value has 1 to 128 characters.
-- Each character is an ASCII letter, an ASCII digit, or one of `+`, `/`, `=` and `-`.
+- The value has 16 to 128 characters.
+- Each character is an ASCII letter, an ASCII digit, or one of `.`, `_`, `:`, `+`, `/`, `=` and `-`.
 
 When the value is not valid, or when the header is absent, `$kong_request_id` is generated as usual.
 The request is never rejected.
@@ -232,8 +232,8 @@ server {
     lua_kong_error_log_request_id $kong_request_id;
 }
 ```
-A request with the header `x-message-id: abc123` gives `$kong_request_id` the value `abc123`,
-and its error log lines end with `request_id: "abc123"`.
+A request with the header `x-message-id: message-id-abc123` gives `$kong_request_id` the value `message-id-abc123`,
+and its error log lines end with `request_id: "message-id-abc123"`.
 
 [Back to TOC](#table-of-contents)
 
