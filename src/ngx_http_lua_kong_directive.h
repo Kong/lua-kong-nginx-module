@@ -33,8 +33,20 @@ char *
 ngx_http_lua_kong_error_log_request_id(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 
+#if (NGX_HTTP_LUA_KONG_PASS)
+
 char *
 ngx_http_lua_kong_request_id_header(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+
+char *
+ngx_http_lua_kong_pass(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
+
+char *
+ngx_http_lua_kong_pass_merge_loc_conf(ngx_conf_t *cf,
+    ngx_http_lua_kong_loc_conf_t *prev, ngx_http_lua_kong_loc_conf_t *conf);
+
+#endif
 
 #endif /* _NGX_HTTP_LUA_KONG_DIRECTIVE_H_INCLUDED_ */
