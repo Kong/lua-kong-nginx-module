@@ -2,7 +2,7 @@ use Test::Nginx::Socket::Lua;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 5 - 17);
+plan tests => repeat_each() * (blocks() * 5 - 19);
 
 no_long_string();
 
@@ -84,9 +84,9 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers
-x-message-id: AZaz09._:+=/-xyz789
+x-message-id: AZaz09._:|+=/-xyz789
 --- response_body
-AZaz09._:+=/-xyz789
+AZaz09._:|+=/-xyz789
 --- error_code: 200
 --- no_error_log
 [error]
@@ -117,7 +117,7 @@ x-message-id: 123e4567-e89b-12d3-a456-426614174000
 
 
 
-=== TEST 6: a value of 16 characters is accepted
+=== TEST 6: a value of 4 characters is accepted
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -128,9 +128,9 @@ x-message-id: 123e4567-e89b-12d3-a456-426614174000
 --- request
 GET /t
 --- more_headers eval
-"x-message-id: " . ("a" x 16) . "\n"
+"x-message-id: " . ("a" x 4) . "\n"
 --- response_body eval
-("a" x 16) . "\n"
+("a" x 4) . "\n"
 --- error_code: 200
 --- no_error_log
 [error]
@@ -139,7 +139,7 @@ GET /t
 
 
 
-=== TEST 7: a value of 128 characters is accepted
+=== TEST 7: a value of 256 characters is accepted
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -150,9 +150,9 @@ GET /t
 --- request
 GET /t
 --- more_headers eval
-"x-message-id: " . ("a" x 128) . "\n"
+"x-message-id: " . ("a" x 256) . "\n"
 --- response_body eval
-("a" x 128) . "\n"
+("a" x 256) . "\n"
 --- error_code: 200
 --- no_error_log
 [error]
@@ -161,7 +161,7 @@ GET /t
 
 
 
-=== TEST 8: a value of 129 characters generates an identifier
+=== TEST 8: a value of 257 characters generates an identifier
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -172,7 +172,7 @@ GET /t
 --- request
 GET /t
 --- more_headers eval
-"x-message-id: " . ("a" x 129) . "\n"
+"x-message-id: " . ("a" x 257) . "\n"
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -856,7 +856,7 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 40: a value of 15 characters generates an identifier
+=== TEST 40: a value of 3 characters generates an identifier
 --- config
     lua_kong_request_id_header x-message-id;
     location /t {
@@ -867,7 +867,7 @@ qr/\A[0-9a-f]{32}\n\z/
 --- request
 GET /t
 --- more_headers eval
-"x-message-id: " . ("a" x 15) . "\n"
+"x-message-id: " . ("a" x 3) . "\n"
 --- response_body_like eval
 qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
@@ -1029,3 +1029,91 @@ qr/\A[0-9a-f]{32}\n\z/
 [error]
 [crit]
 [alert]
+
+
+
+=== TEST 48: a value with a pipe is accepted
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: parent-id-48|PE:endpoint-48|CCID:correlation-48
+--- response_body
+parent-id-48|PE:endpoint-48|CCID:correlation-48
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 49: an address and uuid value is accepted
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: 10.202.28.114-616967f6-52dc-49d0-8a4b-678393ac20de
+--- response_body
+10.202.28.114-616967f6-52dc-49d0-8a4b-678393ac20de
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 50: a short client value is accepted
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: ok-12345
+--- response_body
+ok-12345
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 51: a value with a pipe in the error log is not altered
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_error_log_request_id $kong_request_id;
+    location /t {
+        content_by_lua_block {
+            ngx.log(ngx.ERR, "boom")
+            ngx.say("ok")
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: parent-id-51|PE:endpoint-51
+--- response_body
+ok
+--- error_code: 200
+--- error_log eval
+qr/boom.*request_id: "parent-id-51\|PE:endpoint-51"/
