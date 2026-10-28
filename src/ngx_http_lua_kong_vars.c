@@ -20,8 +20,8 @@
 
 #define NGX_HTTP_LUA_KONG_RANDOM_COUNT         4
 #define NGX_HTTP_LUA_KONG_UINT32_HEX_LEN       sizeof(uint32_t) * 2
-#define NGX_HTTP_LUA_KONG_REQUEST_ID_MIN_LEN   16
-#define NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN   128
+#define NGX_HTTP_LUA_KONG_REQUEST_ID_MIN_LEN   4
+#define NGX_HTTP_LUA_KONG_REQUEST_ID_MAX_LEN   256
 
 
 static ngx_int_t   ngx_http_lua_kong_request_id_index = NGX_ERROR;
@@ -35,7 +35,7 @@ ngx_http_lua_kong_request_id_char(u_char c)
            || (c >= 'A' && c <= 'Z')
            || (c >= '0' && c <= '9')
            || c == '+' || c == '/' || c == '=' || c == '-'
-           || c == '.' || c == '_' || c == ':';
+           || c == '.' || c == '_' || c == ':' || c == '|';
 }
 
 
