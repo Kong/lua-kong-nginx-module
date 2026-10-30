@@ -1,0 +1,114 @@
+name: OpenResty
+
+# The Tests workflow builds this module through Kong, which pins an OpenResty
+# older than the one kong_pass ships with, so it skips the version=2 tests and
+# everything that needs nginx 1.29.7 or later. This workflow builds plain
+# OpenResty instead, from public sources only:
+#
+# - kong-pass: unpatched OpenResty, running the kong_pass tests. The rest of t/
+#   needs Kong's nginx patches, so it is left to the Tests workflow.
+# - no-http-v2: OpenResty without ngx_http_v2_module, so without kong_pass,
+#   which only has to compile.
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+env:
+  OPENRESTY_VERSION: 1.31.8.1
+  OPENRESTY_SHA256: b569c63b420f80a4ac8466f2deffe73ed93ab760026532e039c3658409a997f4
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  kong-pass:
+    name: kong_pass on OpenResty
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Install packages
+      run: |
+        sudo apt update
+        sudo apt install build-essential libssl-dev libpcre2-dev zlib1g-dev cpanminus valgrind
+
+    - name: Download OpenResty
+      run: |
+        curl -sSfLO https://openresty.org/download/openresty-$OPENRESTY_VERSION.tar.gz
+        echo "$OPENRESTY_SHA256  openresty-$OPENRESTY_VERSION.tar.gz" | sha256sum -c
+        tar xzf openresty-$OPENRESTY_VERSION.tar.gz -C "$RUNNER_TEMP"
+
+    - name: Build OpenResty
+      run: |
+        cd "$RUNNER_TEMP/openresty-$OPENRESTY_VERSION"
+        ./configure --prefix="$RUNNER_TEMP/openresty" -j$(nproc) \
+          --with-http_ssl_module \
+          --with-http_sub_module \
+          --with-http_realip_module \
+          --with-http_stub_status_module \
+          --with-http_v2_module \
+          --with-stream \
+          --with-stream_ssl_module \
+          --with-stream_realip_module \
+          --with-stream_ssl_preread_module \
+          --add-module="$GITHUB_WORKSPACE" \
+          --add-module="$GITHUB_WORKSPACE/stream"
+        make -j$(nproc)
+        make install
+        echo "$RUNNER_TEMP/openresty/nginx/sbin" >> "$GITHUB_PATH"
+        echo "$RUNNER_TEMP/openresty/bin" >> "$GITHUB_PATH"
+
+    - name: Install Test::Nginx
+      run: sudo cpanm --notest Test::Nginx
+
+    - name: Run Test
+      run: |
+        nginx -V
+        prove t/019-kong-pass.t
+
+    - name: Run Test with Valgrind
+      run: |
+        export TEST_NGINX_VALGRIND='--num-callers=100 -q --tool=memcheck --leak-check=full --show-possibly-lost=no --gen-suppressions=all --suppressions=valgrind.suppress --track-origins=yes' TEST_NGINX_TIMEOUT=60 TEST_NGINX_SLEEP=1
+        export TEST_NGINX_USE_VALGRIND=1
+
+        # fail if definite leak found
+        prove t/019-kong-pass.t 2>&1 | tee /dev/stderr | grep -q "match-leak-kinds: definite" && exit 1 || exit 0
+
+  no-http-v2:
+    name: Build without HTTP/2
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Install packages
+      run: |
+        sudo apt update
+        sudo apt install build-essential libssl-dev libpcre2-dev zlib1g-dev
+
+    - name: Download OpenResty
+      run: |
+        curl -sSfLO https://openresty.org/download/openresty-$OPENRESTY_VERSION.tar.gz
+        echo "$OPENRESTY_SHA256  openresty-$OPENRESTY_VERSION.tar.gz" | sha256sum -c
+        tar xzf openresty-$OPENRESTY_VERSION.tar.gz -C "$RUNNER_TEMP"
+
+    - name: Build OpenResty
+      run: |
+        cd "$RUNNER_TEMP/openresty-$OPENRESTY_VERSION"
+        ./configure --prefix="$RUNNER_TEMP/openresty" -j$(nproc) \
+          --with-stream \
+          --with-stream_ssl_module \
+          --add-module="$GITHUB_WORKSPACE" \
+          --add-module="$GITHUB_WORKSPACE/stream"
+        make -j$(nproc)
+
+        # kong_pass must be left out of this build, not just compile
+        ! grep -q NGX_HTTP_LUA_KONG_PASS build/nginx-*/objs/ngx_auto_config.h
