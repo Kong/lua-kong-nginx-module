@@ -20,6 +20,13 @@ else
 fi
 
 ngx_module_incs="$ngx_addon_dir/src $ngx_lua_loc/src"
+ngx_module_deps=" \
+                $ngx_addon_dir/src/ngx_http_lua_kong_common.h \
+                $ngx_addon_dir/src/ngx_http_lua_kong_directive.h \
+                $ngx_addon_dir/src/ngx_http_lua_kong_module.h \
+                $ngx_addon_dir/src/ngx_http_lua_kong_ssl.h \
+                $ngx_addon_dir/src/ssl/ngx_lua_kong_ssl.h \
+                "
 
 . auto/module
 
