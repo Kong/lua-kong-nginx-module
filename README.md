@@ -14,6 +14,7 @@ Table of Contents
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
     * [lua\_kong\_request\_id\_header](#lua_kong_request_id_header)
+    * [kong\_pass](#kong_pass)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
@@ -234,6 +235,144 @@ server {
 ```
 A request with the header `x-message-id: message-id-abc123` gives `$kong_request_id` the value `message-id-abc123`,
 and its error log lines end with `request_id: "message-id-abc123"`.
+
+[Back to TOC](#table-of-contents)
+
+kong\_pass
+-------------------------------------------
+**syntax:** *kong_pass $selector host path [version=$variable];*
+
+**context:** *location*
+
+Mediates a single location between `proxy_pass` and `grpc_pass`, chosen per
+request from `$selector`, and, for `proxy_pass`, additionally selects the
+upstream HTTP version per request. It exists because both of those are
+static, per-location directives: neither can be told "use HTTP/2 for this
+request but HTTP/1.1 for the next one on the same location", and a location
+can only have one of them configured at a time.
+
+At configuration time, `kong_pass` builds a `<$selector>://<host><path>` URL
+and internally invokes `proxy_pass` with it (path included) and `grpc_pass`
+with it (path dropped, since gRPC carries the method in the `:path`
+pseudo-header and `grpc_pass` does not accept a URI part). `kong_pass` then
+installs its own request-time handler in place of whichever one of the two
+ran last. Because that URL always embeds `$selector`, `proxy_pass` and
+`grpc_pass` always take their own dynamic-URL code path (as they would for
+any `proxy_pass`/`grpc_pass` value containing a variable): `host` is not
+checked against known `upstream {}` blocks at configuration time, and, if it
+does not name one, nginx resolves it as a hostname at request time, which
+needs a [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
+configured.
+
+`$selector` must be a single variable, written either as `$name` or as
+`${name}`, and is evaluated fresh for every request:
+
+- a value of exactly `grpc` or `grpcs`, case-insensitive, dispatches to
+  `grpc_pass`; the `version=` parameter, if given, is still parsed but has
+  no effect, since gRPC always speaks HTTP/2
+- any other value dispatches to `proxy_pass`
+
+`$selector` is read again when `proxy_pass` or `grpc_pass` builds the URL, so
+it must give the same value throughout the request, which `set`, `map` and
+`$arg_` variables do. A variable that can change between the two reads could
+send a request down one path with a URL built for the other.
+
+`host` and `path` are plain configuration tokens, not compiled separately:
+`kong_pass` concatenates `$selector`, `host` and `path` into that one URL
+string at configuration time and hands it, unchanged, to `proxy_pass` (and
+to `grpc_pass`, minus `path`, per above). Because `$selector` guarantees the
+string contains a variable reference, both directives compile it
+dynamically, so a `$variable` written inside `host` or `path` is honoured
+too, evaluated per request, the same as it would be in a literal
+`proxy_pass`/`grpc_pass` value. `host` must not be empty; `path` may be, in
+which case only `<$selector>://<host>` is passed to `proxy_pass`, leaving the
+client's URI to the upstream. A `path` written as a literal must start with
+`/`, because it is appended straight onto `host` with no separator; a `path`
+that starts with `$` is evaluated per request, and so cannot be checked at
+configuration time.
+
+Note what dropping `path` for `grpc_pass` means in practice: `path` decides
+the upstream URI only for requests `$selector` sends to `proxy_pass`. A
+request that goes to `grpc_pass` carries the client's own URI in the `:path`
+pseudo-header, because that is where nginx's gRPC module takes it from, so
+whatever rewriting `path` expresses does not reach it. A `path` of
+`$upstream_uri` holding a rewritten path, for instance, applies to the
+HTTP/1.x and HTTP/2 proxy dispatch and not to the gRPC one.
+
+`version=$variable` is optional and, when given, must be a single variable,
+in either spelling. It is evaluated per request, only when `$selector`
+selected `proxy_pass`:
+
+- an empty value, or `1.1`, uses whatever `proxy_http_version` is configured
+  for the location, same as not specifying `version=` at all
+- `2` proxies to the upstream over HTTP/2 for that request, regardless of
+  `proxy_http_version`
+- anything else is not supported; `kong_pass` logs a warning naming the
+  value and falls back to `proxy_http_version`, so an unrecognised value
+  does not silently look like it took effect
+
+`$selector`, `host` and `path` are always required, in that order, and
+`kong_pass` may only appear once per location, and only in the location
+itself, not inside its `if` or `limit_except` blocks.
+Every argument after `path` must be `name=value`; `version=` is currently
+the only one `kong_pass` recognises, and it may only be given once.
+
+A `kong_pass` in a location also covers that location's `if` and
+`limit_except` blocks, which nginx runs against separate location configs of
+their own: they inherit the selector, the `version=` value and the dispatch,
+so `$selector` still decides between `proxy_pass` and `grpc_pass` for the
+requests those blocks handle. A `proxy_pass` written inside a `limit_except`
+block is what a non-`grpc` selector proxies to for the methods that block
+restricts; a `grpc` selector still goes to the location's `grpc_pass`.
+
+Take care where the selector and `version=` variables come from in that
+case. A `limit_except` block runs against a location config that
+`ngx_http_rewrite_module` does not inherit into, and `set` is not allowed
+inside one either, so no `set` reaches the requests a `limit_except`
+restricts: a selector taken from `set $upstream_scheme` evaluates empty for
+them, and `proxy_pass` then rejects the URL. Use a variable that any
+location config can read, such as one from
+[`map`](https://nginx.org/en/docs/http/ngx_http_map_module.html#map), an
+`$arg_` variable, or one whose value is assigned at request time.
+
+`kong_pass` is only built when nginx builds both of the modules whose
+directives it invokes, `ngx_http_proxy_module` and `ngx_http_grpc_module`, and
+the latter needs `ngx_http_v2_module`, which `configure` leaves out unless
+`--with-http_v2_module` is given. A build missing any of the three has no
+`kong_pass` directive at all, and nginx rejects a configuration using it with
+"unknown directive"; the rest of this module is unaffected either way.
+
+Selecting HTTP/2 with `version=` additionally requires:
+
+- nginx 1.29.4 or later, which is when `ngx_http_proxy_module.h` and its
+  HTTP/2 upstream handler first shipped. On an older nginx, `kong_pass`
+  still works for HTTP/1.x, but `version=` has no effect: it is still
+  parsed (so the same configuration works unchanged across nginx versions),
+  but a warning is logged at startup, and, in the request path, `2` falls
+  back to `proxy_http_version`. It does so without a warning of its own,
+  since it is a value `kong_pass` recognises and the startup warning has
+  already reported that this build cannot honour it
+
+No nginx patch is needed. A `version=2` request runs on an HTTP/2 copy of the
+location's proxy configuration, made once at startup, because nginx's HTTP/2
+upstream handler expects a proxy configuration that only ever proxies over
+HTTP/2 and changes it accordingly. Every other directive applies to both
+versions the same way.
+
+Take care with upstream keepalive when one location proxies over both HTTP/1.x
+and HTTP/2, since a pooled connection of the wrong protocol makes the request
+hang until it times out:
+
+- nginx's own cache, which 1.29.7 and later enable for every upstream block
+  even without a `keepalive` directive, keeps the two versions apart by
+  default, because they use different proxy configurations. An explicit
+  `keepalive N` without the `local` parameter does not: it matches on the
+  peer address only. Write `keepalive N local`, or leave the directive out.
+- with `balancer_by_lua`, nginx's cache sits in front of the Lua balancer and
+  takes each connection before `balancer_keepalive` can pool it. Switch it
+  off with `keepalive 0`, and pool through `ngx.balancer.enable_keepalive`
+  with a pool name that includes the scheme and the HTTP version, as Kong
+  does: the Lua pool matches on the pool name and the peer address only.
 
 [Back to TOC](#table-of-contents)
 
