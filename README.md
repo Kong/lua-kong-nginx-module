@@ -14,6 +14,7 @@ Table of Contents
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
     * [lua\_kong\_request\_id\_header](#lua_kong_request_id_header)
+    * [lua\_kong\_request\_id\_header\_trusted\_only](#lua_kong_request_id_header_trusted_only)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
     * [$kong\_upstream\_ssl\_server\_raw\_cert](#kong_upstream_ssl_server_raw_cert)
@@ -222,7 +223,8 @@ from Lua code, does not change `$kong_request_id`.
 When [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id) uses `$kong_request_id`,
 log lines that nginx writes before it has read the request headers have no ID.
 
-A client controls the value of the header. Use a header that your trust boundary sets.
+A client controls the value of the header. Use a header that your trust boundary sets,
+or set [lua\_kong\_request\_id\_header\_trusted\_only](#lua_kong_request_id_header_trusted_only) to `on`.
 Nginx does not check that the values are unique.
 
 For example, with this configuration:
@@ -234,6 +236,41 @@ server {
 ```
 A request with the header `x-message-id: message-id-abc123` gives `$kong_request_id` the value `message-id-abc123`,
 and its error log lines end with `request_id: "message-id-abc123"`.
+
+[Back to TOC](#table-of-contents)
+
+lua\_kong\_request\_id\_header\_trusted\_only
+-------------------------------------------
+**syntax:** *lua_kong_request_id_header_trusted_only on|off;*
+
+**default:** *off*
+
+**context:** *http* *server*
+
+When this directive is `on`, nginx uses the header of [lua\_kong\_request\_id\_header](#lua_kong_request_id_header)
+only when the connecting peer is trusted.
+When the peer is not trusted, `$kong_request_id` is generated as usual. The request is never rejected.
+
+A peer is trusted when its address matches a
+[set\_real\_ip\_from](https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from) rule.
+When the server has no `set_real_ip_from` rule, no peer is trusted.
+The check uses the address of the connection. It does not depend on the real-IP header
+and gives the same result before and after the realip module replaces the client address.
+
+This directive needs the variable `$realip_is_trusted` from the Kong nginx patch of the realip module.
+When the directive is `on` and the variable does not exist, nginx does not start
+and reports `unknown "realip_is_trusted" variable`.
+
+For example, with this configuration:
+```
+server {
+    set_real_ip_from 10.0.0.0/8;
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_trusted_only on;
+}
+```
+A request from `10.1.2.3` with the header `x-message-id: message-id-abc123` gives `$kong_request_id` the value `message-id-abc123`.
+The same request from `192.0.2.1` gives a generated value.
 
 [Back to TOC](#table-of-contents)
 

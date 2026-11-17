@@ -39,6 +39,7 @@ typedef struct {
     ngx_str_t                tag;
     ngx_int_t                request_id_var_index;
     ngx_str_t                request_id_header;
+    ngx_flag_t               request_id_header_trusted_only;
 } ngx_http_lua_kong_loc_conf_t;
 
 

@@ -26,6 +26,8 @@
 
 static ngx_int_t   ngx_http_lua_kong_request_id_index = NGX_ERROR;
 static ngx_flag_t  ngx_http_lua_kong_request_id_header_used;
+static ngx_int_t   ngx_http_lua_kong_realip_trusted_index = NGX_ERROR;
+static ngx_flag_t  ngx_http_lua_kong_request_id_trusted_only_used;
 
 
 static ngx_inline ngx_flag_t
@@ -98,6 +100,22 @@ ngx_http_lua_kong_request_id_from_header(ngx_http_request_t *r,
 }
 
 
+static ngx_flag_t
+ngx_http_lua_kong_peer_is_trusted(ngx_http_request_t *r)
+{
+    ngx_http_variable_value_t  *vv;
+
+    if (ngx_http_lua_kong_realip_trusted_index == NGX_ERROR) {
+        return 0;
+    }
+
+    vv = ngx_http_get_indexed_variable(r,
+                                       ngx_http_lua_kong_realip_trusted_index);
+
+    return vv != NULL && !vv->not_found && vv->len == 1 && vv->data[0] == '1';
+}
+
+
 static ngx_int_t
 ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
@@ -109,6 +127,15 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
     if (lcf->request_id_header.len != 0) {
+        if (lcf->request_id_header_trusted_only
+            && !ngx_http_lua_kong_peer_is_trusted(r))
+        {
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                           "kong request id header ignored: "
+                           "the connecting peer is not trusted");
+            goto generate;
+        }
+
         rc = ngx_http_lua_kong_request_id_from_header(r,
                                                       &lcf->request_id_header,
                                                       v);
@@ -116,6 +143,8 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
             return rc;
         }
     }
+
+generate:
 
     id = ngx_pnalloc(r->pool,
                      NGX_HTTP_LUA_KONG_RANDOM_COUNT *
@@ -461,6 +490,8 @@ ngx_http_lua_kong_add_vars(ngx_conf_t *cf)
     ngx_http_variable_t        *cv, *v;
 
     ngx_http_lua_kong_request_id_header_used = 0;
+    ngx_http_lua_kong_request_id_trusted_only_used = 0;
+    ngx_http_lua_kong_realip_trusted_index = NGX_ERROR;
 
     for (cv = ngx_http_lua_kong_variables; cv->name.len; cv++) {
         v = ngx_http_add_variable(cf, &cv->name, cv->flags);
@@ -530,6 +561,26 @@ invalid:
 }
 
 
+char *
+ngx_http_lua_kong_request_id_header_trusted_only(ngx_conf_t *cf,
+    ngx_command_t *cmd, void *conf)
+{
+    char                          *rv;
+    ngx_http_lua_kong_loc_conf_t  *lcf = conf;
+
+    rv = ngx_conf_set_flag_slot(cf, cmd, conf);
+    if (rv != NGX_CONF_OK) {
+        return rv;
+    }
+
+    if (lcf->request_id_header_trusted_only == 1) {
+        ngx_http_lua_kong_request_id_trusted_only_used = 1;
+    }
+
+    return NGX_CONF_OK;
+}
+
+
 ngx_flag_t
 ngx_http_lua_kong_request_id_pending(ngx_http_request_t *r, ngx_int_t index)
 {
@@ -556,6 +607,7 @@ ngx_int_t
 ngx_http_lua_kong_request_id_init(ngx_conf_t *cf)
 {
     ngx_str_t                   name = ngx_string("kong_request_id");
+    ngx_str_t                   trusted_name = ngx_string("realip_is_trusted");
     ngx_http_handler_pt        *h;
     ngx_http_core_main_conf_t  *cmcf;
 
@@ -566,6 +618,14 @@ ngx_http_lua_kong_request_id_init(ngx_conf_t *cf)
     ngx_http_lua_kong_request_id_index = ngx_http_get_variable_index(cf, &name);
     if (ngx_http_lua_kong_request_id_index == NGX_ERROR) {
         return NGX_ERROR;
+    }
+
+    if (ngx_http_lua_kong_request_id_trusted_only_used) {
+        ngx_http_lua_kong_realip_trusted_index =
+            ngx_http_get_variable_index(cf, &trusted_name);
+        if (ngx_http_lua_kong_realip_trusted_index == NGX_ERROR) {
+            return NGX_ERROR;
+        }
     }
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);

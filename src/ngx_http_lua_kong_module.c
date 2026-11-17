@@ -73,6 +73,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       0,
       NULL },
 
+    { ngx_string("lua_kong_request_id_header_trusted_only"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_FLAG,
+      ngx_http_lua_kong_request_id_header_trusted_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_lua_kong_loc_conf_t, request_id_header_trusted_only),
+      NULL },
+
     ngx_null_command
 };
 
@@ -157,6 +164,7 @@ ngx_http_lua_kong_create_loc_conf(ngx_conf_t* cf)
     }
 
     conf->request_id_var_index = NGX_CONF_UNSET;
+    conf->request_id_header_trusted_only = NGX_CONF_UNSET;
 
     return conf;
 }
@@ -171,6 +179,8 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     /* conf->tag is NGX_HTTP_LOC_CONF only */
     ngx_conf_merge_value(conf->request_id_var_index, prev->request_id_var_index, NGX_CONF_UNSET);
     ngx_conf_merge_str_value(conf->request_id_header, prev->request_id_header, "");
+    ngx_conf_merge_value(conf->request_id_header_trusted_only,
+                         prev->request_id_header_trusted_only, 0);
 
     return NGX_CONF_OK;
 }
