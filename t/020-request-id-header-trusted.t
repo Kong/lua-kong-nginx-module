@@ -7,17 +7,15 @@ sub nginx_has_realip_is_trusted {
     my $bin = $ENV{TEST_NGINX_BINARY} || 'nginx';
     my $dir = tempdir(CLEANUP => 1);
     mkdir("$dir/logs");
-    open(my $fh, '>', "$dir/nginx.conf") or return 0;
+    open(my $fh, '>', "$dir/nginx.conf") or die "cannot write the probe config: $!";
     print $fh "error_log stderr;\n"
         . "events {}\n"
         . "http {\n"
-        . "    server {\n"
-        . "        listen 127.0.0.1:1;\n"
-        . "        location / { return 200 \$realip_is_trusted; }\n"
-        . "    }\n"
+        . "    map \$realip_is_trusted \$probe { default 0; }\n"
         . "}\n";
     close($fh);
-    return system("$bin -t -p $dir -c $dir/nginx.conf >/dev/null 2>&1") == 0 ? 1 : 0;
+    my $out = `$bin -t -p $dir -c $dir/nginx.conf 2>&1`;
+    return $out =~ /unknown "realip_is_trusted" variable/ ? 0 : 1;
 }
 
 repeat_each(2);
@@ -379,6 +377,105 @@ x-message-id: message-id-abc123
 X-Real-IP: 1.2.3.4
 --- response_body
 message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 15: a rule only in the location does not count
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_trusted_only on;
+    location /t {
+        set_real_ip_from 127.0.0.1;
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 16: the server rule decides when the location has its own rule
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_trusted_only on;
+    set_real_ip_from 127.0.0.1;
+    location /t {
+        set_real_ip_from 10.0.0.0/8;
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 17: a rule in the http block is inherited by the server
+--- http_config
+    set_real_ip_from 127.0.0.1;
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_trusted_only on;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 18: a server rule that does not match is not overridden by a location rule that does
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_trusted_only on;
+    set_real_ip_from 10.0.0.0/8;
+    location /t {
+        set_real_ip_from 127.0.0.1;
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
 --- error_code: 200
 --- no_error_log
 [error]

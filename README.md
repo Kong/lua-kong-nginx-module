@@ -254,7 +254,9 @@ When the peer is not trusted, `$kong_request_id` is generated as usual. The requ
 
 A peer is trusted when its address matches a
 [set\_real\_ip\_from](https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from) rule.
-When the server has no `set_real_ip_from` rule, no peer is trusted.
+Only the `set_real_ip_from` rules of the `http` and `server` blocks count.
+Nginx fixes the request ID before it selects a location, so a rule in a `location` block has no effect on this directive.
+When the server has no such rule, no peer is trusted.
 The check uses the address of the connection. It does not depend on the real-IP header
 and gives the same result before and after the realip module replaces the client address.
 
