@@ -14,6 +14,7 @@ Table of Contents
     * [lua\_kong\_set\_static\_tag](#lua_kong_set_static_tag)
     * [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id)
     * [lua\_kong\_request\_id\_header](#lua_kong_request_id_header)
+    * [lua\_kong\_request\_id\_header\_from](#lua_kong_request_id_header_from)
     * [kong\_pass](#kong_pass)
 * [Variables](#variables)
     * [$kong\_request\_id](#kong_request_id)
@@ -223,7 +224,8 @@ from Lua code, does not change `$kong_request_id`.
 When [lua\_kong\_error\_log\_request\_id](#lua_kong_error_log_request_id) uses `$kong_request_id`,
 log lines that nginx writes before it has read the request headers have no ID.
 
-A client controls the value of the header. Use a header that your trust boundary sets.
+Nginx uses the header only when the connecting peer is listed by [lua\_kong\_request\_id\_header\_from](#lua_kong_request_id_header_from).
+When no peer is listed, no peer is trusted and `$kong_request_id` is always generated.
 Nginx does not check that the values are unique.
 
 For example, with this configuration:
@@ -235,6 +237,45 @@ server {
 ```
 A request with the header `x-message-id: message-id-abc123` gives `$kong_request_id` the value `message-id-abc123`,
 and its error log lines end with `request_id: "message-id-abc123"`.
+
+[Back to TOC](#table-of-contents)
+
+lua\_kong\_request\_id\_header\_from
+-------------------------------------------
+**syntax:** *lua_kong_request_id_header_from address | CIDR | unix: | hostname;*
+
+**default:** *none*
+
+**context:** *http* *server*
+
+Lists the peers that may set the request ID with the header of [lua\_kong\_request\_id\_header](#lua_kong_request_id_header).
+The directive can be given more than once. The forms of the value are the same as in
+[set\_real\_ip\_from](https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from):
+an IPv4 or IPv6 address, a CIDR block, `unix:` for peers that connect over a unix socket,
+or a host name, which nginx resolves when it reads the configuration.
+
+When the connecting peer matches no entry, `$kong_request_id` is generated as usual. The request is never rejected.
+When the directive is not set, no peer is trusted. To trust every peer, list `0.0.0.0/0` and `::/0`.
+
+The list of an inner block replaces the list of an outer block. The directive is not allowed in a `location`,
+because nginx fixes the request ID before it selects a location.
+
+The check uses the address of the TCP connection. It does not use the real-IP header.
+Nginx fixes the request ID before the realip module runs, so a `set_real_ip_from` rule or an `X-Real-IP` header
+does not change the result. The list is separate from the `set_real_ip_from` rules.
+Set both from the same source when they must trust the same peers.
+
+When the header directive is set, a subrequest gets the ID of its main request.
+
+For example, with this configuration:
+```
+server {
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 10.0.0.0/8;
+}
+```
+A request from `10.1.2.3` with the header `x-message-id: message-id-abc123` gives `$kong_request_id` the value `message-id-abc123`.
+The same request from `192.0.2.1` gives a generated value.
 
 [Back to TOC](#table-of-contents)
 
@@ -395,7 +436,8 @@ $kong\_request\_id
 ------------------
 Unique request identifier generated from 16 pseudo-random bytes, in hexadecimal.
 When [lua\_kong\_request\_id\_header](#lua_kong_request_id_header) is set and the request has a
-valid value in that header, the variable has that value instead.
+valid value in that header, and the connecting peer is listed by
+[lua\_kong\_request\_id\_header\_from](#lua_kong_request_id_header_from), the variable has that value instead.
 This variable is indexed.
 
 [Back to TOC](#table-of-contents)

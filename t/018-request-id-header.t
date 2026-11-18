@@ -6,6 +6,12 @@ plan tests => repeat_each() * (blocks() * 5 - 19);
 
 no_long_string();
 
+add_block_preprocessor(sub {
+    my $block = shift;
+    my $http_config = $block->http_config || "";
+    $block->set_value("http_config", "lua_kong_request_id_header_from 127.0.0.1;\n$http_config");
+});
+
 run_tests();
 
 __DATA__

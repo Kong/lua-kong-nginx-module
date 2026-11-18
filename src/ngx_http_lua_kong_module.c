@@ -73,6 +73,13 @@ static ngx_command_t ngx_http_lua_kong_commands[] = {
       0,
       NULL },
 
+    { ngx_string("lua_kong_request_id_header_from"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_http_lua_kong_request_id_header_from,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
 #if (NGX_HTTP_LUA_KONG_PASS)
     { ngx_string("kong_pass"),
       NGX_HTTP_LOC_CONF|NGX_CONF_2MORE,
@@ -182,6 +189,9 @@ ngx_http_lua_kong_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     /* conf->tag is NGX_HTTP_LOC_CONF only */
     ngx_conf_merge_value(conf->request_id_var_index, prev->request_id_var_index, NGX_CONF_UNSET);
     ngx_conf_merge_str_value(conf->request_id_header, prev->request_id_header, "");
+    if (conf->request_id_header_from == NULL) {
+        conf->request_id_header_from = prev->request_id_header_from;
+    }
 
 #if (NGX_HTTP_LUA_KONG_PASS)
     return ngx_http_lua_kong_pass_merge_loc_conf(cf, prev, conf);

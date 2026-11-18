@@ -39,6 +39,7 @@ typedef struct {
     ngx_str_t                tag;
     ngx_int_t                request_id_var_index;
     ngx_str_t                request_id_header;
+    ngx_array_t             *request_id_header_from;
     ngx_int_t                pass_selector_index;
     ngx_int_t                pass_version_index;
     ngx_http_handler_pt      proxy_handler;
