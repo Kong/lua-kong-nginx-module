@@ -38,8 +38,8 @@ ngx_http_lua_kong_request_id_header(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 
 char *
-ngx_http_lua_kong_request_id_header_trusted_only(ngx_conf_t *cf,
-    ngx_command_t *cmd, void *conf);
+ngx_http_lua_kong_request_id_header_from(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
 
 #if (NGX_HTTP_LUA_KONG_PASS)
 

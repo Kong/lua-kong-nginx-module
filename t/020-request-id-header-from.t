@@ -1,30 +1,10 @@
 use Test::Nginx::Socket::Lua;
-use File::Temp qw(tempdir);
 
 $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
 
-sub nginx_has_realip_is_trusted {
-    my $bin = $ENV{TEST_NGINX_BINARY} || 'nginx';
-    my $dir = tempdir(CLEANUP => 1);
-    mkdir("$dir/logs");
-    open(my $fh, '>', "$dir/nginx.conf") or die "cannot write the probe config: $!";
-    print $fh "error_log stderr;\n"
-        . "events {}\n"
-        . "http {\n"
-        . "    map \$realip_is_trusted \$probe { default 0; }\n"
-        . "}\n";
-    close($fh);
-    my $out = `$bin -t -p $dir -c $dir/nginx.conf 2>&1`;
-    return $out =~ /unknown "realip_is_trusted" variable/ ? 0 : 1;
-}
-
 repeat_each(2);
 
-if (nginx_has_realip_is_trusted()) {
-    plan tests => repeat_each() * (blocks() * 5);
-} else {
-    plan skip_all => 'nginx has no $realip_is_trusted variable';
-}
+plan tests => repeat_each() * (blocks() * 5 - 7);
 
 no_long_string();
 
@@ -32,11 +12,10 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: a trusted peer without a real-IP header is trusted
+=== TEST 1: a listed peer keeps the header value
 --- config
     lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    set_real_ip_from 127.0.0.1;
+    lua_kong_request_id_header_from 127.0.0.1;
     location /t {
         content_by_lua_block {
             ngx.say(ngx.var.kong_request_id)
@@ -56,11 +35,150 @@ message-id-abc123
 
 
 
-=== TEST 2: a trusted peer is still trusted after realip replaces the address
+=== TEST 2: a peer inside a listed CIDR keeps the header value
 --- config
     lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
+    lua_kong_request_id_header_from 127.0.0.0/8;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 3: an unlisted peer gets a generated ID
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 10.0.0.0/8;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 4: without the directive no peer is trusted
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 5: listing every address trusts every peer
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 0.0.0.0/0;
+    lua_kong_request_id_header_from ::/0;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 6: a peer that matches the second entry keeps the header value
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 10.0.0.0/8;
+    lua_kong_request_id_header_from 127.0.0.1;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 7: a host name is resolved when nginx reads the configuration
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from localhost;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 8: the peer is tested before realip replaces the address
+--- config
     set_real_ip_from 127.0.0.1;
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 127.0.0.1;
     location /t {
         content_by_lua_block {
             ngx.say(ngx.var.kong_request_id)
@@ -81,203 +199,142 @@ message-id-abc123
 
 
 
-=== TEST 3: an untrusted peer gets a generated ID
+=== TEST 9: a forged real IP does not make the peer listed
 --- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    set_real_ip_from 10.0.0.0/8;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 4: an untrusted peer gets a generated ID even with X-Real-IP
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    set_real_ip_from 10.0.0.0/8;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
-X-Real-IP: 127.0.0.1
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 5: no set_real_ip_from means nobody is trusted
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 6: trusting every peer accepts the header
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    set_real_ip_from 0.0.0.0/0;
-    set_real_ip_from ::/0;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body
-message-id-abc123
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 7: without the directive the header is accepted from any peer
---- config
-    lua_kong_request_id_header x-message-id;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body
-message-id-abc123
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 8: the directive set to off accepts the header from an untrusted peer
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only off;
-    set_real_ip_from 10.0.0.0/8;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body
-message-id-abc123
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 9: a server inherits the directive from the http block
---- http_config
-    lua_kong_request_id_header_trusted_only on;
---- config
-    lua_kong_request_id_header x-message-id;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 10: a server overrides the directive of the http block
---- http_config
-    lua_kong_request_id_header_trusted_only on;
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only off;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body
-message-id-abc123
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 11: a trusted peer still needs a valid value
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
     set_real_ip_from 127.0.0.1;
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 1.2.3.4;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+X-Real-IP: 1.2.3.4
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 10: a unix socket peer is listed with unix:
+--- http_config
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/listed.sock;
+        lua_kong_request_id_header x-message-id;
+        lua_kong_request_id_header_from unix:;
+        location / {
+            content_by_lua_block {
+                ngx.say(ngx.var.kong_request_id)
+            }
+        }
+    }
+--- config
+    location /t {
+        proxy_set_header x-message-id message-id-abc123;
+        proxy_pass http://unix:$TEST_NGINX_HTML_DIR/listed.sock:/;
+    }
+--- request
+GET /t
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 11: a unix socket peer is not listed by an IP entry
+--- http_config
+    server {
+        listen unix:$TEST_NGINX_HTML_DIR/unlisted.sock;
+        lua_kong_request_id_header x-message-id;
+        lua_kong_request_id_header_from 127.0.0.1;
+        location / {
+            content_by_lua_block {
+                ngx.say(ngx.var.kong_request_id)
+            }
+        }
+    }
+--- config
+    location /t {
+        proxy_set_header x-message-id message-id-abc123;
+        proxy_pass http://unix:$TEST_NGINX_HTML_DIR/unlisted.sock:/;
+    }
+--- request
+GET /t
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 12: a server inherits the list of the http block
+--- http_config
+    lua_kong_request_id_header_from 127.0.0.1;
+--- config
+    lua_kong_request_id_header x-message-id;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body
+message-id-abc123
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 13: the list of a server replaces the list of the http block
+--- http_config
+    lua_kong_request_id_header_from 127.0.0.1;
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 10.0.0.0/8;
+    location /t {
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
+        }
+    }
+--- request
+GET /t
+--- more_headers
+x-message-id: message-id-abc123
+--- response_body_like eval
+qr/\A[0-9a-f]{32}\n\z/
+--- error_code: 200
+--- no_error_log
+[error]
+[crit]
+[alert]
+
+
+
+=== TEST 14: a listed peer still needs a valid value
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 127.0.0.1;
     location /t {
         content_by_lua_block {
             ngx.say(ngx.var.kong_request_id)
@@ -297,53 +354,14 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 12: a unix socket peer is trusted with set_real_ip_from unix:
---- http_config
-    server {
-        listen unix:$TEST_NGINX_HTML_DIR/trusted.sock;
-        lua_kong_request_id_header x-message-id;
-        lua_kong_request_id_header_trusted_only on;
-        set_real_ip_from unix:;
-        location / {
-            content_by_lua_block {
-                ngx.say(ngx.var.kong_request_id)
-            }
-        }
-    }
+=== TEST 15: a listed peer without the header gets a generated ID
 --- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 127.0.0.1;
     location /t {
-        proxy_set_header x-message-id message-id-abc123;
-        proxy_pass http://unix:$TEST_NGINX_HTML_DIR/trusted.sock:/;
-    }
---- request
-GET /t
---- response_body
-message-id-abc123
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 13: a unix socket peer is not trusted without set_real_ip_from unix:
---- http_config
-    server {
-        listen unix:$TEST_NGINX_HTML_DIR/untrusted.sock;
-        lua_kong_request_id_header x-message-id;
-        lua_kong_request_id_header_trusted_only on;
-        set_real_ip_from 127.0.0.1;
-        location / {
-            content_by_lua_block {
-                ngx.say(ngx.var.kong_request_id)
-            }
+        content_by_lua_block {
+            ngx.say(ngx.var.kong_request_id)
         }
-    }
---- config
-    location /t {
-        proxy_set_header x-message-id message-id-abc123;
-        proxy_pass http://unix:$TEST_NGINX_HTML_DIR/untrusted.sock:/;
     }
 --- request
 GET /t
@@ -357,11 +375,11 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 14: the pinned ID survives an internal redirect for a trusted peer
+=== TEST 16: the ID survives an internal redirect after realip replaced the address
 --- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
     set_real_ip_from 127.0.0.1;
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 127.0.0.1;
     location /a {
         rewrite ^ /b last;
     }
@@ -385,22 +403,30 @@ message-id-abc123
 
 
 
-=== TEST 15: a rule only in the location does not count
+=== TEST 17: a subrequest gets the ID of its main request after realip replaced the address
 --- config
+    set_real_ip_from 127.0.0.1;
     lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    location /t {
-        set_real_ip_from 127.0.0.1;
+    lua_kong_request_id_header_from 127.0.0.1;
+    location /sub {
+        internal;
         content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
+            ngx.print(ngx.var.kong_request_id)
+        }
+    }
+    location /t {
+        content_by_lua_block {
+            local res = ngx.location.capture("/sub")
+            ngx.say(ngx.var.kong_request_id, " ", res.body)
         }
     }
 --- request
 GET /t
 --- more_headers
 x-message-id: message-id-abc123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
+X-Real-IP: 1.2.3.4
+--- response_body
+message-id-abc123 message-id-abc123
 --- error_code: 200
 --- no_error_log
 [error]
@@ -409,13 +435,32 @@ qr/\A[0-9a-f]{32}\n\z/
 
 
 
-=== TEST 16: the server rule decides when the location has its own rule
+=== TEST 18: a value that is not an address or a host name is rejected
 --- config
     lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    set_real_ip_from 127.0.0.1;
+    lua_kong_request_id_header_from not.an.address.invalid;
+--- must_die
+--- error_log
+in lua_kong_request_id_header_from "not.an.address.invalid"
+
+
+
+=== TEST 19: the directive is not allowed in a location
+--- config
     location /t {
-        set_real_ip_from 10.0.0.0/8;
+        lua_kong_request_id_header_from 127.0.0.1;
+    }
+--- must_die
+--- error_log
+directive is not allowed here
+
+
+
+=== TEST 20: a CIDR with meaningless low bits is accepted
+--- config
+    lua_kong_request_id_header x-message-id;
+    lua_kong_request_id_header_from 127.0.0.1/8;
+    location /t {
         content_by_lua_block {
             ngx.say(ngx.var.kong_request_id)
         }
@@ -430,54 +475,3 @@ message-id-abc123
 --- no_error_log
 [error]
 [crit]
-[alert]
-
-
-
-=== TEST 17: a rule in the http block is inherited by the server
---- http_config
-    set_real_ip_from 127.0.0.1;
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    location /t {
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body
-message-id-abc123
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]
-
-
-
-=== TEST 18: a server rule that does not match is not overridden by a location rule that does
---- config
-    lua_kong_request_id_header x-message-id;
-    lua_kong_request_id_header_trusted_only on;
-    set_real_ip_from 10.0.0.0/8;
-    location /t {
-        set_real_ip_from 127.0.0.1;
-        content_by_lua_block {
-            ngx.say(ngx.var.kong_request_id)
-        }
-    }
---- request
-GET /t
---- more_headers
-x-message-id: message-id-abc123
---- response_body_like eval
-qr/\A[0-9a-f]{32}\n\z/
---- error_code: 200
---- no_error_log
-[error]
-[crit]
-[alert]

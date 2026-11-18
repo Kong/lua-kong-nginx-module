@@ -26,8 +26,6 @@
 
 static ngx_int_t   ngx_http_lua_kong_request_id_index = NGX_ERROR;
 static ngx_flag_t  ngx_http_lua_kong_request_id_header_used;
-static ngx_int_t   ngx_http_lua_kong_realip_trusted_index = NGX_ERROR;
-static ngx_flag_t  ngx_http_lua_kong_request_id_trusted_only_used;
 
 
 static ngx_inline ngx_flag_t
@@ -101,18 +99,14 @@ ngx_http_lua_kong_request_id_from_header(ngx_http_request_t *r,
 
 
 static ngx_flag_t
-ngx_http_lua_kong_peer_is_trusted(ngx_http_request_t *r)
+ngx_http_lua_kong_peer_is_trusted(ngx_http_request_t *r,
+    ngx_array_t *from)
 {
-    ngx_http_variable_value_t  *vv;
-
-    if (ngx_http_lua_kong_realip_trusted_index == NGX_ERROR) {
+    if (from == NULL) {
         return 0;
     }
 
-    vv = ngx_http_get_indexed_variable(r,
-                                       ngx_http_lua_kong_realip_trusted_index);
-
-    return vv != NULL && !vv->not_found && vv->len == 1 && vv->data[0] == '1';
+    return ngx_cidr_match(r->connection->sockaddr, from) == NGX_OK;
 }
 
 
@@ -123,28 +117,35 @@ ngx_http_lua_kong_variable_request_id(ngx_http_request_t *r,
     u_char                        *id;
     uint32_t                       i, rnd;
     ngx_int_t                      rc;
+    ngx_http_variable_value_t     *mv;
     ngx_http_lua_kong_loc_conf_t  *lcf;
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_lua_kong_module);
     if (lcf->request_id_header.len != 0) {
-        if (lcf->request_id_header_trusted_only
-            && !ngx_http_lua_kong_peer_is_trusted(r))
-        {
+        if (r != r->main) {
+            mv = ngx_http_get_indexed_variable(r->main,
+                                               ngx_http_lua_kong_request_id_index);
+            if (mv != NULL && mv->valid && !mv->not_found) {
+                *v = *mv;
+
+                return NGX_OK;
+            }
+        }
+
+        if (ngx_http_lua_kong_peer_is_trusted(r, lcf->request_id_header_from)) {
+            rc = ngx_http_lua_kong_request_id_from_header(r,
+                                                          &lcf->request_id_header,
+                                                          v);
+            if (rc != NGX_DECLINED) {
+                return rc;
+            }
+
+        } else {
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                            "kong request id header ignored: "
-                           "the connecting peer is not trusted");
-            goto generate;
-        }
-
-        rc = ngx_http_lua_kong_request_id_from_header(r,
-                                                      &lcf->request_id_header,
-                                                      v);
-        if (rc != NGX_DECLINED) {
-            return rc;
+                           "the connecting peer is not listed");
         }
     }
-
-generate:
 
     id = ngx_pnalloc(r->pool,
                      NGX_HTTP_LUA_KONG_RANDOM_COUNT *
@@ -490,8 +491,6 @@ ngx_http_lua_kong_add_vars(ngx_conf_t *cf)
     ngx_http_variable_t        *cv, *v;
 
     ngx_http_lua_kong_request_id_header_used = 0;
-    ngx_http_lua_kong_request_id_trusted_only_used = 0;
-    ngx_http_lua_kong_realip_trusted_index = NGX_ERROR;
 
     for (cv = ngx_http_lua_kong_variables; cv->name.len; cv++) {
         v = ngx_http_add_variable(cf, &cv->name, cv->flags);
@@ -562,19 +561,103 @@ invalid:
 
 
 char *
-ngx_http_lua_kong_request_id_header_trusted_only(ngx_conf_t *cf,
-    ngx_command_t *cmd, void *conf)
+ngx_http_lua_kong_request_id_header_from(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf)
 {
-    char                          *rv;
+    ngx_int_t                      rc;
+    ngx_str_t                     *value;
+    ngx_url_t                      u;
+    ngx_cidr_t                     c, *cidr;
+    ngx_uint_t                     i;
+    struct sockaddr_in            *sin;
+#if (NGX_HAVE_INET6)
+    struct sockaddr_in6           *sin6;
+#endif
     ngx_http_lua_kong_loc_conf_t  *lcf = conf;
 
-    rv = ngx_conf_set_flag_slot(cf, cmd, conf);
-    if (rv != NGX_CONF_OK) {
-        return rv;
+    value = cf->args->elts;
+
+    if (lcf->request_id_header_from == NULL) {
+        lcf->request_id_header_from = ngx_array_create(cf->pool, 2,
+                                                       sizeof(ngx_cidr_t));
+        if (lcf->request_id_header_from == NULL) {
+            return NGX_CONF_ERROR;
+        }
     }
 
-    if (lcf->request_id_header_trusted_only == 1) {
-        ngx_http_lua_kong_request_id_trusted_only_used = 1;
+#if (NGX_HAVE_UNIX_DOMAIN)
+
+    if (ngx_strcmp(value[1].data, "unix:") == 0) {
+        cidr = ngx_array_push(lcf->request_id_header_from);
+        if (cidr == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        cidr->family = AF_UNIX;
+
+        return NGX_CONF_OK;
+    }
+
+#endif
+
+    rc = ngx_ptocidr(&value[1], &c);
+
+    if (rc != NGX_ERROR) {
+        if (rc == NGX_DONE) {
+            ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
+                               "low address bits of %V are meaningless",
+                               &value[1]);
+        }
+
+        cidr = ngx_array_push(lcf->request_id_header_from);
+        if (cidr == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        *cidr = c;
+
+        return NGX_CONF_OK;
+    }
+
+    ngx_memzero(&u, sizeof(ngx_url_t));
+    u.host = value[1];
+
+    if (ngx_inet_resolve_host(cf->pool, &u) != NGX_OK) {
+        if (u.err) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "%s in lua_kong_request_id_header_from \"%V\"",
+                               u.err, &u.host);
+        }
+
+        return NGX_CONF_ERROR;
+    }
+
+    cidr = ngx_array_push_n(lcf->request_id_header_from, u.naddrs);
+    if (cidr == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_memzero(cidr, u.naddrs * sizeof(ngx_cidr_t));
+
+    for (i = 0; i < u.naddrs; i++) {
+        cidr[i].family = u.addrs[i].sockaddr->sa_family;
+
+        switch (cidr[i].family) {
+
+#if (NGX_HAVE_INET6)
+        case AF_INET6:
+            sin6 = (struct sockaddr_in6 *) u.addrs[i].sockaddr;
+            cidr[i].u.in6.addr = sin6->sin6_addr;
+            ngx_memset(cidr[i].u.in6.mask.s6_addr, 0xff, 16);
+            break;
+#endif
+
+        default:
+            sin = (struct sockaddr_in *) u.addrs[i].sockaddr;
+            cidr[i].u.in.addr = sin->sin_addr.s_addr;
+            cidr[i].u.in.mask = 0xffffffff;
+            break;
+        }
     }
 
     return NGX_CONF_OK;
@@ -607,7 +690,6 @@ ngx_int_t
 ngx_http_lua_kong_request_id_init(ngx_conf_t *cf)
 {
     ngx_str_t                   name = ngx_string("kong_request_id");
-    ngx_str_t                   trusted_name = ngx_string("realip_is_trusted");
     ngx_http_handler_pt        *h;
     ngx_http_core_main_conf_t  *cmcf;
 
@@ -620,13 +702,6 @@ ngx_http_lua_kong_request_id_init(ngx_conf_t *cf)
         return NGX_ERROR;
     }
 
-    if (ngx_http_lua_kong_request_id_trusted_only_used) {
-        ngx_http_lua_kong_realip_trusted_index =
-            ngx_http_get_variable_index(cf, &trusted_name);
-        if (ngx_http_lua_kong_realip_trusted_index == NGX_ERROR) {
-            return NGX_ERROR;
-        }
-    }
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
